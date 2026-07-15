@@ -2,6 +2,7 @@ services:
   - type: web
     name: meih-api
     runtime: node
+    rootDir: meih/backend
     buildCommand: npm install
     startCommand: npm start
     envVars:

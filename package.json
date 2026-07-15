@@ -3,10 +3,6 @@
   "version": "1.0.0",
   "description": "MOFATE Event & Innovation Hub",
   "private": true,
-  "scripts": {
-    "start": "node meih/backend/src/index.js",
-    "postinstall": "npm install --prefix meih/backend"
-  },
   "engines": {
     "node": ">=18.0.0"
   }
