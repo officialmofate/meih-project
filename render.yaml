@@ -2,14 +2,11 @@ services:
   - type: web
     name: meih-backend
     runtime: node
-    rootDir: .
-    buildCommand: cd meih/backend && npm install
-    startCommand: node meih/backend/src/index.js
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET

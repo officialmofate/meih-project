@@ -1,22 +1,18 @@
-FROM node:20-alpine AS base
+FROM node:20-alpine
 WORKDIR /app
 
-# ── Backend ──
-COPY meih/backend/package*.json ./backend/
-RUN cd backend && npm ci --omit=dev
+COPY package.json ./
+RUN npm install
 
-COPY meih/backend/src ./backend/src
-RUN mkdir -p backend/uploads/payments
+COPY meih/backend ./meih/backend
+COPY meih/frontend ./meih/frontend
 
-# ── Frontend ──
-COPY meih/frontend ./frontend
+RUN mkdir -p meih/backend/uploads/payments
 
-# ── Final image ──
 ENV NODE_ENV=production
-ENV PORT=4000
-EXPOSE 4000
+EXPOSE 10000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
 
-CMD ["node", "backend/src/index.js"]
+CMD ["npm", "start"]

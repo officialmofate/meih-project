@@ -4,9 +4,8 @@
   "description": "MOFATE Event & Innovation Hub",
   "private": true,
   "scripts": {
-    "install-all": "cd meih/backend && npm install",
     "start": "node meih/backend/src/index.js",
-    "dev": "cd meih/backend && npm run dev"
+    "postinstall": "npm install --prefix meih/backend"
   },
   "engines": {
     "node": ">=18.0.0"
