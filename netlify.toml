@@ -1,0 +1,16 @@
+[build]
+  publish = "meih/frontend"
+  command = "echo 'Static site - no build needed'"
+
+[build.environment]
+  MEIH_API_URL = ""
+
+[[redirects]]
+  from = "/pages/*"
+  to = "/pages/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
