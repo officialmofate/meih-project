@@ -1,0 +1,14 @@
+{
+  "name": "meih",
+  "version": "1.0.0",
+  "description": "MOFATE Event & Innovation Hub",
+  "private": true,
+  "scripts": {
+    "install-all": "cd meih/backend && npm install",
+    "start": "node meih/backend/src/index.js",
+    "dev": "cd meih/backend && npm run dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
