@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Judge Dashboard — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/dashboard.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page dashboard" data-page="dashboard-judge">
+    <div class="container">
+
+      <header class="page-header">
+        <h1 data-i18n="judge_dashboard">Judge Dashboard</h1>
+        <p data-i18n="judge_welcome">Welcome back — you have <strong id="assignment-count">0</strong> innovations assigned for scoring.</p>
+      </header>
+
+      <div class="dashboard-grid">
+
+        <section class="card wide">
+          <h2 data-i18n="assigned_innovations">Assigned Innovations</h2>
+          <p id="no-assignments" class="empty-state" data-i18n="no_assignments">No innovations assigned yet.</p>
+          <table class="data-table" id="assignments-table" hidden>
+            <thead><tr><th data-i18n="title">Title</th><th data-i18n="category">Category</th><th data-i18n="conflict_of_interest">Conflict of Interest</th><th data-i18n="status">Status</th><th></th></tr></thead>
+            <tbody id="assignments-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide" id="score-form-section">
+          <h2 data-i18n="score_sheet">Score Sheet — <span id="score-target-title">Select an innovation above</span></h2>
+          <form id="score-form" class="stacked-form">
+            <input type="hidden" id="score-submission-id" name="submissionId" />
+
+            <div class="rubric-grid">
+              <label>Innovation (High weight) <input type="range" name="innovationScore" min="0" max="10" value="5" /></label>
+              <label>Impact (High weight) <input type="range" name="impactScore" min="0" max="10" value="5" /></label>
+              <label>Feasibility (Medium) <input type="range" name="feasibilityScore" min="0" max="10" value="5" /></label>
+              <label>Scalability (Medium) <input type="range" name="scalabilityScore" min="0" max="10" value="5" /></label>
+              <label>Sustainability (Medium) <input type="range" name="sustainabilityScore" min="0" max="10" value="5" /></label>
+              <label>Technology Used (Medium) <input type="range" name="technologyScore" min="0" max="10" value="5" /></label>
+              <label>Business Model (Low) <input type="range" name="businessModelScore" min="0" max="10" value="5" /></label>
+              <label>Social Impact (Medium) <input type="range" name="socialImpactScore" min="0" max="10" value="5" /></label>
+              <label>Market Readiness (Low) <input type="range" name="marketReadinessScore" min="0" max="10" value="5" /></label>
+              <label>Presentation (Low) <input type="range" name="presentationScore" min="0" max="10" value="5" /></label>
+            </div>
+
+            <label for="score-comments" data-i18n="comments_for_innovator">Comments for the innovator</label>
+            <textarea id="score-comments" name="comments" rows="3"></textarea>
+
+            <button type="submit" class="btn btn-primary" data-i18n="submit_score">Submit Score</button>
+          </form>
+          <p id="score-confirmation" class="form-success" hidden data-i18n="score_submitted">Score submitted.</p>
+        </section>
+
+        <section class="card wide">
+          <h2 data-i18n="current_rankings">Current Rankings (Your Scores)</h2>
+          <ol id="judge-rankings" class="leaderboard-list">
+            <li class="results-count">No scores submitted yet.</li>
+          </ol>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+
+    // Load judge assignments
+    api.get('/innovation/judge/assignments').then((assignments) => {
+      if (!Array.isArray(assignments) || !assignments.length) {
+        document.getElementById('no-assignments').hidden = false;
+        return;
+      }
+      document.getElementById('no-assignments').hidden = true;
+      document.getElementById('assignments-table').hidden = false;
+      document.getElementById('assignment-count').textContent = assignments.length;
+      const tbody = document.getElementById('assignments-body');
+      tbody.innerHTML = assignments.map(a => {
+        const statusClass = a.status === 'scored' ? 'badge-success' : 'badge-muted';
+        const action = a.status === 'scored' ? 'Edit Score' : 'Score';
+        return `<tr>
+          <td>${a.title || a.innovation_title || '—'}</td>
+          <td>${a.category || '—'}</td>
+          <td><label class="checkbox-label"><input type="checkbox" data-conflict /> Declare conflict</label></td>
+          <td><span class="badge ${statusClass}">${a.status || 'pending'}</span></td>
+          <td><a href="#score-section" data-open-score="${a.submission_id || a.id}">${action}</a></td>
+        </tr>`;
+      }).join('');
+
+      tbody.querySelectorAll('[data-open-score]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const id = link.dataset.openScore;
+          document.getElementById('score-target-title').textContent = link.closest('tr').children[0].textContent;
+          document.getElementById('score-submission-id').value = id;
+          document.getElementById('score-form-section').scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+    }).catch(() => {
+      document.getElementById('no-assignments').hidden = false;
+    });
+
+    // Submit score
+    document.getElementById('score-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      try {
+        await api.post('/innovation/judge/score', data);
+      } catch {}
+      document.getElementById('score-confirmation').hidden = false;
+      setTimeout(() => { document.getElementById('score-confirmation').hidden = true; }, 3000);
+    });
+  </script>
+</body>
+</html>

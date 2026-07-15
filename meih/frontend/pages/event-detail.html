@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Event Detail — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/events.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page" data-page="event-detail">
+    <div class="container detail-layout">
+
+      <section class="detail-main">
+        <nav class="breadcrumb"><a href="events.html">&larr; Back to Event Hub</a></nav>
+
+        <h1 id="event-name">Loading event...</h1>
+        <div class="flex meta-row">
+          <span class="badge" id="event-category">—</span>
+          <span id="event-location">—</span>
+          <span id="event-status" class="badge badge-muted">—</span>
+        </div>
+
+        <section class="card">
+          <h2>About this event</h2>
+          <p id="event-description">
+            Full event details, requirements, and deadlines will appear here once loaded
+            from the event record.
+          </p>
+          <dl class="detail-grid">
+            <dt>Budget</dt><dd id="event-budget">—</dd>
+            <dt>Date</dt><dd id="event-date">—</dd>
+            <dt>Deposit required</dt><dd id="event-deposit">30% on award</dd>
+            <dt>Created by</dt><dd id="event-client">—</dd>
+          </dl>
+        </section>
+
+        <section class="card">
+          <h2>Vendors & Planners Quoting</h2>
+          <div id="vendor-list" class="grid vendor-list"></div>
+          <p id="no-vendors" class="empty-state" hidden>No quotes submitted yet.</p>
+        </section>
+
+        <section class="card">
+          <h2>Chat with the Client</h2>
+          <div id="chat-log" class="chat-log"></div>
+          <form id="chat-form" class="flex">
+            <input id="chat-input" type="text" placeholder="Type a message..." aria-label="Chat message" required style="flex:1" />
+            <button type="submit" class="btn btn-primary">Send</button>
+          </form>
+        </section>
+      </section>
+
+      <aside class="detail-sidebar">
+        <div class="card sticky-card">
+          <h2>Submit a Quote / Book This Event</h2>
+          <form id="booking-form" class="stacked-form">
+            <input type="hidden" name="eventId" id="booking-event-id" />
+
+            <label for="quote-amount" data-i18n="event.quote_amount">Your quote (Tsh)</label>
+            <input id="quote-amount" name="quoteAmount" type="number" min="1" required />
+
+            <label for="quote-notes">Notes for the client</label>
+            <textarea id="quote-notes" name="notes" rows="4" placeholder="Describe what's included..."></textarea>
+
+            <label for="quote-availability">Available on event date?</label>
+            <select id="quote-availability" name="availability">
+              <option value="yes">Yes, fully available</option>
+              <option value="tentative">Tentative</option>
+            </select>
+
+            <button type="submit" class="btn btn-primary btn-block">Submit Quote</button>
+          </form>
+          <p id="booking-confirmation" class="form-success" hidden>Quote submitted — the client will be notified.</p>
+        </div>
+
+        <div class="card sticky-card" style="margin-top: var(--space-md);" id="payment-section" hidden>
+          <h2>Make a Payment</h2>
+          <p class="text-muted">Pay to the planner's number, then upload your payment screenshot below.</p>
+
+          <div id="pay-details-box" class="info-box" hidden>
+            <p><strong>Pay to:</strong> <span id="payee-name">—</span></p>
+            <p><strong>Number:</strong> <span id="payee-number">—</span></p>
+            <p><strong>Method:</strong> <span id="payee-method">—</span></p>
+          </div>
+
+          <form id="event-payment-form" class="stacked-form">
+            <input type="hidden" name="bookingId" id="pay-booking-id" />
+
+            <label for="ep-amount" data-i18n="event.pay_amount">Amount (Tsh)</label>
+            <input id="ep-amount" name="amount" type="number" min="1" required />
+
+            <label for="ep-method">Payment method</label>
+            <select id="ep-method" name="method">
+              <option value="mobile_money">Mobile Money</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
+
+            <label for="ep-number">Your payment number</label>
+            <input id="ep-number" name="paymentNumber" type="text" placeholder="e.g. 0754 123 456" />
+
+            <label for="ep-name">Account holder name</label>
+            <input id="ep-name" name="paymentName" type="text" placeholder="e.g. John Mwakasege" />
+
+            <label for="ep-screenshot">Payment screenshot</label>
+            <input id="ep-screenshot" name="screenshot" type="file" accept="image/*" />
+
+            <label for="ep-notes">Notes</label>
+            <textarea id="ep-notes" name="notes" rows="2" placeholder="Optional..."></textarea>
+
+            <button type="submit" class="btn btn-primary btn-block">Submit Payment Proof</button>
+          </form>
+          <p id="ep-success" class="form-success" hidden>Payment proof submitted — awaiting planner confirmation.</p>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+    import { vendorCard } from '../js/components/vendor-card.js';
+    import { formatCurrency, formatDate } from '../js/utils/formatters.js';
+    import { initChat } from '../js/components/chat.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('id');
+    if (!eventId) {
+      document.querySelector('.detail-main').innerHTML = '<p class="empty-state">No event specified.</p>';
+      throw new Error('No event ID');
+    }
+    document.getElementById('booking-event-id').value = eventId;
+
+    function paintEvent(ev) {
+      document.getElementById('event-name').textContent = ev.name || 'Untitled Event';
+      document.getElementById('event-category').textContent = ev.category_name || ev.category || '';
+      document.getElementById('event-location').textContent = ev.location || '—';
+      document.getElementById('event-status').textContent = ev.status || '';
+      document.getElementById('event-description').textContent = ev.description || 'No description provided.';
+      document.getElementById('event-budget').textContent = formatCurrency(ev.budget || 0, 'TZS');
+      document.getElementById('event-date').textContent = ev.event_date ? formatDate(ev.event_date) : 'TBD';
+      document.getElementById('event-client').textContent = ev.client_name || '—';
+    }
+
+    function paintVendors(vendors) {
+      const list = document.getElementById('vendor-list');
+      const noVendors = document.getElementById('no-vendors');
+      if (!Array.isArray(vendors) || !vendors.length) {
+        list.innerHTML = '';
+        noVendors.hidden = false;
+        return;
+      }
+      noVendors.hidden = true;
+      list.innerHTML = vendors.map(vendorCard).join('');
+    }
+
+    let currentEvent = null;
+    api.get(`/events/events/${eventId}`).then(ev => {
+      paintEvent(ev);
+      currentEvent = ev;
+    }).catch(() => {
+      document.querySelector('.detail-main').innerHTML = '<p class="empty-state">Event not found.</p>';
+    });
+    api.get(`/events/events/${eventId}/bookings`).then(paintVendors).catch(() => paintVendors([]));
+
+    document.getElementById('booking-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      try {
+        const booking = await api.post('/bookings', data);
+        document.getElementById('booking-confirmation').hidden = false;
+        document.getElementById('payment-section').hidden = false;
+        document.getElementById('pay-booking-id').value = booking.id;
+        loadPaymentDetails(booking.id);
+      } catch {
+        document.getElementById('booking-confirmation').hidden = false;
+      }
+      e.target.reset();
+      document.getElementById('booking-event-id').value = eventId;
+    });
+
+    async function loadPaymentDetails(bookingId) {
+      try {
+        const details = await api.get(`/payments/booking/${bookingId}`);
+        if (details && details.payment_number) {
+          document.getElementById('pay-details-box').hidden = false;
+          document.getElementById('payee-name').textContent = details.payee_name || '—';
+          document.getElementById('payee-number').textContent = details.payment_number || '—';
+          document.getElementById('payee-method').textContent = details.payment_method || 'mobile_money';
+        }
+      } catch {}
+    }
+
+    document.getElementById('event-payment-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const fileInput = document.getElementById('ep-screenshot');
+      if (fileInput.files.length > 0) {
+        formData.set('screenshot', fileInput.files[0]);
+      }
+      for (const [key, val] of [...formData.entries()]) {
+        if (!val || (typeof val === 'string' && !val.trim())) formData.delete(key);
+      }
+      try {
+        await api.upload('/payments', formData);
+        document.getElementById('ep-success').hidden = false;
+        e.target.reset();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    const chatLog = document.getElementById('chat-log');
+    function appendMessage({ message, senderId, sentAt }) {
+      const row = document.createElement('div');
+      row.className = 'chat-message';
+      row.textContent = `[${new Date(sentAt || Date.now()).toLocaleTimeString()}] ${senderId || 'you'}: ${message}`;
+      chatLog.appendChild(row);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    let chat;
+    try {
+      chat = initChat(eventId, appendMessage);
+    } catch {}
+
+    document.getElementById('chat-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('chat-input');
+      const message = input.value.trim();
+      if (!message) return;
+      if (chat) {
+        chat.send(message);
+      } else {
+        appendMessage({ message, senderId: 'you', sentAt: new Date().toISOString() });
+      }
+      input.value = '';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE — Breakpoints for dark theme
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Tablet and below */
+@media (max-width: 1024px) {
+  .detail-layout { grid-template-columns: 1fr; }
+  .innovation-layout { grid-template-columns: 1fr; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  h1 { font-size: 28px; }
+  h2 { font-size: 22px; }
+}
+
+@media (max-width: 480px) {
+  .stats-row { grid-template-columns: 1fr; }
+  .events-grid, .innovation-grid, .vendor-list { grid-template-columns: 1fr; }
+  .form-grid, .checkbox-grid { grid-template-columns: 1fr; }
+  .filter-bar { flex-direction: column; }
+  .filter-bar input, .filter-bar select { width: 100%; }
+}

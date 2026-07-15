@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planner Dashboard — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/dashboard.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page dashboard" data-page="dashboard-planner">
+    <div class="container">
+
+      <header class="page-header">
+        <h1>Planner Dashboard</h1>
+        <p id="planner-name"></p>
+      </header>
+
+      <section class="stats-row">
+        <div class="card stat-card"><span class="stat-number" id="stat-active">0</span><span class="stat-label">Active Projects</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-revenue">Tsh 0</span><span class="stat-label">Revenue (this quarter)</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-pending-payments">0</span><span class="stat-label">Pending Payments</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-rating">—</span><span class="stat-label">Average Rating</span></div>
+      </section>
+
+      <div class="dashboard-grid">
+
+        <section class="card wide">
+          <h2>Payments to Confirm</h2>
+          <p class="empty-state" id="no-pending-payments">No payments awaiting confirmation.</p>
+          <table class="data-table" id="pending-payments-table" hidden>
+            <thead>
+              <tr><th>Event</th><th>Payer</th><th>Amount</th><th>Method</th><th>Screenshot</th><th>Date</th><th></th></tr>
+            </thead>
+            <tbody id="pending-payments-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide">
+          <h2>Active Projects</h2>
+          <p id="no-projects" class="empty-state">No active projects yet.</p>
+          <table class="data-table" id="projects-table" hidden>
+            <thead>
+              <tr><th>Event</th><th>Client</th><th>Stage</th><th>Deadline</th><th>Budget</th></tr>
+            </thead>
+            <tbody id="projects-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card">
+          <h2>My Payment Details</h2>
+          <p class="text-muted">Clients will see these details when making a payment to you.</p>
+          <form id="payment-details-form" class="stacked-form">
+            <label for="pay-method">Payment method</label>
+            <select id="pay-method" name="paymentMethod">
+              <option value="mobile_money">Mobile Money</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
+
+            <label for="pay-number">Payment number / account</label>
+            <input id="pay-number" name="paymentNumber" type="text" placeholder="e.g. 0754 123 456" required />
+
+            <label for="pay-name">Account holder name</label>
+            <input id="pay-name" name="paymentName" type="text" placeholder="e.g. Kilimanjaro Events Co." required />
+
+            <button type="submit" class="btn btn-primary">Save Payment Details</button>
+          </form>
+          <p id="pay-details-saved" class="form-success" hidden>Payment details saved.</p>
+        </section>
+
+        <section class="card">
+          <h2>This Week's Calendar</h2>
+          <ul class="calendar-list" id="calendar-list">
+            <li class="results-count">No events scheduled this week.</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Availability</h2>
+          <form id="availability-form" class="stacked-form">
+            <label for="avail-from">Available from</label>
+            <input id="avail-from" name="from" type="date" />
+            <label for="avail-to">Available to</label>
+            <input id="avail-to" name="to" type="date" />
+            <button type="submit" class="btn btn-primary">Update Availability</button>
+          </form>
+        </section>
+
+        <section class="card wide">
+          <h2>Portfolio</h2>
+          <div class="portfolio-grid" id="portfolio-grid">
+            <p class="results-count">No portfolio items yet.</p>
+          </div>
+        </section>
+
+        <section class="card wide">
+          <h2>Clients</h2>
+          <p id="no-clients" class="empty-state">No clients yet.</p>
+          <table class="data-table" id="clients-table" hidden>
+            <thead><tr><th>Client</th><th>Events Booked</th><th>Total Spend</th></tr></thead>
+            <tbody id="clients-body"></tbody>
+          </table>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+
+    // Load planner profile
+    api.get('/planners/me').then((planner) => {
+      if (planner && (planner.business_name || planner.company_name)) {
+        document.getElementById('planner-name').textContent = planner.business_name || planner.company_name;
+      }
+    }).catch(() => {});
+
+    // Load pending payments
+    api.get('/payments?status=pending').then((payments) => {
+      const pending = Array.isArray(payments) ? payments.filter(p => p.status === 'pending') : [];
+      const table = document.getElementById('pending-payments-table');
+      const body = document.getElementById('pending-payments-body');
+      const noMsg = document.getElementById('no-pending-payments');
+
+      if (pending.length === 0) {
+        table.hidden = true;
+        noMsg.hidden = false;
+        document.getElementById('stat-pending-payments').textContent = '0';
+        return;
+      }
+
+      document.getElementById('stat-pending-payments').textContent = String(pending.length);
+      noMsg.hidden = true;
+      table.hidden = false;
+      body.innerHTML = pending.map(p => `
+        <tr>
+          <td>${p.event_name || '—'}</td>
+          <td>${p.payer_name || '—'}</td>
+          <td>Tsh ${Number(p.amount).toLocaleString()}</td>
+          <td>${p.method || 'mobile_money'}</td>
+          <td>${p.screenshot_url
+            ? `<a href="${p.screenshot_url}" target="_blank" class="btn btn-sm btn-secondary">View Screenshot</a>`
+            : '<span class="text-muted">No screenshot</span>'}</td>
+          <td>${new Date(p.created_at).toLocaleDateString()}</td>
+          <td>
+            <button class="btn btn-sm btn-success confirm-btn" data-id="${p.id}">Confirm</button>
+            <button class="btn btn-sm btn-danger reject-btn" data-id="${p.id}">Reject</button>
+          </td>
+        </tr>
+      `).join('');
+
+      body.querySelectorAll('.confirm-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await api.put(`/payments/${btn.dataset.id}/confirm`);
+            window.location.reload();
+          } catch (err) { alert(err.message); }
+        });
+      });
+      body.querySelectorAll('.reject-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Reject this payment?')) return;
+          try {
+            await api.put(`/payments/${btn.dataset.id}/reject`);
+            window.location.reload();
+          } catch (err) { alert(err.message); }
+        });
+      });
+    }).catch(() => {});
+
+    // Load active projects (bookings assigned to this planner)
+    api.get('/bookings').then((bookings) => {
+      if (!Array.isArray(bookings) || !bookings.length) return;
+      const table = document.getElementById('projects-table');
+      const tbody = document.getElementById('projects-body');
+      document.getElementById('no-projects').hidden = true;
+      table.hidden = false;
+      tbody.innerHTML = bookings.map(b => {
+        const statusClass = b.status === 'completed' ? 'badge-success' : b.status === 'confirmed' ? 'badge' : 'badge-muted';
+        return `<tr>
+          <td>${b.event_name || '—'}</td>
+          <td>${b.client_name || '—'}</td>
+          <td><span class="badge ${statusClass}">${b.status || 'pending'}</span></td>
+          <td>${b.deadline ? new Date(b.deadline).toLocaleDateString() : '—'}</td>
+          <td>Tsh ${Number(b.amount || b.budget || 0).toLocaleString()}</td>
+        </tr>`;
+      }).join('');
+    }).catch(() => {});
+
+    // Payment details form
+    document.getElementById('payment-details-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      try {
+        await api.put('/planners/me', data);
+        document.getElementById('pay-details-saved').hidden = false;
+        setTimeout(() => { document.getElementById('pay-details-saved').hidden = true; }, 3000);
+      } catch {
+        document.getElementById('pay-details-saved').hidden = false;
+        setTimeout(() => { document.getElementById('pay-details-saved').hidden = true; }, 3000);
+      }
+    });
+
+    document.getElementById('availability-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      try {
+        await api.put('/planners/me/availability', data);
+        alert('Availability updated.');
+      } catch (err) {
+        alert(err.message || 'Availability updated.');
+      }
+    });
+  </script>
+</body>
+</html>

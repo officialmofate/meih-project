@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register Event — MEIH</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/events.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page" data-page="create-event">
+    <div class="container narrow">
+      <div class="event-create-header">
+        <h1>Register a New Event</h1>
+        <p class="text-muted">Fill in the details below. Use the map to pinpoint your venue for accurate vendor matching.</p>
+      </div>
+
+      <ol class="stepper" id="stepper">
+        <li class="step active" data-step="1"><span class="step-num">1</span><span class="step-label" data-i18n="event.step_details">Details</span></li>
+        <li class="step" data-step="2"><span class="step-num">2</span><span class="step-label" data-i18n="event.step_location">Location</span></li>
+        <li class="step" data-step="3"><span class="step-num">3</span><span class="step-label" data-i18n="event.step_budget">Budget</span></li>
+        <li class="step" data-step="4"><span class="step-num">4</span><span class="step-label" data-i18n="event.step_requirements">Requirements</span></li>
+        <li class="step" data-step="5"><span class="step-num">5</span><span class="step-label" data-i18n="event.step_review">Review</span></li>
+      </ol>
+
+      <form id="create-event-form" class="event-create-form" novalidate>
+
+        <!-- Step 1: Details -->
+        <fieldset class="form-step active" data-step="1">
+          <legend data-i18n="event.legend_details">Event Details</legend>
+
+          <div class="form-group">
+            <label for="ev-name" data-i18n="event.name">Event name</label>
+            <input id="ev-name" name="name" type="text" required data-i18n-ph="event.name_ph" placeholder="e.g. Amina & Juma Wedding" />
+          </div>
+
+          <div class="form-group">
+            <label for="ev-category" data-i18n="event.category">Category</label>
+            <select id="ev-category" name="category" required>
+              <option value="" data-i18n="event.category_ph">Select a category</option>
+            </select>
+            <span class="form-hint" id="category-fee-hint"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="ev-date" data-i18n="event.date">Event date</label>
+            <input id="ev-date" name="eventDate" type="date" required />
+          </div>
+
+          <div class="step-actions">
+            <span></span>
+            <button type="button" class="btn btn-primary" data-next data-i18n="event.next_location">Next: Location</button>
+          </div>
+        </fieldset>
+
+        <!-- Step 2: Location + Map -->
+        <fieldset class="form-step" data-step="2" hidden>
+          <legend data-i18n="event.legend_location">Event Location</legend>
+
+          <div class="form-group form-group--search">
+            <label for="ev-location" data-i18n="event.location_search">Search venue or address</label>
+            <div class="location-search-row">
+              <input id="ev-location" name="location" type="text" data-i18n-ph="event.location_ph" placeholder="Start typing a location..." autocomplete="off" />
+              <button type="button" class="btn btn-secondary btn-sm" id="use-my-location" title="Use my current location">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>
+                <span data-i18n="event.my_location">My Location</span>
+              </button>
+            </div>
+            <div id="location-suggestions" class="location-suggestions" hidden></div>
+          </div>
+
+          <div id="event-map" class="event-map"></div>
+
+          <div class="map-coordinates">
+            <div class="form-group">
+              <label for="ev-lat">Latitude</label>
+              <input id="ev-lat" name="latitude" type="number" step="any" readonly class="coord-input" />
+            </div>
+            <div class="form-group">
+              <label for="ev-lng">Longitude</label>
+              <input id="ev-lng" name="longitude" type="number" step="any" readonly class="coord-input" />
+            </div>
+          </div>
+
+          <p class="map-instruction" data-i18n="event.map_instruction">Click on the map to set the exact venue location, or search above.</p>
+
+          <div class="step-actions">
+            <button type="button" class="btn btn-secondary" data-back data-i18n="event.back">Back</button>
+            <button type="button" class="btn btn-primary" data-next data-i18n="event.next_budget">Next: Budget</button>
+          </div>
+        </fieldset>
+
+        <!-- Step 3: Budget -->
+        <fieldset class="form-step" data-step="3" hidden>
+          <legend data-i18n="event.legend_budget">Budget & Guests</legend>
+
+          <div class="budget-summary-card" id="budget-summary-card" hidden>
+            <div class="budget-icon">Tsh</div>
+            <div>
+              <p class="budget-title" data-i18n="event.platform_fee">Estimated Platform Fee</p>
+              <p class="budget-fee" id="estimated-fee">Tsh 0</p>
+              <p class="text-muted text-sm" data-i18n="event.fee_hint">Based on your selected category</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="ev-budget" data-i18n="event.budget_label">Total budget (Tsh)</label>
+            <input id="ev-budget" name="budget" type="number" min="1" required data-i18n-ph="event.budget_ph" placeholder="e.g. 2,500,000" />
+            <span class="form-hint" data-i18n="event.budget_hint">Set your total event budget. A 30% deposit is due once you award a vendor or planner.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="ev-guests" data-i18n="event.guests">Expected number of guests</label>
+            <input id="ev-guests" name="guestCount" type="number" min="1" required data-i18n-ph="event.guests_ph" placeholder="e.g. 150" />
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="btn btn-secondary" data-back data-i18n="event.back">Back</button>
+            <button type="button" class="btn btn-primary" data-next data-i18n="event.next_requirements">Next: Requirements</button>
+          </div>
+        </fieldset>
+
+        <!-- Step 4: Requirements -->
+        <fieldset class="form-step" data-step="4" hidden>
+          <legend data-i18n="event.legend_requirements">Services & Requirements</legend>
+
+          <div class="form-group">
+            <label data-i18n="event.services_label">Services needed</label>
+            <div class="services-grid">
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="decorator" />
+                <span class="service-icon">🎨</span>
+                <span>Decorator</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="catering" />
+                <span class="service-icon">🍽️</span>
+                <span>Catering</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="photography" />
+                <span class="service-icon">📸</span>
+                <span>Photography</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="videography" />
+                <span class="service-icon">🎥</span>
+                <span>Videography</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="sound" />
+                <span class="service-icon">🔊</span>
+                <span>Sound & Lighting</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="mc" />
+                <span class="service-icon">🎤</span>
+                <span>MC / Entertainment</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="security" />
+                <span class="service-icon">🛡️</span>
+                <span>Security</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="transport" />
+                <span class="service-icon">🚗</span>
+                <span>Transport</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="tent" />
+                <span class="service-icon">⛺</span>
+                <span>Tent & Furniture</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="florist" />
+                <span class="service-icon">💐</span>
+                <span>Florist</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="makeup" />
+                <span class="service-icon">💄</span>
+                <span>Makeup</span>
+              </label>
+              <label class="service-chip">
+                <input type="checkbox" name="services" value="branding" />
+                <span class="service-icon">🏷️</span>
+                <span>Branding</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="ev-requirements" data-i18n="event.requirements">Additional requirements</label>
+            <textarea id="ev-requirements" name="requirements" rows="4" data-i18n-ph="event.requirements_ph" placeholder="Describe any special requirements, themes, dietary needs, accessibility needs..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="ev-deadline" data-i18n="event.deadline">Quote submission deadline</label>
+            <input id="ev-deadline" name="quoteDeadline" type="date" />
+            <span class="form-hint" data-i18n="event.deadline_hint">Vendors and planners will submit quotes before this date.</span>
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="btn btn-secondary" data-back data-i18n="event.back">Back</button>
+            <button type="button" class="btn btn-primary" data-next data-i18n="event.next_review">Next: Review</button>
+          </div>
+        </fieldset>
+
+        <!-- Step 5: Review -->
+        <fieldset class="form-step" data-step="5" hidden>
+          <legend data-i18n="event.legend_review">Review & Submit</legend>
+
+          <div class="review-card">
+            <div class="review-section">
+              <h3 data-i18n="event.review_details">Event Details</h3>
+              <dl class="detail-grid" id="review-details"></dl>
+            </div>
+            <div class="review-section">
+              <h3 data-i18n="event.review_location">Location</h3>
+              <dl class="detail-grid" id="review-location"></dl>
+              <div id="review-map" class="review-map"></div>
+            </div>
+            <div class="review-section">
+              <h3 data-i18n="event.review_budget">Budget & Guests</h3>
+              <dl class="detail-grid" id="review-budget"></dl>
+            </div>
+            <div class="review-section">
+              <h3 data-i18n="event.review_services">Services & Requirements</h3>
+              <dl class="detail-grid" id="review-requirements"></dl>
+            </div>
+          </div>
+
+          <p id="create-event-error" class="form-error" role="alert" hidden></p>
+
+          <div class="step-actions">
+            <button type="button" class="btn btn-secondary" data-back data-i18n="event.back">Back</button>
+            <button type="submit" class="btn btn-primary btn-lg" data-i18n="event.submit_btn">Register Event</button>
+          </div>
+        </fieldset>
+
+      </form>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ── Stepper + Map Logic ──
+    (function() {
+      'use strict';
+
+      var form = document.getElementById('create-event-form');
+      var steps = Array.prototype.slice.call(form.querySelectorAll('.form-step'));
+      var stepperItems = Array.prototype.slice.call(document.querySelectorAll('#stepper .step'));
+      var current = 1;
+      var reviewMapInstance = null;
+
+      var FallbackCategories = [
+        { name: 'Wedding', suggested_fee_usd: 500000 },
+        { name: 'Corporate Event', suggested_fee_usd: 750000 },
+        { name: 'Birthday Party', suggested_fee_usd: 300000 },
+        { name: 'Conference', suggested_fee_usd: 1000000 },
+        { name: 'Concert', suggested_fee_usd: 1000000 },
+        { name: 'Workshop', suggested_fee_usd: 400000 },
+        { name: 'Exhibition', suggested_fee_usd: 600000 },
+        { name: 'Fundraiser', suggested_fee_usd: 500000 },
+        { name: 'Community Event', suggested_fee_usd: 250000 },
+        { name: 'Cultural Festival', suggested_fee_usd: 500000 },
+        { name: 'Sports Event', suggested_fee_usd: 600000 },
+        { name: 'Other', suggested_fee_usd: 0 }
+      ];
+
+      function goTo(stepNum) {
+        steps.forEach(function(s) {
+          var sn = Number(s.getAttribute('data-step'));
+          s.hidden = sn !== stepNum;
+          s.classList.toggle('active', sn === stepNum);
+        });
+        stepperItems.forEach(function(li) {
+          var sn = Number(li.getAttribute('data-step'));
+          li.classList.toggle('active', sn <= stepNum);
+          li.classList.toggle('completed', sn < stepNum);
+        });
+        current = stepNum;
+        if (stepNum === 2 && !window._mapInitialized) initMap();
+        if (stepNum === 5) renderReview();
+      }
+
+      form.querySelectorAll('[data-next]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var fieldset = btn.closest('.form-step');
+          if (!fieldset.checkValidity()) { fieldset.reportValidity(); return; }
+          goTo(current + 1);
+        });
+      });
+      form.querySelectorAll('[data-back]').forEach(function(btn) {
+        btn.addEventListener('click', function() { goTo(current - 1); });
+      });
+
+      // ── Map ──
+      var map, marker;
+      window._mapInitialized = false;
+
+      function initMap() {
+        if (window._mapInitialized) return;
+        if (typeof L === 'undefined') {
+          console.error('[MEIH] Leaflet.js failed to load. Map features disabled.');
+          document.getElementById('event-map').innerHTML = '<p style="text-align:center;padding:40px;color:var(--color-muted);">Map unavailable. Please enter coordinates manually or reload the page.</p>';
+          window._mapInitialized = true;
+          return;
+        }
+        window._mapInitialized = true;
+
+        var latInput = document.getElementById('ev-lat');
+        var lngInput = document.getElementById('ev-lng');
+        var defaultLat = latInput.value ? parseFloat(latInput.value) : -6.1630;
+        var defaultLng = lngInput.value ? parseFloat(lngInput.value) : 35.7516;
+        var defaultZoom = latInput.value ? 13 : 6;
+
+        map = L.map('event-map', { zoomControl: true }).setView([defaultLat, defaultLng], defaultZoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19
+        }).addTo(map);
+
+        if (latInput.value && lngInput.value) {
+          marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+          marker.on('dragend', function(e) {
+            var pos = e.target.getLatLng();
+            latInput.value = pos.lat.toFixed(7);
+            lngInput.value = pos.lng.toFixed(7);
+            reverseGeocode(pos.lat, pos.lng);
+          });
+        }
+
+        map.on('click', function(e) {
+          var pos = e.latlng;
+          if (marker) {
+            marker.setLatLng(pos);
+          } else {
+            marker = L.marker(pos, { draggable: true }).addTo(map);
+            marker.on('dragend', function(e) {
+              var p = e.target.getLatLng();
+              latInput.value = p.lat.toFixed(7);
+              lngInput.value = p.lng.toFixed(7);
+              reverseGeocode(p.lat, p.lng);
+            });
+          }
+          latInput.value = pos.lat.toFixed(7);
+          lngInput.value = pos.lng.toFixed(7);
+          reverseGeocode(pos.lat, pos.lng);
+        });
+
+        setTimeout(function() { map.invalidateSize(); }, 300);
+      }
+
+      // ── Geocoding (Nominatim) ──
+      var searchTimeout;
+      var searchInput = document.getElementById('ev-location');
+      var suggestionsEl = document.getElementById('location-suggestions');
+
+      searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        var q = searchInput.value.trim();
+        if (q.length < 3) { suggestionsEl.hidden = true; return; }
+        searchTimeout = setTimeout(function() { forwardGeocode(q); }, 400);
+      });
+
+      searchInput.addEventListener('focus', function() {
+        if (suggestionsEl.children.length > 0) suggestionsEl.hidden = false;
+      });
+
+      document.addEventListener('click', function(e) {
+        if (!suggestionsEl.contains(e.target) && e.target !== searchInput) {
+          suggestionsEl.hidden = true;
+        }
+      });
+
+      async function forwardGeocode(query) {
+        try {
+          var res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&limit=5&addressdetails=1', {
+            headers: { 'Accept': 'application/json', 'User-Agent': 'MEIH-EventPlatform/1.0 (https://meih.app)' }
+          });
+          var results = await res.json();
+          if (!results.length) { suggestionsEl.hidden = true; return; }
+          suggestionsEl.innerHTML = results.map(function(r) {
+            return '<div class="suggestion-item" data-lat="' + r.lat + '" data-lng="' + r.lon + '" data-name="' + r.display_name.replace(/"/g, '&quot;') + '">' +
+              '<span class="suggestion-name">' + (r.display_name.split(',')[0]) + '</span>' +
+              '<span class="suggestion-detail">' + r.display_name.split(',').slice(1, 3).join(',') + '</span>' +
+            '</div>';
+          }).join('');
+          suggestionsEl.hidden = false;
+
+          suggestionsEl.querySelectorAll('.suggestion-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+              var lat = parseFloat(item.dataset.lat);
+              var lng = parseFloat(item.dataset.lng);
+              var name = item.dataset.name;
+              searchInput.value = name;
+              suggestionsEl.hidden = true;
+
+              document.getElementById('ev-lat').value = lat.toFixed(7);
+              document.getElementById('ev-lng').value = lng.toFixed(7);
+
+              if (!window._mapInitialized) initMap();
+              if (map) {
+                setTimeout(function() {
+                  map.setView([lat, lng], 13);
+                  if (marker) {
+                    marker.setLatLng([lat, lng]);
+                  } else {
+                    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                    marker.on('dragend', function(e) {
+                      var p = e.target.getLatLng();
+                      document.getElementById('ev-lat').value = p.lat.toFixed(7);
+                      document.getElementById('ev-lng').value = p.lng.toFixed(7);
+                      reverseGeocode(p.lat, p.lng);
+                    });
+                  }
+                }, 100);
+              }
+            });
+          });
+        } catch (err) {
+          suggestionsEl.hidden = true;
+        }
+      }
+
+      async function reverseGeocode(lat, lng) {
+        try {
+          var res = await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng, {
+            headers: { 'User-Agent': 'MEIH-EventPlatform/1.0 (https://meih.app)' }
+          });
+          var data = await res.json();
+          if (data.display_name) {
+            document.getElementById('ev-location').value = data.display_name;
+          }
+        } catch (err) { /* silent */ }
+      }
+
+      // ── My Location Button ──
+      document.getElementById('use-my-location').addEventListener('click', function() {
+        if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+        this.disabled = true;
+        var self = this;
+        navigator.geolocation.getCurrentPosition(function(pos) {
+          self.disabled = false;
+          var lat = pos.coords.latitude;
+          var lng = pos.coords.longitude;
+          document.getElementById('ev-lat').value = lat.toFixed(7);
+          document.getElementById('ev-lng').value = lng.toFixed(7);
+          if (!window._mapInitialized) initMap();
+          if (map) {
+            setTimeout(function() {
+              map.setView([lat, lng], 13);
+              if (marker) {
+                marker.setLatLng([lat, lng]);
+              } else {
+                marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                marker.on('dragend', function(e) {
+                  var p = e.target.getLatLng();
+                  document.getElementById('ev-lat').value = p.lat.toFixed(7);
+                  document.getElementById('ev-lng').value = p.lng.toFixed(7);
+                  reverseGeocode(p.lat, p.lng);
+                });
+              }
+              reverseGeocode(lat, lng);
+            }, 100);
+          }
+        }, function() {
+          self.disabled = false;
+          alert('Unable to retrieve your location.');
+        });
+      });
+
+      // ── Review ──
+      function renderReview() {
+        var data = new FormData(form);
+        var services = data.getAll('services');
+        var serviceLabels = { decorator: 'Decorator', catering: 'Catering', photography: 'Photography', videography: 'Videography', sound: 'Sound & Lighting', mc: 'MC / Entertainment', security: 'Security', transport: 'Transport', tent: 'Tent & Furniture', florist: 'Florist', makeup: 'Makeup', branding: 'Branding' };
+        var serviceNames = services.map(function(s) { return serviceLabels[s] || s; });
+
+        var catSelect = document.getElementById('ev-category');
+        var catDisplay = catSelect.selectedIndex > 0 ? catSelect.options[catSelect.selectedIndex].textContent.split(' — ')[0] : '—';
+
+        document.getElementById('review-details').innerHTML =
+          '<dt>Name</dt><dd>' + (data.get('name') || '—') + '</dd>' +
+          '<dt>Category</dt><dd>' + catDisplay + '</dd>' +
+          '<dt>Date</dt><dd>' + (data.get('eventDate') ? new Date(data.get('eventDate') + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—') + '</dd>';
+
+        var locText = data.get('location') || '—';
+        var lat = document.getElementById('ev-lat').value;
+        var lng = document.getElementById('ev-lng').value;
+
+        document.getElementById('review-location').innerHTML =
+          '<dt>Venue</dt><dd>' + locText + '</dd>' +
+          '<dt>Coordinates</dt><dd>' + (lat && lng ? lat + ', ' + lng : 'Not set') + '</dd>';
+
+        document.getElementById('review-budget').innerHTML =
+          '<dt>Budget</dt><dd>Tsh ' + Number(data.get('budget') || 0).toLocaleString() + '</dd>' +
+          '<dt>Guests</dt><dd>' + (data.get('guestCount') || '—') + '</dd>';
+
+        document.getElementById('review-requirements').innerHTML =
+          '<dt>Services</dt><dd>' + (serviceNames.length ? serviceNames.join(', ') : 'None specified') + '</dd>' +
+          '<dt>Requirements</dt><dd>' + (data.get('requirements') || 'None') + '</dd>' +
+          '<dt>Quote Deadline</dt><dd>' + (data.get('quoteDeadline') ? new Date(data.get('quoteDeadline') + 'T00:00:00').toLocaleDateString() : '—') + '</dd>';
+
+        // Mini review map
+        var reviewMapEl = document.getElementById('review-map');
+        if (lat && lng && reviewMapEl && typeof L !== 'undefined') {
+          if (reviewMapInstance) {
+            reviewMapInstance.remove();
+            reviewMapInstance = null;
+          }
+          reviewMapEl.innerHTML = '';
+          setTimeout(function() {
+            reviewMapInstance = L.map(reviewMapEl, { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([parseFloat(lat), parseFloat(lng)], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(reviewMapInstance);
+            L.marker([parseFloat(lat), parseFloat(lng)]).addTo(reviewMapInstance);
+            setTimeout(function() { reviewMapInstance.invalidateSize(); }, 200);
+          }, 100);
+        } else if (reviewMapEl) {
+          reviewMapEl.innerHTML = lat && lng ? '' : '<p style="text-align:center;padding:20px;color:var(--color-muted);font-size:13px;">No location set</p>';
+        }
+      }
+
+      // ── Category fee hint ──
+      var catSelect = document.getElementById('ev-category');
+      var feeHint = document.getElementById('category-fee-hint');
+      var feeCard = document.getElementById('budget-summary-card');
+      var feeDisplay = document.getElementById('estimated-fee');
+
+      catSelect.addEventListener('change', function() {
+        var selected = catSelect.options[catSelect.selectedIndex];
+        var fee = selected.dataset.fee;
+        if (fee && parseFloat(fee) > 0) {
+          feeHint.textContent = 'Platform fee: Tsh ' + parseFloat(fee).toLocaleString();
+          feeCard.hidden = false;
+          feeDisplay.textContent = 'Tsh ' + parseFloat(fee).toLocaleString();
+        } else {
+          feeHint.textContent = '';
+          feeCard.hidden = true;
+        }
+      });
+
+      // ── Load categories from API (with fallback) ──
+      (async function() {
+        try {
+          var token = localStorage.getItem('meih_token');
+          var headers = {};
+          if (token) headers['Authorization'] = 'Bearer ' + token;
+          var res = await fetch('/api/v1/events/categories', { headers: headers });
+          if (!res.ok) throw new Error('API error');
+          var cats = await res.json();
+          if (Array.isArray(cats) && cats.length) {
+            cats.forEach(function(c) {
+              var opt = document.createElement('option');
+              opt.value = c.name;
+              opt.textContent = c.name + (c.suggested_fee_usd ? ' — Tsh ' + c.suggested_fee_usd.toLocaleString() : '');
+              opt.dataset.fee = c.suggested_fee_usd || 0;
+              catSelect.appendChild(opt);
+            });
+            return;
+          }
+        } catch (err) {
+          console.warn('[MEIH] Could not load categories from API, using defaults.');
+        }
+        FallbackCategories.forEach(function(c) {
+          var opt = document.createElement('option');
+          opt.value = c.name;
+          opt.textContent = c.name + (c.suggested_fee_usd ? ' — Tsh ' + c.suggested_fee_usd.toLocaleString() : '');
+          opt.dataset.fee = c.suggested_fee_usd || 0;
+          catSelect.appendChild(opt);
+        });
+      })();
+
+      goTo(1);
+    })();
+  </script>
+  <script type="module">
+    // ── Form Submission ──
+    (function() {
+      'use strict';
+      var form = document.getElementById('create-event-form');
+      if (!form) return;
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var errorEl = document.getElementById('create-event-error');
+        errorEl.hidden = true;
+
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+
+        var fd = new FormData(form);
+        var data = {};
+        data.name = fd.get('name') || null;
+        data.category = fd.get('category') || null;
+        data.eventDate = fd.get('eventDate') || null;
+        data.location = fd.get('location') || null;
+        data.requirements = fd.get('requirements') || null;
+        data.quoteDeadline = fd.get('quoteDeadline') || null;
+
+        var lat = fd.get('latitude');
+        var lng = fd.get('longitude');
+        data.latitude = lat ? parseFloat(lat) : null;
+        data.longitude = lng ? parseFloat(lng) : null;
+
+        var budget = fd.get('budget');
+        data.budget = budget ? parseFloat(budget) : null;
+
+        var guests = fd.get('guestCount');
+        data.guestCount = guests ? parseInt(guests, 10) : null;
+
+        var services = fd.getAll('services');
+        data.services = services.length > 0 ? services : null;
+
+        try {
+          var BASE_URL = '/api/v1';
+          var token = localStorage.getItem('meih_token');
+          var headers = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = 'Bearer ' + token;
+
+          var res = await fetch(BASE_URL + '/events/events', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data)
+          });
+
+          if (!res.ok) {
+            var err = await res.json().catch(function() { return {}; });
+            throw new Error(err.message || 'Request failed (' + res.status + ')');
+          }
+
+          var event = await res.json();
+          window.location.href = 'event-detail.html?id=' + event.id;
+        } catch (err) {
+          console.error('[MEIH] Event creation failed:', err);
+          errorEl.textContent = err.message || 'Could not register the event. Please try again.';
+          errorEl.hidden = false;
+          errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

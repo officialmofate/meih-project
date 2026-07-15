@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/auth.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page auth-page" data-page="login">
+    <div class="auth-card">
+      <h1 data-i18n="auth.welcome_back">Welcome back</h1>
+      <p class="auth-sub" data-i18n="auth.login_sub">Log in to manage your events, bookings, or innovation submissions.</p>
+
+      <form id="login-form" class="stacked-form" novalidate>
+        <label for="login-email" data-i18n="auth.email">Email</label>
+        <input id="login-email" name="email" type="email" autocomplete="email" required />
+
+        <label for="login-password" data-i18n="auth.password">Password</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="8" />
+
+        <p id="login-error" class="form-error" role="alert" hidden></p>
+
+        <button type="submit" class="btn btn-primary btn-block" data-i18n="auth.login_btn">Log In</button>
+      </form>
+
+      <p class="auth-switch"><span data-i18n="auth.no_account">Don't have an account?</span> <a href="register.html" data-i18n="auth.signup_link">Register here</a></p>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { auth } from '../js/auth.js';
+    import { isEmail } from '../js/utils/validators.js';
+
+    var dashMap = {
+      client: 'dashboard-client.html',
+      planner: 'dashboard-planner.html',
+      vendor: 'dashboard-vendor.html',
+      innovator: 'dashboard-client.html',
+      judge: 'dashboard-judge.html',
+      admin: 'dashboard-admin.html',
+      public_voter: 'innovation.html',
+      innovator_manager: 'dashboard-admin.html',
+    };
+
+    var loginError = document.getElementById('login-error');
+
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var data = Object.fromEntries(new FormData(e.target));
+      loginError.hidden = true;
+
+      if (!isEmail(data.email)) {
+        loginError.textContent = 'Please enter a valid email address.';
+        loginError.hidden = false;
+        return;
+      }
+
+      try {
+        var user = await auth.login(data.email, data.password);
+        window.location.href = dashMap[user && user.role] || 'dashboard-client.html';
+      } catch (err) {
+        loginError.textContent = err.message || 'Login failed. Check your credentials and try again.';
+        loginError.hidden = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+/* ═══════════════════════════════════════════════════════════════
+   LANDING PAGE — Dark Theme with Tab-Based Hub Design
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Hub Tabs ── */
+.hub-tabs {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+.hub-tab {
+  padding: 10px 28px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 14px;
+  font-family: var(--font-heading);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.hub-tab:hover { color: var(--color-text); }
+.hub-tab.active {
+  background: var(--gradient-primary);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(108, 92, 231, 0.3);
+}
+.hub-tab.event-tab.active { background: linear-gradient(135deg, #6c5ce7, #a855f7); }
+.hub-tab.innovation-tab.active { background: linear-gradient(135deg, #00cec9, #22d3ee); }
+
+/* ── Hub sections (hidden by default, toggled by tabs) ── */
+.hub-section { display: none; }
+.hub-section.active { display: block; animation: fadeIn 0.3s ease; }
+
+/* ── Hero ── */
+.hero {
+  padding: var(--space-2xl) 0;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(108, 92, 231, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  right: -15%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 206, 201, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2xl);
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+.hero-copy h1 {
+  font-size: 48px;
+  line-height: 1.08;
+  margin: var(--space-md) 0;
+  letter-spacing: -0.03em;
+}
+.hero-copy h1 .gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  line-height: 1.7;
+  margin-bottom: var(--space-lg);
+}
+.hero-actions { display: flex; gap: var(--space-sm); }
+
+/* ── Hero Panel (Estimator) ── */
+.hero-panel {
+  padding: var(--space-lg);
+}
+.hero-panel h3 {
+  margin-bottom: var(--space-md);
+  font-size: 18px;
+}
+
+.qe-result {
+  margin-top: var(--space-sm);
+  font-weight: 600;
+  color: var(--color-secondary);
+  padding: var(--space-sm);
+  background: var(--color-secondary-light);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+
+/* ── Occasion Gallery ── */
+.occasion-gallery,
+.innovation-gallery {
+  padding: var(--space-xl) 0;
+  text-align: center;
+}
+.occasion-gallery h2,
+.innovation-gallery h2 { margin-bottom: 4px; }
+.section-sub { color: var(--color-muted); margin-bottom: var(--space-lg); font-size: 15px; }
+.occasion-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-md);
+}
+.occasion-item {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 1/1;
+  cursor: pointer;
+  border: 1px solid var(--color-glass-border);
+  transition: all var(--transition-normal);
+}
+.occasion-item:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-glow-primary);
+  border-color: rgba(108, 92, 231, 0.3);
+}
+.occasion-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition-slow);
+}
+.occasion-item:hover img { transform: scale(1.08); }
+.occasion-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-lg) var(--space-md) var(--space-sm);
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ── Innovation Gallery Items ── */
+.innovation-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-card);
+  border-color: rgba(0, 206, 201, 0.15);
+}
+.innovation-item:hover {
+  border-color: var(--color-secondary);
+  box-shadow: var(--shadow-glow-secondary);
+}
+.innovation-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-sm);
+}
+.innovation-item .occasion-label {
+  position: relative;
+  background: none;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 11px;
+}
+
+/* ── Stats ── */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); padding: var(--space-xl) 0; }
+
+/* ── Hub Cards (Event/Innovation side by side) ── */
+.hub-cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); padding-bottom: var(--space-xl); }
+.hub-card {
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-glass-border);
+  background: var(--gradient-card);
+  backdrop-filter: var(--glass-blur);
+  transition: all var(--transition-normal);
+}
+.hub-card:hover { border-color: rgba(255,255,255,0.12); }
+.hub-card.event-card-accent { border-top: 3px solid var(--color-primary); }
+.hub-card.innovation-card-accent { border-top: 3px solid var(--color-secondary); }
+.hub-card h2 { margin-bottom: var(--space-sm); font-size: 22px; }
+.hub-card .checklist { padding-left: 18px; font-size: 14px; line-height: 1.9; }
+.hub-card .checklist li { color: var(--color-text-secondary); }
+
+/* ── How It Works ── */
+.how-it-works { padding-bottom: var(--space-xl); }
+.how-it-works h2 { margin-bottom: var(--space-lg); text-align: center; }
+.steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); }
+.step-card {
+  text-align: center;
+  padding: var(--space-lg);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-card);
+  transition: all var(--transition-normal);
+}
+.step-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-2px); }
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: var(--space-md);
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+}
+.step-card h3 { font-size: 15px; margin-bottom: var(--space-xs); }
+.step-card p { font-size: 13px; color: var(--color-muted); line-height: 1.5; }
+
+/* ── Categories ── */
+.categories { padding-bottom: var(--space-xl); }
+.categories h2 { margin-bottom: var(--space-md); }
+
+/* ── Innovation Hub Specific ── */
+.innovation-showcase {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+.competition-card {
+  padding: var(--space-lg);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-card);
+  transition: all var(--transition-normal);
+}
+.competition-card:hover { border-color: var(--color-secondary); box-shadow: var(--shadow-glow-secondary); }
+.competition-card h3 { font-size: 16px; margin-bottom: var(--space-xs); }
+.competition-card .comp-status { font-size: 12px; color: var(--color-secondary); font-weight: 600; text-transform: uppercase; }
+.competition-card .comp-meta { font-size: 13px; color: var(--color-muted); margin-top: var(--space-sm); }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .hero-inner, .hub-cards, .stats { grid-template-columns: 1fr; }
+  .hero-copy h1 { font-size: 36px; }
+  .hero { padding: var(--space-xl) 0; }
+  .occasion-grid { grid-template-columns: repeat(2, 1fr); }
+  .steps-grid { grid-template-columns: repeat(2, 1fr); }
+  .innovation-showcase { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .occasion-grid { grid-template-columns: 1fr 1fr; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .hub-tabs { flex-direction: column; border-radius: var(--radius-lg); }
+  .hub-tab { border-radius: var(--radius-md); }
+  .innovation-icon { font-size: 36px; }
+}

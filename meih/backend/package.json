@@ -1,0 +1,32 @@
+{
+  "name": "meih-backend",
+  "version": "1.0.0",
+  "description": "MOFATE Event & Innovation Hub (MEIH) backend API",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "echo \"no tests yet\" && exit 0"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "express-rate-limit": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "pg": "^8.11.5",
+    "redis": "^4.6.13",
+    "socket.io": "^4.7.5",
+    "multer": "^1.4.5-lts.1",
+    "joi": "^17.13.3",
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

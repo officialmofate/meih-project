@@ -1,0 +1,29 @@
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD PAGES — Dark Theme
+   ═══════════════════════════════════════════════════════════════ */
+
+.dashboard { padding-top: var(--space-lg); }
+.dashboard .page-header { margin-bottom: var(--space-lg); }
+
+.dashboard .card { margin-bottom: var(--space-md); }
+.dashboard .card h2 { font-size: 18px; margin-bottom: var(--space-md); }
+
+.dashboard .data-table { width: 100%; }
+.dashboard .data-table th {
+  background: var(--color-surface-raised);
+  position: sticky;
+  top: 0;
+}
+
+/* Dashboard stat cards with gradient */
+.dashboard .stat-card {
+  background: var(--gradient-card);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-normal);
+}
+.dashboard .stat-card:hover { border-color: rgba(255,255,255,0.12); }
+
+/* Dashboard sections */
+.dashboard section.card { overflow: visible; }

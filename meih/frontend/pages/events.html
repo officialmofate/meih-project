@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Event Hub — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/events.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page" data-page="events">
+    <div class="container">
+
+      <header class="page-header">
+        <h1 data-i18n="events.title">Event Hub</h1>
+        <p data-i18n="events.subtitle">Browse events looking for planners and vendors, or explore by category.</p>
+        <a class="btn btn-primary" href="create-event.html" data-i18n="landing.hero_event_cta2">+ Register Event</a>
+      </header>
+
+      <div class="filter-bar card">
+        <input id="search-input" type="search" data-i18n-ph="events.search_ph" placeholder="Search events by name or location..." aria-label="Search events" />
+
+        <select id="category-filter" aria-label="Filter by category">
+          <option value="" data-i18n="events.all_categories">All Categories</option>
+        </select>
+
+        <select id="status-filter" aria-label="Filter by status">
+          <option value="">Any Status</option>
+          <option value="published">Open for Quotes</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="completed">Completed</option>
+        </select>
+
+        <select id="sort-filter" aria-label="Sort events">
+          <option value="recent">Most Recent</option>
+          <option value="budget-high">Budget: High to Low</option>
+          <option value="budget-low">Budget: Low to High</option>
+        </select>
+      </div>
+
+      <p id="results-count" class="results-count"></p>
+
+      <div id="events-grid" class="grid events-grid" aria-live="polite"></div>
+      <p id="empty-state" class="empty-state" hidden>No events match your filters. Try broadening your search.</p>
+
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+    import { eventCard } from '../js/components/event-card.js';
+    import { debounce } from '../js/utils/helpers.js';
+
+    let events = [];
+    let filtered = [];
+
+    const grid = document.getElementById('events-grid');
+    const emptyState = document.getElementById('empty-state');
+    const resultsCount = document.getElementById('results-count');
+    const categoryFilter = document.getElementById('category-filter');
+
+    function render() {
+      grid.innerHTML = filtered.map(eventCard).join('');
+      grid.querySelectorAll('.card').forEach((card, i) => {
+        card.addEventListener('click', () => {
+          window.location.href = `event-detail.html?id=${filtered[i].id}`;
+        });
+        card.style.cursor = 'pointer';
+      });
+      emptyState.hidden = filtered.length !== 0;
+      resultsCount.textContent = `${filtered.length} event${filtered.length === 1 ? '' : 's'} found`;
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      const category = document.getElementById('category-filter').value;
+      const status = document.getElementById('status-filter').value;
+      const sort = document.getElementById('sort-filter').value;
+
+      filtered = events.filter((ev) =>
+        (!q || ev.name.toLowerCase().includes(q) || (ev.location || '').toLowerCase().includes(q)) &&
+        (!category || ev.category_name === category || ev.category === category) &&
+        (!status || ev.status === status)
+      );
+
+      if (sort === 'budget-high') filtered.sort((a, b) => (b.budget || 0) - (a.budget || 0));
+      if (sort === 'budget-low') filtered.sort((a, b) => (a.budget || 0) - (b.budget || 0));
+
+      render();
+    }
+
+    document.getElementById('search-input').addEventListener('input', debounce(applyFilters, 250));
+    document.getElementById('category-filter').addEventListener('change', applyFilters);
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+    document.getElementById('sort-filter').addEventListener('change', applyFilters);
+
+    // Load categories from API
+    api.get('/events/categories').then((cats) => {
+      if (Array.isArray(cats)) {
+        cats.forEach((c) => {
+          const name = c.name || c;
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          categoryFilter.appendChild(opt);
+        });
+      }
+    }).catch(() => {});
+
+    // Load events from API
+    grid.innerHTML = '<p class="results-count">Loading events...</p>';
+    api.get('/events/events')
+      .then((data) => {
+        if (Array.isArray(data)) {
+          events = data;
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        applyFilters();
+      });
+  </script>
+</body>
+</html>

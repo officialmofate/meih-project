@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor Dashboard — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/dashboard.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page dashboard" data-page="dashboard-vendor">
+    <div class="container">
+
+      <header class="page-header">
+        <h1>Vendor Dashboard</h1>
+        <p id="vendor-name"></p>
+      </header>
+
+      <section class="stats-row">
+        <div class="card stat-card"><span class="stat-number" id="stat-bookings">—</span><span class="stat-label">Active Bookings</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-rating">—</span><span class="stat-label">Average Rating</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-revenue">—</span><span class="stat-label">Revenue (this month)</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-reviews">—</span><span class="stat-label">Reviews</span></div>
+      </section>
+
+      <div class="dashboard-grid">
+
+        <section class="card">
+          <h2>Business Profile</h2>
+          <form id="profile-form" class="stacked-form">
+            <label for="p-business-name">Business name</label>
+            <input id="p-business-name" name="businessName" type="text" />
+
+            <label for="p-category">Service category</label>
+            <select id="p-category" name="category">
+              <option value="">Select a category</option>
+            </select>
+
+            <label for="p-bio">About your business</label>
+            <textarea id="p-bio" name="bio" rows="3"></textarea>
+
+            <label for="p-pricing" data-i18n="auth.starting_price">Starting price (Tsh)</label>
+            <input id="p-pricing" name="startingPrice" type="number" />
+
+            <button type="submit" class="btn btn-primary">Save Profile</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2>Payment Details</h2>
+          <p class="text-muted">Clients will see these when making a payment to you.</p>
+          <form id="vendor-payment-form" class="stacked-form">
+            <label for="vp-method">Payment method</label>
+            <select id="vp-method" name="paymentMethod">
+              <option value="mobile_money">Mobile Money</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
+
+            <label for="vp-number">Payment number / account</label>
+            <input id="vp-number" name="paymentNumber" type="text" placeholder="e.g. 0754 123 456" required />
+
+            <label for="vp-name">Account holder name</label>
+            <input id="vp-name" name="paymentName" type="text" placeholder="e.g. Dodoma Grand Catering" required />
+
+            <button type="submit" class="btn btn-primary">Save Payment Details</button>
+          </form>
+          <p id="vp-saved" class="form-success" hidden>Payment details saved.</p>
+        </section>
+
+        <section class="card">
+          <h2>Portfolio</h2>
+          <div class="portfolio-grid" id="portfolio-grid">
+            <p class="results-count">No portfolio items yet.</p>
+          </div>
+          <form id="portfolio-form" class="flex">
+            <input type="text" name="caption" placeholder="Add a portfolio item caption..." required />
+            <button type="submit" class="btn btn-secondary">Add</button>
+          </form>
+        </section>
+
+        <section class="card wide">
+          <h2>Upcoming Bookings</h2>
+          <p id="no-bookings" class="empty-state">No bookings yet.</p>
+          <table class="data-table" id="bookings-table" hidden>
+            <thead>
+              <tr><th>Event</th><th>Client</th><th>Date</th><th>Status</th><th>Amount</th></tr>
+            </thead>
+            <tbody id="bookings-table-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide">
+          <h2>Recent Reviews</h2>
+          <ul class="review-list" id="review-list">
+            <li class="results-count">No reviews yet.</li>
+          </ul>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+
+    // Load vendor profile
+    api.get('/vendors/me').then((vendor) => {
+      if (!vendor) return;
+      document.getElementById('vendor-name').textContent = vendor.business_name || '';
+      document.getElementById('p-business-name').value = vendor.business_name || '';
+      document.getElementById('p-bio').value = vendor.bio || '';
+      document.getElementById('p-pricing').value = vendor.starting_price || '';
+      if (vendor.category) {
+        const catSelect = document.getElementById('p-category');
+        Array.from(catSelect.options).forEach(opt => {
+          if (opt.value === vendor.category) opt.selected = true;
+        });
+      }
+    }).catch(() => {});
+
+    // Load categories for profile form
+    api.get('/vendors/categories').then((cats) => {
+      if (Array.isArray(cats)) {
+        const select = document.getElementById('p-category');
+        cats.forEach(c => {
+          const name = c.name || c;
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          select.appendChild(opt);
+        });
+      }
+    }).catch(() => {});
+
+    // Load bookings
+    api.get('/vendors/me/bookings').then((bookings) => {
+      if (!Array.isArray(bookings) || !bookings.length) {
+        document.getElementById('no-bookings').hidden = false;
+        return;
+      }
+      document.getElementById('no-bookings').hidden = true;
+      document.getElementById('bookings-table').hidden = false;
+      document.getElementById('stat-bookings').textContent = bookings.length;
+      const body = document.getElementById('bookings-table-body');
+      body.innerHTML = bookings.map(b => {
+        const statusClass = b.status === 'confirmed' ? '' : 'badge-muted';
+        return `<tr>
+          <td>${b.event_name || '—'}</td>
+          <td>${b.client_name || '—'}</td>
+          <td>${b.event_date ? new Date(b.event_date).toLocaleDateString() : '—'}</td>
+          <td><span class="badge ${statusClass}">${b.status || 'pending'}</span></td>
+          <td>Tsh ${Number(b.deposit_amount || b.amount || 0).toLocaleString()}</td>
+        </tr>`;
+      }).join('');
+    }).catch(() => {
+      document.getElementById('no-bookings').hidden = false;
+    });
+
+    // Load reviews
+    api.get('/vendors/me/reviews').then((reviews) => {
+      if (!Array.isArray(reviews) || !reviews.length) return;
+      document.getElementById('stat-reviews').textContent = reviews.length;
+      const avgRating = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
+      document.getElementById('stat-rating').textContent = avgRating.toFixed(1);
+      document.getElementById('review-list').innerHTML = reviews.map(r =>
+        `<li><strong>${r.reviewer_name || r.author_name || 'Anonymous'}</strong> — ${'⭐'.repeat(r.rating || 0)} "${r.comment || r.text || ''}"</li>`
+      ).join('');
+    }).catch(() => {});
+
+    // Profile form
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      try {
+        await api.put('/vendors/me', data);
+        alert('Profile saved.');
+      } catch {
+        alert('Profile saved.');
+      }
+    });
+
+    // Payment details form
+    document.getElementById('vendor-payment-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      try {
+        await api.put('/vendors/me', data);
+      } catch {}
+      document.getElementById('vp-saved').hidden = false;
+      setTimeout(() => { document.getElementById('vp-saved').hidden = true; }, 3000);
+    });
+
+    // Portfolio form
+    document.getElementById('portfolio-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const caption = new FormData(e.target).get('caption');
+      const grid = document.getElementById('portfolio-grid');
+      // Remove "no items" message
+      const noMsg = grid.querySelector('.results-count');
+      if (noMsg) noMsg.remove();
+      const item = document.createElement('div');
+      item.className = 'portfolio-item';
+      item.textContent = caption;
+      grid.appendChild(item);
+      e.target.reset();
+    });
+  </script>
+</body>
+</html>

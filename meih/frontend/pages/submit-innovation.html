@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register Innovation — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/innovation.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page" data-page="submit-innovation">
+    <div class="container narrow">
+      <h1>Register Your Innovation</h1>
+
+      <ol class="stepper" id="stepper">
+        <li class="step active" data-step="1">1. Basics</li>
+        <li class="step" data-step="2">2. Details</li>
+        <li class="step" data-step="3">3. Review</li>
+      </ol>
+
+      <form id="submit-innovation-form" class="card">
+
+        <fieldset class="form-step active" data-step="1">
+          <legend>Innovation Basics</legend>
+
+          <label for="inno-competition">Competition</label>
+          <select id="inno-competition" name="competitionId" required>
+            <option value="">Select a competition</option>
+          </select>
+
+          <label for="inno-title">Title</label>
+          <input id="inno-title" name="title" type="text" required placeholder="A short, descriptive name" />
+
+          <label for="inno-category">Category</label>
+          <select id="inno-category" name="category" required>
+            <option value="">Select a category</option>
+          </select>
+
+          <label for="inno-country">Country</label>
+          <input id="inno-country" name="country" type="text" required />
+
+          <div class="step-actions">
+            <button type="button" class="btn btn-primary" data-next>Next: Details</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-step" data-step="2" hidden>
+          <legend>Innovation Details</legend>
+
+          <label for="inno-problem">Problem Statement</label>
+          <textarea id="inno-problem" name="problem" rows="3" required placeholder="What problem does this innovation solve?"></textarea>
+
+          <label for="inno-summary">Summary</label>
+          <textarea id="inno-summary" name="description" rows="4" required placeholder="Briefly describe your innovation..."></textarea>
+
+          <label for="inno-how">How does it work?</label>
+          <textarea id="inno-how" name="solution" rows="4" required placeholder="Explain the mechanism or approach..."></textarea>
+
+          <label for="inno-impact">Expected Impact</label>
+          <textarea id="inno-impact" name="impact" rows="3" required placeholder="What impact will this innovation have?"></textarea>
+
+          <label for="inno-technology">Technology Used</label>
+          <input id="inno-technology" name="technology" type="text" placeholder="e.g. Mobile App, IoT Sensors, AI/ML" />
+
+          <div class="step-actions">
+            <button type="button" class="btn btn-secondary" data-back>Back</button>
+            <button type="button" class="btn btn-primary" data-next>Next: Review</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-step" data-step="3" hidden>
+          <legend>Review & Submit</legend>
+          <dl class="detail-grid" id="review-summary"></dl>
+
+          <label class="checkbox-label">
+            <input type="checkbox" name="acceptTerms" required />
+            I confirm the information is accurate and agree to the competition terms.
+          </label>
+
+          <p id="submit-innovation-error" class="form-error" role="alert" hidden></p>
+
+          <div class="step-actions">
+            <button type="button" class="btn btn-secondary" data-back>Back</button>
+            <button type="submit" class="btn btn-primary">Register Innovation</button>
+          </div>
+        </fieldset>
+
+      </form>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script>
+    // Stepper — plain script, guaranteed to run
+    (function() {
+      var form = document.getElementById('submit-innovation-form');
+      var steps = Array.prototype.slice.call(form.querySelectorAll('.form-step'));
+      var stepperItems = Array.prototype.slice.call(document.querySelectorAll('#stepper .step'));
+      var current = 1;
+
+      function goTo(stepNum) {
+        steps.forEach(function(s) {
+          var sn = Number(s.getAttribute('data-step'));
+          s.hidden = sn !== stepNum;
+          s.classList.toggle('active', sn === stepNum);
+        });
+        stepperItems.forEach(function(li) {
+          li.classList.toggle('active', Number(li.getAttribute('data-step')) <= stepNum);
+        });
+        current = stepNum;
+        if (stepNum === 3) renderReview();
+      }
+
+      form.querySelectorAll('[data-next]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var fieldset = btn.closest('.form-step');
+          if (!fieldset.checkValidity()) { fieldset.reportValidity(); return; }
+          goTo(current + 1);
+        });
+      });
+
+      form.querySelectorAll('[data-back]').forEach(function(btn) {
+        btn.addEventListener('click', function() { goTo(current - 1); });
+      });
+
+      function renderReview() {
+        var data = new FormData(form);
+        document.getElementById('review-summary').innerHTML =
+          '<dt>Title</dt><dd>' + (data.get('title') || '—') + '</dd>' +
+          '<dt>Category</dt><dd>' + (data.get('category') || '—') + '</dd>' +
+          '<dt>Country</dt><dd>' + (data.get('country') || '—') + '</dd>' +
+          '<dt>Problem</dt><dd>' + (data.get('problem') || '—') + '</dd>' +
+          '<dt>Summary</dt><dd>' + (data.get('description') || '—') + '</dd>' +
+          '<dt>Solution</dt><dd>' + (data.get('solution') || '—') + '</dd>' +
+          '<dt>Impact</dt><dd>' + (data.get('impact') || '—') + '</dd>' +
+          '<dt>Technology</dt><dd>' + (data.get('technology') || '—') + '</dd>';
+      }
+
+      goTo(1);
+    })();
+  </script>
+  <script type="module">
+    import { api } from '../js/api.js';
+
+    // Load competitions into dropdown
+    (async function() {
+      try {
+        const comps = await api.get('/innovation/competitions');
+        const select = document.getElementById('inno-competition');
+        if (Array.isArray(comps) && comps.length) {
+          select.innerHTML = '<option value="">Select a competition</option>' +
+            comps.map(c => '<option value="' + c.id + '">' + c.title + '</option>').join('');
+        }
+      } catch {}
+    })();
+
+    // Load categories into dropdown
+    (async function() {
+      try {
+        const cats = await api.get('/innovation/categories');
+        const select = document.getElementById('inno-category');
+        if (Array.isArray(cats) && cats.length) {
+          cats.forEach(c => {
+            const name = c.name || c;
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            select.appendChild(opt);
+          });
+        }
+      } catch {}
+    })();
+
+    // Form submission — isolated from stepper
+    try {
+      var form = document.getElementById('submit-innovation-form');
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var errorEl = document.getElementById('submit-innovation-error');
+        errorEl.hidden = true;
+        var data = Object.fromEntries(new FormData(form));
+        var competitionId = data.competitionId;
+        if (!competitionId) {
+          errorEl.textContent = 'Please select a competition.';
+          errorEl.hidden = false;
+          return;
+        }
+        try {
+          var BASE_URL = '/api/v1';
+          var token = localStorage.getItem('meih_token');
+          var headers = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = 'Bearer ' + token;
+          var res = await fetch(BASE_URL + '/innovation/competitions/' + competitionId + '/submit', { method: 'POST', headers: headers, body: JSON.stringify(data) });
+          if (!res.ok) { var err = await res.json().catch(function() { return {}; }); throw new Error(err.message || 'Request failed'); }
+          window.location.href = 'innovation.html';
+        } catch (err) {
+          errorEl.textContent = err.message || 'Could not register the innovation. Please try again.';
+          errorEl.hidden = false;
+        }
+      });
+    } catch(e) { console.error('[MEIH] Innovation form error:', e); }
+  </script>
+</body>
+</html>

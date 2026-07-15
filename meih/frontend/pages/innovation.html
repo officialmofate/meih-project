@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Innovation Hub — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/innovation.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page" data-page="innovation">
+    <div class="container">
+
+      <header class="page-header">
+        <h1>Innovation Hub</h1>
+        <p>Discover Tanzanian innovations, vote for your favorites, and track live rankings.</p>
+        <a class="btn btn-primary" href="submit-innovation.html">+ Register Innovation</a>
+      </header>
+
+      <div class="filter-bar card">
+        <input id="search-input" type="search" placeholder="Search innovations..." aria-label="Search innovations" />
+        <select id="category-filter" aria-label="Filter by category">
+          <option value="" data-i18n="events.all_categories">All Categories</option>
+        </select>
+      </div>
+
+      <div class="innovation-layout">
+        <section class="innovation-list-section">
+          <p id="results-count" class="results-count"></p>
+          <div id="innovation-grid" class="grid innovation-grid" aria-live="polite"></div>
+        </section>
+
+        <aside class="card leaderboard-preview">
+          <h2>Live Leaderboard</h2>
+          <ol id="mini-leaderboard" class="mini-leaderboard"></ol>
+          <a class="btn-link" href="leaderboard.html">View full leaderboard &rarr;</a>
+        </aside>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+    import { innovationCard } from '../js/components/innovation-card.js';
+    import { debounce } from '../js/utils/helpers.js';
+
+    let innovations = [];
+    let filtered = [];
+    const grid = document.getElementById('innovation-grid');
+    const resultsCount = document.getElementById('results-count');
+    const categoryFilter = document.getElementById('category-filter');
+
+    function render() {
+      grid.innerHTML = filtered.length
+        ? filtered.map(innovationCard).join('')
+        : '<p class="results-count">No innovations found.</p>';
+      grid.querySelectorAll('.card').forEach((card, i) => {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => {
+          window.location.href = `innovation-detail.html?id=${filtered[i].id}`;
+        });
+      });
+      resultsCount.textContent = `${filtered.length} innovation${filtered.length === 1 ? '' : 's'} found`;
+      renderMiniLeaderboard();
+    }
+
+    function renderMiniLeaderboard() {
+      const top5 = [...innovations].sort((a, b) => (b.voteCount || b.vote_count || 0) - (a.voteCount || a.vote_count || 0)).slice(0, 5);
+      document.getElementById('mini-leaderboard').innerHTML = top5.length
+        ? top5.map((i) => `<li>${i.title} — <strong>${i.voteCount || i.vote_count || 0}</strong> votes</li>`).join('')
+        : '<li>No votes yet.</li>';
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      const category = document.getElementById('category-filter').value;
+      filtered = innovations.filter((i) =>
+        (!q || i.title.toLowerCase().includes(q)) && (!category || i.category === category)
+      );
+      render();
+    }
+
+    document.getElementById('search-input').addEventListener('input', debounce(applyFilters, 250));
+    document.getElementById('category-filter').addEventListener('change', applyFilters);
+
+    // Load categories from API
+    api.get('/innovation/categories').then((cats) => {
+      if (Array.isArray(cats)) {
+        cats.forEach((c) => {
+          const name = c.name || c;
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          categoryFilter.appendChild(opt);
+        });
+      }
+    }).catch(() => {});
+
+    // Load innovations from API
+    grid.innerHTML = '<p class="results-count">Loading innovations...</p>';
+    api.get('/innovation/submissions')
+      .then((data) => {
+        if (Array.isArray(data)) {
+          innovations = data;
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        applyFilters();
+      });
+  </script>
+</body>
+</html>

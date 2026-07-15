@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/innovation.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page" data-page="leaderboard">
+    <div class="container narrow">
+      <header class="page-header">
+        <h1 data-i18n="live_leaderboard">Live Leaderboard</h1>
+        <p data-i18n="live_leaderboard_desc">Rankings update in real time as public votes come in. <span class="live-dot" aria-hidden="true"></span> Live</p>
+      </header>
+
+      <select id="competition-select" aria-label="Select competition" style="margin-bottom: var(--space-md); padding: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); width: 100%; font-size: 14px;">
+        <option value="" data-i18n="all_competitions">All Competitions</option>
+      </select>
+
+      <ol id="leaderboard-list" class="leaderboard-list card"></ol>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+    import { renderLeaderboard } from '../js/components/leaderboard.js';
+
+    function paint(rows) {
+      const list = document.getElementById('leaderboard-list');
+      if (!rows.length) {
+        list.innerHTML = '<li class="results-count">No rankings available yet.</li>';
+        return;
+      }
+      list.innerHTML = rows
+        .map((r, i) => {
+          const votes = r.vote_count ?? r.voteCount ?? 0;
+          const author = r.author_name ? ` — ${r.author_name}` : '';
+          return `<li class="leaderboard-row rank-${i + 1}">
+            <span class="rank">#${i + 1}</span>
+            <span class="title">${r.title}${author}</span>
+            <span class="votes">${votes} votes</span>
+          </li>`;
+        })
+        .join('');
+    }
+
+    const container = document.getElementById('leaderboard-list');
+    const select = document.getElementById('competition-select');
+
+    function load() {
+      const compId = select.value;
+      if (compId) {
+        renderLeaderboard(compId, container).catch(() => {
+          container.innerHTML = '<li class="results-count">Could not load leaderboard.</li>';
+        });
+      } else {
+        // Load all innovations sorted by votes
+        api.get('/innovation/submissions').then((data) => {
+          const sorted = Array.isArray(data)
+            ? data.sort((a, b) => (b.vote_count || b.voteCount || 0) - (a.vote_count || a.voteCount || 0))
+            : [];
+          paint(sorted);
+        }).catch(() => {
+          container.innerHTML = '<li class="results-count">Could not load leaderboard.</li>';
+        });
+      }
+    }
+
+    // Load competitions for the dropdown
+    api.get('/innovation/competitions')
+      .then((comps) => {
+        if (Array.isArray(comps) && comps.length) {
+          select.innerHTML = '<option value="">All Competitions</option>' +
+            comps.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+        }
+      })
+      .catch(() => {});
+
+    select.addEventListener('change', load);
+    container.innerHTML = '<li class="results-count">Loading leaderboard...</li>';
+    load();
+  </script>
+</body>
+</html>

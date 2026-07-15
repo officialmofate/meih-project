@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MEIH — MOFATE Event & Innovation Hub</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/landing.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page" data-page="landing">
+    <div class="container">
+
+      <!-- Hub Tab Switcher -->
+      <div class="hub-tabs">
+        <button class="hub-tab event-tab active" data-hub="event" data-i18n="nav.events">Event Hub</button>
+        <button class="hub-tab innovation-tab" data-hub="innovation" data-i18n="nav.innovation">Innovation Hub</button>
+      </div>
+
+      <!-- ═══ EVENT HUB SECTION ═══ -->
+      <section class="hub-section active" id="hub-event">
+        <div class="hero">
+          <div class="hero-inner">
+            <div class="hero-copy">
+              <span class="badge" style="background:var(--color-primary-light);color:var(--color-primary);" data-i18n="landing.badge_event">Tanzania's #1 Event Platform</span>
+              <h1 data-i18n="landing.hero_event_title">Plan <span class="gradient-text">unforgettable</span> events.</h1>
+              <p class="hero-sub" data-i18n="landing.hero_event_sub">
+                Connect with vetted event planners and vendors across Tanzania.
+                From birthdays to corporate galas — get quotes, compare reviews,
+                pay securely, and track everything in real time.
+              </p>
+              <div class="hero-actions">
+                <a class="btn btn-primary" href="events.html" data-i18n="landing.hero_event_cta1">Browse Events</a>
+                <a class="btn btn-secondary" href="create-event.html" data-i18n="landing.hero_event_cta2">+ Register Event</a>
+                <a class="btn btn-ghost" href="register.html" data-i18n="landing.hero_event_cta3">Sign Up Free</a>
+              </div>
+            </div>
+            <div class="hero-panel card">
+              <h3 data-i18n="landing.quick_estimate">Quick Event Estimate</h3>
+              <form id="quick-estimate-form" class="stacked-form">
+                <label for="qe-category" data-i18n="landing.qe_category">Event category</label>
+                <select id="qe-category" name="category" required>
+                  <option value="">Select a category</option>
+                </select>
+                <label for="qe-guests" data-i18n="landing.qe_guests">Estimated guests</label>
+                <input id="qe-guests" name="guests" type="number" min="1" placeholder="e.g. 150" required />
+                <label for="qe-location" data-i18n="landing.qe_location">Location</label>
+                <input id="qe-location" name="location" type="text" placeholder="e.g. Dodoma, Tanzania" required />
+                <button type="submit" class="btn btn-primary" data-i18n="landing.qe_submit">Get Estimate</button>
+              </form>
+              <p id="qe-result" class="qe-result" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+
+        <section class="occasion-gallery">
+          <h2 data-i18n="landing.occasion_title">Every Occasion, One Platform</h2>
+          <p class="section-sub" data-i18n="landing.occasion_sub">From birthdays to hackathons — we help you plan and manage it all.</p>
+          <div class="occasion-grid">
+            <div class="occasion-item"><img src="../assets/images/birthday.jpg" alt="Birthday" loading="lazy" /><span class="occasion-label">Birthday Parties</span></div>
+            <div class="occasion-item"><img src="../assets/images/wedding.jpg" alt="Wedding" loading="lazy" /><span class="occasion-label">Weddings</span></div>
+            <div class="occasion-item"><img src="../assets/images/corporate.jpg" alt="Corporate" loading="lazy" /><span class="occasion-label">Corporate Events</span></div>
+            <div class="occasion-item"><img src="../assets/images/festival.jpg" alt="Festival" loading="lazy" /><span class="occasion-label">Cultural Festivals</span></div>
+            <div class="occasion-item"><img src="../assets/images/graduation.jpg" alt="Graduation" loading="lazy" /><span class="occasion-label">Graduations</span></div>
+            <div class="occasion-item"><img src="../assets/images/conference.jpg" alt="Conference" loading="lazy" /><span class="occasion-label">Conferences</span></div>
+            <div class="occasion-item"><img src="../assets/images/sports.jpg" alt="Sports" loading="lazy" /><span class="occasion-label">Sports Events</span></div>
+            <div class="occasion-item"><img src="../assets/images/community.jpg" alt="Community" loading="lazy" /><span class="occasion-label">Community Events</span></div>
+            <div class="occasion-item"><img src="../assets/images/hackathon.jpg" alt="Hackathon" loading="lazy" /><span class="occasion-label">Hackathons</span></div>
+            <div class="occasion-item"><img src="../assets/images/celebration.jpg" alt="Celebration" loading="lazy" /><span class="occasion-label">Celebrations</span></div>
+          </div>
+        </section>
+
+        <section class="how-it-works">
+          <h2 data-i18n="landing.how_title">How It Works</h2>
+          <div class="steps-grid">
+            <div class="step-card"><span class="step-number">1</span><h3 data-i18n="landing.step1_title">Register Your Event</h3><p data-i18n="landing.step1_desc">Choose a category, set your budget, and describe what you need.</p></div>
+            <div class="step-card"><span class="step-number">2</span><h3 data-i18n="landing.step2_title">Get Quotes</h3><p data-i18n="landing.step2_desc">Vetted planners and vendors submit quotes with pricing.</p></div>
+            <div class="step-card"><span class="step-number">3</span><h3 data-i18n="landing.step3_title">Pay & Confirm</h3><p data-i18n="landing.step3_desc">Pay via mobile money — upload your payment screenshot for confirmation.</p></div>
+            <div class="step-card"><span class="step-number">4</span><h3 data-i18n="landing.step4_title">Track & Enjoy</h3><p data-i18n="landing.step4_desc">Track progress in real time, chat with your planner.</p></div>
+          </div>
+        </section>
+
+        <section class="categories">
+          <h2 data-i18n="landing.categories_title">Popular Event Categories</h2>
+          <div class="chip-row" id="category-chips">
+            <a class="chip" href="events.html">Browse All Events</a>
+          </div>
+        </section>
+      </section>
+
+      <!-- ═══ INNOVATION HUB SECTION ═══ -->
+      <section class="hub-section" id="hub-innovation">
+        <div class="hero">
+          <div class="hero-inner">
+            <div class="hero-copy">
+              <span class="badge" style="background:var(--color-secondary-light);color:var(--color-secondary);" data-i18n="landing.badge_innovation">Innovation Competitions · Tanzania</span>
+              <h1 data-i18n="landing.hero_inno_title">Launch <span class="gradient-text" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;background-clip:text;">bold</span> innovations.</h1>
+              <p class="hero-sub" data-i18n="landing.hero_inno_sub">
+                Submit your innovation, get validated by the public through OTP-verified
+                voting, and be scored by expert judges. Win certificates, funding,
+                and recognition — all on one platform.
+              </p>
+              <div class="hero-actions">
+                <a class="btn btn-primary" href="innovation.html" style="background:linear-gradient(135deg, #00cec9, #22d3ee);box-shadow:0 2px 8px rgba(0,206,201,0.3);" data-i18n="landing.hero_inno_cta1">Browse Innovations</a>
+                <a class="btn btn-secondary" href="submit-innovation.html" style="border-color:var(--color-secondary);color:var(--color-secondary);" data-i18n="landing.hero_inno_cta2">+ Register Innovation</a>
+                <a class="btn btn-ghost" href="register.html" data-i18n="landing.hero_inno_cta3">Sign Up Free</a>
+              </div>
+            </div>
+            <div class="hero-panel card">
+              <h3 data-i18n="landing.preview_title">Live Competition Preview</h3>
+              <div id="live-competition-preview" style="margin-top:var(--space-md);">
+                <p class="results-count">Loading competitions...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section class="innovation-gallery">
+          <h2 data-i18n="landing.inno_gallery_title">Explore Innovation Categories</h2>
+          <p class="section-sub" data-i18n="landing.inno_gallery_sub">From health tech to clean energy — find innovations solving real problems.</p>
+          <div class="occasion-grid innovation-grid">
+            <div class="occasion-item innovation-item"><div class="innovation-icon">🏥</div><span class="occasion-label">Health & Wellness</span></div>
+            <div class="occasion-item innovation-item"><div class="innovation-icon">🌾</div><span class="occasion-label">AgriTech</span></div>
+            <div class="occasion-item innovation-item"><div class="innovation-icon">📚</div><span class="occasion-label">Education</span></div>
+            <div class="occasion-item innovation-item"><div class="innovation-icon">🤖</div><span class="occasion-label">Artificial Intelligence</span></div>
+            <div class="occasion-item innovation-item"><div class="innovation-icon">🌍</div><span class="occasion-label">Climate Action</span></div>
+            <div class="occasion-item innovation-item"><div class="innovation-icon">💰</div><span class="occasion-label">FinTech</span></div>
+            <div class="occasion-item innovation-item"><div class="innovation-icon">⚡</div><span class="occasion-label">Clean Energy</span></div>
+            <div class="occasion-item innovation-item"><div class="innovation-icon">🚌</div><span class="occasion-label">Smart Transport</span></div>
+            <div class="occasion-item innovation-item"><div class="innovation-icon">🔧</div><span class="occasion-label">Robotics</span></div>
+            <div class="occasion-item innovation-item"><div class="innovation-icon">💧</div><span class="occasion-label">Water Innovation</span></div>
+          </div>
+        </section>
+
+        <section class="how-it-works">
+          <h2 data-i18n="landing.how_inno_title">How Innovation Works</h2>
+          <div class="steps-grid">
+            <div class="step-card"><span class="step-number" style="background:linear-gradient(135deg, #00cec9, #22d3ee);">1</span><h3 data-i18n="landing.inno_step1_title">Register & Submit</h3><p data-i18n="landing.inno_step1_desc">Create an account, pick a category, and submit your innovation details.</p></div>
+            <div class="step-card"><span class="step-number" style="background:linear-gradient(135deg, #00cec9, #22d3ee);">2</span><h3 data-i18n="landing.inno_step2_title">Public Voting</h3><p data-i18n="landing.inno_step2_desc">The public votes via OTP verification — one person, one vote.</p></div>
+            <div class="step-card"><span class="step-number" style="background:linear-gradient(135deg, #00cec9, #22d3ee);">3</span><h3 data-i18n="landing.inno_step3_title">Expert Judging</h3><p data-i18n="landing.inno_step3_desc">Expert judges score submissions on 10 criteria.</p></div>
+            <div class="step-card"><span class="step-number" style="background:linear-gradient(135deg, #00cec9, #22d3ee);">4</span><h3 data-i18n="landing.inno_step4_title">Win & Certify</h3><p data-i18n="landing.inno_step4_desc">Top innovations win QR-verified certificates and recognition.</p></div>
+          </div>
+        </section>
+
+        <section class="categories">
+          <h2>Innovation Categories</h2>
+          <div class="chip-row">
+            <a class="chip chip-secondary" href="innovation.html?category=Health">Health & Wellness</a>
+            <a class="chip chip-secondary" href="innovation.html?category=AgriTech">AgriTech</a>
+            <a class="chip chip-secondary" href="innovation.html?category=Education">Education</a>
+            <a class="chip chip-secondary" href="innovation.html?category=AI">Artificial Intelligence</a>
+            <a class="chip chip-secondary" href="innovation.html?category=Climate">Climate Action</a>
+            <a class="chip chip-secondary" href="innovation.html?category=FinTech">FinTech</a>
+            <a class="chip chip-secondary" href="innovation.html?category=Energy">Clean Energy</a>
+            <a class="chip chip-secondary" href="innovation.html?category=Transport">Smart Transport</a>
+          </div>
+        </section>
+      </section>
+
+      <!-- ═══ SHARED STATS ═══ -->
+      <section class="stats">
+        <div class="card stat-card"><span class="stat-number" id="stat-events">—</span><span class="stat-label">Events Planned</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-vendors">—</span><span class="stat-label">Verified Vendors</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-innovations">—</span><span class="stat-label">Innovations</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-regions">—</span><span class="stat-label">Regions</span></div>
+      </section>
+
+    </div>
+  </main>
+
+  <div id="footer-root">
+    <footer class="footer">
+      <p>&copy; 2026 MOFATE Event & Innovation Hub (MEIH). All rights reserved.</p>
+    </footer>
+  </div>
+  <div id="ai-root">
+    <button class="ai-fab" id="ai-fab" onclick="(function(){var p=document.getElementById('ai-chat-panel');if(p)p.classList.toggle('open');})()">✦</button>
+    <div class="ai-chat-panel" id="ai-chat-panel">
+      <div class="ai-chat-header">
+        <div>
+          <h3><span class="ai-dot"></span> MEIH Assistant</h3>
+          <span class="ai-status">Powered by Gemini AI</span>
+        </div>
+        <button class="ai-close-btn" id="ai-close" onclick="document.getElementById('ai-chat-panel').classList.remove('open')">&times;</button>
+      </div>
+      <div class="ai-chat-messages" id="ai-messages">
+        <div class="ai-welcome">
+          <div class="ai-icon">✦</div>
+          <p>Hi! I'm your MEIH assistant.<br/>Ask me anything about the platform.</p>
+        </div>
+      </div>
+      <div class="ai-chat-input">
+        <input type="text" id="ai-input" placeholder="Type your question..." />
+        <button id="ai-send">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../js/app.js"></script>
+  <script>
+    // Hub Tab Switching — plain script, no module dependency, guaranteed to run
+    document.querySelectorAll('.hub-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.hub-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.hub-section').forEach(function(s) { s.classList.remove('active'); });
+        tab.classList.add('active');
+        var target = document.getElementById('hub-' + tab.dataset.hub);
+        if (target) target.classList.add('active');
+      });
+    });
+  </script>
+  <script type="module">
+    // Quick Estimate — isolated from tab switching
+    try {
+      var prices = {};
+      var qeSelect = document.getElementById('qe-category');
+
+      // Load categories from API
+      fetch('/api/v1/events/categories').then(r => r.ok ? r.json() : []).then(cats => {
+        if (!Array.isArray(cats)) return;
+        cats.forEach(c => {
+          var name = c.name || c;
+          var fee = c.suggested_fee_usd || c.platform_fee || 0;
+          prices[name.toLowerCase().replace(/\s+/g, '')] = fee;
+          var opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name + (fee ? ' — Tsh ' + fee.toLocaleString() : '');
+          qeSelect.appendChild(opt);
+        });
+        // Also populate category chips
+        var chipRow = document.getElementById('category-chips');
+        if (chipRow) {
+          cats.slice(0, 6).forEach(c => {
+            var name = c.name || c;
+            var fee = c.suggested_fee_usd || c.platform_fee || 0;
+            var a = document.createElement('a');
+            a.className = 'chip';
+            a.href = 'events.html?category=' + encodeURIComponent(name);
+            a.textContent = name + (fee ? ' · Tsh ' + fee.toLocaleString() : '');
+            chipRow.appendChild(a);
+          });
+        }
+      }).catch(() => {});
+
+      document.getElementById('quick-estimate-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var data = Object.fromEntries(new FormData(e.target));
+        var base = prices[data.category] || prices[data.category.toLowerCase().replace(/\s+/g, '')] || 0;
+        var guestFactor = Math.max(1, Math.ceil(Number(data.guests) / 50));
+        var estimate = base * guestFactor;
+        document.getElementById('qe-result').textContent =
+          'Estimated platform service fee for ' + data.guests + ' guests in ' + data.location + ': Tsh ' + estimate.toLocaleString();
+      });
+    } catch(e) { console.error('[MEIH] Quick estimate error:', e); }
+
+    // Load stats
+    Promise.all([
+      fetch('/api/v1/events/events').then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch('/api/v1/vendors').then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch('/api/v1/innovation/submissions').then(r => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([events, vendors, innovations]) => {
+      if (Array.isArray(events)) document.getElementById('stat-events').textContent = events.length.toLocaleString();
+      if (Array.isArray(vendors)) document.getElementById('stat-vendors').textContent = vendors.length.toLocaleString();
+      if (Array.isArray(innovations)) document.getElementById('stat-innovations').textContent = innovations.length.toLocaleString();
+    }).catch(() => {});
+
+    // Load competition preview
+    fetch('/api/v1/innovation/competitions').then(r => r.ok ? r.json() : []).then(comps => {
+      if (!Array.isArray(comps) || !comps.length) return;
+      var container = document.getElementById('live-competition-preview');
+      container.innerHTML = comps.slice(0, 3).map(c => {
+        var statusClass = c.status === 'open' ? '' : c.status === 'voting' ? 'style="color:var(--color-warning)"' : 'style="color:var(--color-muted)"';
+        var statusLabel = c.status === 'open' ? 'Open for Submissions' : c.status === 'voting' ? 'Voting Open' : 'Upcoming';
+        return '<div class="competition-card" style="margin-bottom:var(--space-sm);">' +
+          '<span class="comp-status" ' + statusClass + '>' + statusLabel + '</span>' +
+          '<h3>' + (c.title || 'Competition') + '</h3>' +
+          '<p class="comp-meta">' + (c.description || '') + '</p></div>';
+      }).join('');
+    }).catch(() => {});
+  </script>
+</body>
+</html>
