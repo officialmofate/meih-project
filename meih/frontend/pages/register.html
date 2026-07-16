@@ -11,7 +11,7 @@
   <div id="navbar-root"></div>
 
   <main class="page auth-page" data-page="register">
-    <div class="auth-card auth-card-wide">
+    <div class="auth-card">
       <h1 data-i18n="auth.create_account">Create your account</h1>
       <p class="auth-sub" data-i18n="auth.join_sub">Join the Event Hub or Innovation Hub — one account, multiple roles.</p>
 
@@ -42,11 +42,6 @@
         </div>
 
         <div>
-          <label for="reg-phone" data-i18n="auth.phone">Phone number</label>
-          <input id="reg-phone" name="phone" type="tel" data-i18n-ph="auth.phone_ph" placeholder="e.g. +255 754 123 456" />
-        </div>
-
-        <div>
           <label for="reg-password" data-i18n="auth.password">Password</label>
           <input id="reg-password" name="password" type="password" minlength="8" required data-i18n-ph="auth.password_ph" placeholder="Min. 8 characters" />
         </div>
@@ -54,59 +49,6 @@
         <div>
           <label for="reg-password-confirm" data-i18n="auth.password_confirm">Confirm password</label>
           <input id="reg-password-confirm" name="passwordConfirm" type="password" minlength="8" required />
-        </div>
-
-        <!-- Client fields -->
-        <div id="client-fields" class="role-fields" hidden>
-        </div>
-
-        <!-- Planner fields -->
-        <div id="planner-fields" class="role-fields" hidden>
-          <div class="role-fields-header" data-i18n="auth.planner_details">Planner Details</div>
-          <div>
-            <label for="reg-company" data-i18n="auth.company">Company / business name</label>
-            <input id="reg-company" name="businessName" type="text" data-i18n-ph="auth.company_ph" placeholder="e.g. Top Events Co." />
-          </div>
-          <div>
-            <label for="reg-planner-bio" data-i18n="auth.about_services">About your services</label>
-            <textarea id="reg-planner-bio" name="bio" rows="3" data-i18n-ph="auth.about_services_ph" placeholder="Describe your event planning services..."></textarea>
-          </div>
-        </div>
-
-        <!-- Vendor fields -->
-        <div id="vendor-fields" class="role-fields" hidden>
-          <div class="role-fields-header" data-i18n="auth.business_details">Business Details</div>
-          <div>
-            <label for="reg-business-name" data-i18n="auth.business_name">Business name</label>
-            <input id="reg-business-name" name="businessName" type="text" data-i18n-ph="auth.business_name_ph" placeholder="e.g. Dodoma Grand Catering" />
-          </div>
-          <div>
-            <label for="reg-vendor-category" data-i18n="auth.service_category">Service category</label>
-            <select id="reg-vendor-category" name="category">
-              <option value="" data-i18n="auth.select_category">Select a category</option>
-            </select>
-          </div>
-          <div>
-            <label for="reg-starting-price" data-i18n="auth.starting_price">Starting price (Tsh)</label>
-            <input id="reg-starting-price" name="startingPrice" type="number" min="0" data-i18n-ph="auth.starting_price_ph" placeholder="e.g. 500000" />
-          </div>
-          <div>
-            <label for="reg-vendor-bio" data-i18n="auth.about_business">About your business</label>
-            <textarea id="reg-vendor-bio" name="bio" rows="3" data-i18n-ph="auth.about_business_ph" placeholder="Describe your services and expertise..."></textarea>
-          </div>
-        </div>
-
-        <!-- Innovator fields -->
-        <div id="innovator-fields" class="role-fields" hidden>
-          <div class="role-fields-header" data-i18n="auth.innovator_profile">Innovator Profile</div>
-          <div>
-            <label for="reg-organization" data-i18n="auth.organization">Organization / affiliation</label>
-            <input id="reg-organization" name="organization" type="text" data-i18n-ph="auth.organization_ph" placeholder="e.g. University of Dar es Salaam" />
-          </div>
-        </div>
-
-        <!-- Voter fields -->
-        <div id="voter-fields" class="role-fields" hidden>
         </div>
 
         <label class="checkbox-label">
@@ -129,17 +71,9 @@
   <script type="module" src="../js/app.js"></script>
   <script type="module">
     import { auth } from '../js/auth.js';
-    import { api } from '../js/api.js';
     import { isEmail, minLength } from '../js/utils/validators.js';
 
     var roleSelect = document.getElementById('reg-role');
-    var roleFields = {
-      client: document.getElementById('client-fields'),
-      planner: document.getElementById('planner-fields'),
-      vendor: document.getElementById('vendor-fields'),
-      innovator: document.getElementById('innovator-fields'),
-      public_voter: document.getElementById('voter-fields'),
-    };
 
     var roleDescriptions = {
       client: 'Create events, compare vendors, pay deposits, and track your event progress.',
@@ -149,47 +83,12 @@
       public_voter: 'Browse innovations, vote for your favorites, and support local ideas.',
     };
 
-    function toggleRoleFields() {
-      var role = roleSelect.value;
-      Object.keys(roleFields).forEach(function(r) {
-        roleFields[r].hidden = r !== role;
-      });
-      document.getElementById('role-desc-text').textContent = roleDescriptions[role] || '';
+    function updateRoleDescription() {
+      document.getElementById('role-desc-text').textContent = roleDescriptions[roleSelect.value] || '';
     }
 
-    roleSelect.addEventListener('change', toggleRoleFields);
-    toggleRoleFields();
-
-    // Load vendor categories
-    (async function() {
-      try {
-        var cats = await api.get('/vendors/categories');
-        var select = document.getElementById('reg-vendor-category');
-        if (Array.isArray(cats) && cats.length) {
-          cats.forEach(function(cat) {
-            var opt = document.createElement('option');
-            opt.value = cat;
-            opt.textContent = cat;
-            select.appendChild(opt);
-          });
-        }
-      } catch {
-        // Fallback categories if API unavailable
-        var fallback = [
-          'Decorator', 'MC', 'Photographer', 'Videographer', 'Sound Engineer',
-          'Catering', 'Florist', 'Security', 'Transport', 'Accommodation',
-          'Printing', 'Branding', 'Lighting', 'Tent & Furniture', 'Makeup',
-          'Entertainment', 'Drone Services'
-        ];
-        var select = document.getElementById('reg-vendor-category');
-        fallback.forEach(function(cat) {
-          var opt = document.createElement('option');
-          opt.value = cat;
-          opt.textContent = cat;
-          select.appendChild(opt);
-        });
-      }
-    })();
+    roleSelect.addEventListener('change', updateRoleDescription);
+    updateRoleDescription();
 
     var errorEl = document.getElementById('register-error');
 
@@ -203,30 +102,8 @@
       if (data.password !== data.passwordConfirm) return showError('Passwords do not match.');
       if (!data.acceptTerms) return showError('Please accept the Terms of Service.');
 
-      var role = data.role;
-
-      if (role === 'planner') {
-        if (!data.businessName || !data.businessName.trim()) return showError('Please enter your company name.');
-      } else if (role === 'vendor') {
-        if (!data.businessName || !data.businessName.trim()) return showError('Please enter your business name.');
-        if (!data.category) return showError('Please select a service category.');
-      }
-
-      // Strip fields that don't belong to this role
       delete data.passwordConfirm;
       delete data.acceptTerms;
-      if (role !== 'vendor' && role !== 'planner') {
-        delete data.businessName;
-        delete data.bio;
-      }
-      if (role !== 'vendor') {
-        delete data.category;
-        delete data.startingPrice;
-      }
-      if (role !== 'innovator') {
-        delete data.organization;
-      }
-      if (!data.phone) delete data.phone;
 
       try {
         await auth.register(data);

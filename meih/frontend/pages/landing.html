@@ -312,6 +312,59 @@
 
       var API = window.MEIH_API_URL || '/api/v1';
       var USD_TO_TZS = 2550;
+
+      var CITY_TIERS = {
+        'dar es salaam': 1.2, 'dsm': 1.2, 'dar': 1.2,
+        'dodoma': 1.1, 'dodoma city': 1.1,
+        'arusha': 1.1,
+        'mwanza': 1.0,
+        'zanzibar': 1.05, 'stone town': 1.05, 'unguja': 1.05,
+        'mbeya': 0.95,
+        'tanga': 0.95,
+        'morogoro': 0.9,
+        'tabora': 0.85,
+        'kigoma': 0.85,
+        'shinyanga': 0.85,
+        'songea': 0.8,
+        'iringa': 0.8,
+        'moshi': 0.9, 'arusha region': 0.9,
+        'mbulu': 0.8,
+        'musoma': 0.8,
+        'bukoba': 0.8,
+        'lindi': 0.75,
+        'mtwara': 0.75,
+        'singida': 0.75,
+        'kato': 0.7,
+        'nachingwea': 0.7,
+      };
+      var DEFAULT_TIER = 0.85;
+
+      function getCityTierMultiplier(locationStr) {
+        var loc = (locationStr || '').toLowerCase().trim();
+        for (var city in CITY_TIERS) {
+          if (loc.indexOf(city) !== -1) return CITY_TIERS[city];
+        }
+        return DEFAULT_TIER;
+      }
+
+      async function geocodeLocation(query) {
+        try {
+          var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query + ', Tanzania') + '&format=json&limit=1&countrycodes=tz';
+          var resp = await fetch(url, { headers: { 'User-Agent': 'MEIH-Platform/1.0' } });
+          if (!resp.ok) return null;
+          var results = await resp.json();
+          if (results && results.length) {
+            return {
+              display: results[0].display_name || query,
+              city: (results[0].address && (results[0].address.city || results[0].address.town || results[0].address.village || results[0].address.county)) || '',
+              lat: parseFloat(results[0].lat),
+              lon: parseFloat(results[0].lon)
+            };
+          }
+        } catch {}
+        return null;
+      }
+
       fetch(API + '/events/categories').then(function(r) { return r.ok ? r.json() : []; }).then(function(cats) {
         if (Array.isArray(cats) && cats.length) {
           populateCategories(cats);
@@ -322,15 +375,25 @@
         populateCategories(FallbackCategories);
       });
 
-      document.getElementById('quick-estimate-form').addEventListener('submit', function(e) {
+      document.getElementById('quick-estimate-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         var data = Object.fromEntries(new FormData(e.target));
         var base = prices[data.category] || prices[data.category.toLowerCase().replace(/\s+/g, '')] || 0;
         var guestFactor = Math.max(1, Math.ceil(Number(data.guests) / 50));
-        var estimateUsd = base * guestFactor;
+        var locationMultiplier = getCityTierMultiplier(data.location);
+
+        var geo = await geocodeLocation(data.location);
+        var resolvedCity = '';
+        if (geo) {
+          resolvedCity = geo.city || data.location;
+          locationMultiplier = getCityTierMultiplier(geo.city || data.location);
+        }
+
+        var estimateUsd = base * guestFactor * locationMultiplier;
         var estimateTzs = Math.round(estimateUsd * USD_TO_TZS);
+        var cityLabel = resolvedCity ? ' in ' + resolvedCity : '';
         document.getElementById('qe-result').textContent =
-          'Estimated platform service fee for ' + data.guests + ' guests in ' + data.location + ': Tsh ' + estimateTzs.toLocaleString();
+          'Estimated platform service fee for ' + data.guests + ' guests' + cityLabel + ': Tsh ' + estimateTzs.toLocaleString();
       });
     } catch(e) { console.error('[MEIH] Quick estimate error:', e); }
 

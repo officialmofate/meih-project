@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Complete Your Profile — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/auth.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page auth-page" data-page="complete-profile">
+    <div class="auth-card auth-card-wide">
+      <h1>Complete Your Profile</h1>
+      <p class="auth-sub" id="profile-sub"></p>
+
+      <form id="profile-form" class="stacked-form" novalidate>
+        <!-- Planner fields -->
+        <div id="planner-fields" hidden>
+          <div>
+            <label for="pf-company">Company / business name</label>
+            <input id="pf-company" name="companyName" type="text" required placeholder="e.g. Top Events Co." />
+          </div>
+          <div>
+            <label for="pf-planner-bio">About your services</label>
+            <textarea id="pf-planner-bio" name="bio" rows="3" placeholder="Describe your event planning services..."></textarea>
+          </div>
+        </div>
+
+        <!-- Vendor fields -->
+        <div id="vendor-fields" hidden>
+          <div>
+            <label for="pf-business-name">Business name</label>
+            <input id="pf-business-name" name="businessName" type="text" required placeholder="e.g. Dodoma Grand Catering" />
+          </div>
+          <div>
+            <label for="pf-category">Service category</label>
+            <select id="pf-category" name="category" required>
+              <option value="">Select a category</option>
+            </select>
+          </div>
+          <div>
+            <label for="pf-starting-price">Starting price (Tsh)</label>
+            <input id="pf-starting-price" name="startingPrice" type="number" min="0" placeholder="e.g. 500000" />
+          </div>
+          <div>
+            <label for="pf-vendor-bio">About your business</label>
+            <textarea id="pf-vendor-bio" name="bio" rows="3" placeholder="Describe your services and expertise..."></textarea>
+          </div>
+        </div>
+
+        <p id="profile-error" class="form-error" role="alert" hidden></p>
+
+        <button type="submit" class="btn btn-primary btn-block">Save Profile</button>
+        <button type="button" class="btn btn-ghost btn-block" id="skip-btn">Skip for now</button>
+      </form>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script src="../js/config.js"></script>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+
+    var user = null;
+    try {
+      var raw = localStorage.getItem('meih_user');
+      if (raw) user = JSON.parse(raw);
+    } catch {}
+
+    if (!user || (user.role !== 'planner' && user.role !== 'vendor')) {
+      window.location.href = 'dashboard-client.html';
+    }
+
+    var dashMap = {
+      planner: 'dashboard-planner.html',
+      vendor: 'dashboard-vendor.html',
+    };
+
+    document.getElementById('profile-sub').textContent =
+      user.role === 'planner'
+        ? 'Set up your planner profile so clients can find and book you.'
+        : 'Set up your vendor profile so clients can discover your services.';
+
+    if (user.role === 'planner') {
+      document.getElementById('planner-fields').hidden = false;
+    } else if (user.role === 'vendor') {
+      document.getElementById('vendor-fields').hidden = false;
+
+      (async function() {
+        try {
+          var cats = await api.get('/vendors/categories');
+          var select = document.getElementById('pf-category');
+          if (Array.isArray(cats) && cats.length) {
+            cats.forEach(function(cat) {
+              var opt = document.createElement('option');
+              opt.value = cat;
+              opt.textContent = cat;
+              select.appendChild(opt);
+            });
+          }
+        } catch {
+          var fallback = [
+            'Decorator', 'MC', 'Photographer', 'Videographer', 'Sound Engineer',
+            'Catering', 'Florist', 'Security', 'Transport', 'Accommodation',
+            'Printing', 'Branding', 'Lighting', 'Tent & Furniture', 'Makeup',
+            'Entertainment', 'Drone Services'
+          ];
+          var select = document.getElementById('pf-category');
+          fallback.forEach(function(cat) {
+            var opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            select.appendChild(opt);
+          });
+        }
+      })();
+    }
+
+    var errorEl = document.getElementById('profile-error');
+
+    document.getElementById('profile-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      errorEl.hidden = true;
+      var data = Object.fromEntries(new FormData(e.target));
+
+      if (user.role === 'planner') {
+        if (!data.companyName || !data.companyName.trim()) {
+          errorEl.textContent = 'Please enter your company name.';
+          errorEl.hidden = false;
+          return;
+        }
+      } else if (user.role === 'vendor') {
+        if (!data.businessName || !data.businessName.trim()) {
+          errorEl.textContent = 'Please enter your business name.';
+          errorEl.hidden = false;
+          return;
+        }
+        if (!data.category) {
+          errorEl.textContent = 'Please select a service category.';
+          errorEl.hidden = false;
+          return;
+        }
+      }
+
+      if (!data.bio) delete data.bio;
+      if (!data.startingPrice) delete data.startingPrice;
+
+      try {
+        var endpoint = user.role === 'planner' ? '/planners' : '/vendors';
+        await api.post(endpoint, data);
+        window.location.href = dashMap[user.role] || 'dashboard-client.html';
+      } catch (err) {
+        errorEl.textContent = err.message || 'Could not save profile. Please try again.';
+        errorEl.hidden = false;
+      }
+    });
+
+    document.getElementById('skip-btn').addEventListener('click', function() {
+      window.location.href = dashMap[user.role] || 'dashboard-client.html';
+    });
+  </script>
+</body>
+</html>

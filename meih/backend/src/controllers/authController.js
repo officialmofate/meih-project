@@ -16,14 +16,13 @@ function signTokens(user) {
 
 exports.register = async (req, res, next) => {
   try {
-    const { email, password, fullName, role, phone, businessName, category, bio, startingPrice, organization } = req.body;
+    const { email, password, fullName, role } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
     if (!db.isAvailable()) {
-      // In-memory mode — allow same email with different roles
       const key = `${email}:${role || 'client'}`;
       if (memoryUsers.has(key)) {
         return res.status(409).json({ message: 'Email already registered for this role' });
@@ -36,29 +35,16 @@ exports.register = async (req, res, next) => {
       return res.status(201).json({ user, ...tokens });
     }
 
-    // Database mode — allow same email with different roles
     const userRole = role || 'client';
     const { rows: existing } = await db.query('SELECT id FROM users WHERE email = $1 AND role = $2', [email, userRole]);
     if (existing.length > 0) return res.status(409).json({ message: 'Email already registered for this role' });
 
     const passwordHash = await bcrypt.hash(password, 12);
     const { rows: userRows } = await db.query(
-      'INSERT INTO users (email, password_hash, full_name, phone, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, phone, role, status, created_at',
-      [email, passwordHash, fullName || '', phone || null, userRole]
+      'INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, full_name, role, status, created_at',
+      [email, passwordHash, fullName || '', userRole]
     );
     const user = userRows[0];
-
-    if (userRole === 'planner') {
-      await db.query(
-        'INSERT INTO planners (user_id, company_name, bio) VALUES ($1, $2, $3)',
-        [user.id, businessName || '', bio || '']
-      );
-    } else if (userRole === 'vendor') {
-      await db.query(
-        'INSERT INTO vendors (user_id, business_name, category, bio, starting_price) VALUES ($1, $2, $3, $4, $5)',
-        [user.id, businessName || '', category || '', bio || null, startingPrice || null]
-      );
-    }
 
     const tokens = signTokens(user);
     res.status(201).json({ user, ...tokens });
@@ -76,7 +62,6 @@ exports.login = async (req, res, next) => {
     }
 
     if (!db.isAvailable()) {
-      // In-memory mode — find any account for this email
       let stored;
       for (const [k, v] of memoryUsers) {
         if (k.startsWith(`${email}:`)) { stored = v; break; }
@@ -88,13 +73,11 @@ exports.login = async (req, res, next) => {
       return res.json({ token: tokens.accessToken, ...tokens, user: { id: stored.id, email: stored.email, full_name: stored.full_name, role: stored.role } });
     }
 
-    // Database mode — find first matching user for this email
     const { rows } = await db.query('SELECT * FROM users WHERE email = $1 ORDER BY created_at DESC LIMIT 1', [email]);
     const user = rows[0];
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
-    // Superadmin can log in without password
     if (user.role !== 'superadmin') {
       if (!(await bcrypt.compare(password, user.password_hash))) {
         return res.status(401).json({ message: 'Invalid email or password' });
@@ -103,8 +86,23 @@ exports.login = async (req, res, next) => {
     if (user.status === 'suspended') {
       return res.status(403).json({ message: 'Account has been suspended' });
     }
+
+    let profileComplete = true;
+    if (user.role === 'planner') {
+      const { rows: plannerRows } = await db.query('SELECT id FROM planners WHERE user_id = $1', [user.id]);
+      profileComplete = plannerRows.length > 0;
+    } else if (user.role === 'vendor') {
+      const { rows: vendorRows } = await db.query('SELECT id FROM vendors WHERE user_id = $1', [user.id]);
+      profileComplete = vendorRows.length > 0;
+    }
+
     const tokens = signTokens(user);
-    res.json({ token: tokens.accessToken, ...tokens, user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role } });
+    res.json({
+      token: tokens.accessToken,
+      ...tokens,
+      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
+      profileComplete
+    });
   } catch (err) {
     next(err);
   }

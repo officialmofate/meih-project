@@ -64,8 +64,15 @@
       }
 
       try {
-        var user = await auth.login(data.email, data.password);
-        window.location.href = dashMap[user && user.role] || 'dashboard-client.html';
+        var result = await auth.login(data.email, data.password);
+        var user = result.user;
+        if (!user) {
+          window.location.href = 'dashboard-client.html';
+        } else if ((user.role === 'planner' || user.role === 'vendor') && result.profileComplete === false) {
+          window.location.href = 'complete-profile.html';
+        } else {
+          window.location.href = dashMap[user.role] || 'dashboard-client.html';
+        }
       } catch (err) {
         loginError.textContent = err.message || 'Login failed. Check your credentials and try again.';
         loginError.hidden = false;

@@ -73,26 +73,19 @@ export function initAIAssistant() {
         box-shadow: 0 4px 20px ${accentColor}44;
         z-index: 1000;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        animation: ai-rotate 4s linear infinite;
       }
-      @keyframes ai-rotate {
-        0% { transform: perspective(200px) rotateX(0deg); }
-        50% { transform: perspective(200px) rotateX(180deg); }
-        100% { transform: perspective(200px) rotateX(360deg); }
+      .ai-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px ${accentColor}99; }
+
+      .ai-fab-text {
+        display: inline-block;
+        animation: ai-text-rotate 3s ease-in-out infinite;
+        transform-style: preserve-3d;
       }
-      .ai-fab:hover {
-        transform: scale(1.08) rotate(0deg);
-        box-shadow: 0 6px 28px ${accentColor}66;
-        animation-play-state: paused;
+      @keyframes ai-text-rotate {
+        0%, 100% { transform: perspective(200px) rotateX(0deg); }
+        50% { transform: perspective(200px) rotateX(360deg); }
       }
-      .ai-fab.active {
-        border-radius: var(--radius-lg);
-        width: auto;
-        padding: 0 16px;
-        gap: 8px;
-        font-size: 14px;
-        animation: none;
-      }
+      .ai-fab.active .ai-fab-text { animation: none; }
 
       .ai-chat-panel {
         position: fixed;
@@ -261,7 +254,7 @@ export function initAIAssistant() {
       }
     </style>
 
-    <button class="ai-fab" id="ai-fab">AI</button>
+    <button class="ai-fab" id="ai-fab"><span class="ai-fab-text">AI</span></button>
 
     <div class="ai-chat-panel" id="ai-chat-panel">
       <div class="ai-chat-header">

@@ -9,7 +9,7 @@ export const auth = {
       store.set({ user: data.user });
       localStorage.setItem('meih_user', JSON.stringify(data.user));
     }
-    return data.user;
+    return data;
   },
   async register(payload) {
     return api.post('/auth/register', payload);
