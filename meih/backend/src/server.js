@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const errorHandler = require('./middleware/error');
+const db = require('./config/database');
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -45,6 +46,16 @@ function createApp() {
   );
 
   app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+  app.get('/health/db', async (req, res) => {
+    const available = db.isAvailable();
+    if (!available) return res.json({ status: 'error', database: 'not connected' });
+    try {
+      const { rows } = await db.query('SELECT NOW() AS time, current_database() AS db');
+      res.json({ status: 'ok', database: 'connected', ...rows[0] });
+    } catch (err) {
+      res.json({ status: 'error', database: 'connected but query failed', error: err.message });
+    }
+  });
 
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/users', userRoutes);

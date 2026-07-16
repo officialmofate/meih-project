@@ -6,27 +6,43 @@ let dbAvailable = false;
 
 if (databaseUrl) {
   const isSupabase = databaseUrl.includes('supabase');
-  pool = new Pool({
+  const sslConfig = isSupabase ? { rejectUnauthorized: false } : undefined;
+
+  const poolConfig = {
     connectionString: databaseUrl,
-    ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
+    ssl: sslConfig,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-  });
+    connectionTimeoutMillis: 15000,
+  };
+
+  pool = new Pool(poolConfig);
+
   pool.on('error', (err) => {
     console.error('PostgreSQL pool error:', err.message);
   });
 
-  pool.query('SELECT 1')
-    .then(() => {
-      dbAvailable = true;
-      console.log('PostgreSQL connected to Supabase');
-    })
-    .catch((err) => {
-      dbAvailable = false;
-      console.error('PostgreSQL connection failed:', err.message);
-      console.warn('Running without database');
-    });
+  async function testConnection(retries = 3) {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const client = await pool.connect();
+        await client.query('SELECT 1');
+        client.release();
+        dbAvailable = true;
+        console.log('PostgreSQL connected to Supabase');
+        return;
+      } catch (err) {
+        console.error(`DB connection attempt ${i + 1}/${retries} failed:`, err.message);
+        if (i < retries - 1) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    }
+    dbAvailable = false;
+    console.error('All DB connection attempts failed — running without database');
+  }
+
+  testConnection();
 } else {
   console.warn('DATABASE_URL not set — running without database');
 }
