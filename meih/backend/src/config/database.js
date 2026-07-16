@@ -1,5 +1,9 @@
 const { Pool } = require('pg');
+const dns = require('dns');
 const { databaseUrl } = require('./env');
+
+// Force IPv4 — Render doesn't support outbound IPv6
+dns.setDefaultResultOrder('ipv4first');
 
 let pool = null;
 let dbAvailable = false;
