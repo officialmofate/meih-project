@@ -13,22 +13,39 @@ if (databaseUrl) {
     url += (url.includes('?') ? '&' : '?') + 'sslmode=require';
   }
 
-  // Parse URL to handle passwords with special chars like @
+  // Parse URL manually to handle passwords with special chars like @
   let poolConfig;
   try {
-    const parsed = new URL(url);
+    // Extract components manually - the URL format is:
+    // postgresql://user:password@host:port/database
+    const afterProtocol = url.replace(/^postgresql:\/\//, '');
+    const slashIdx = afterProtocol.lastIndexOf('/');
+    const db = afterProtocol.slice(slashIdx + 1).split('?')[0];
+    const authority = afterProtocol.slice(0, slashIdx);
+    const lastAt = authority.lastIndexOf('@');
+    const userPass = authority.slice(0, lastAt);
+    const hostPort = authority.slice(lastAt + 1);
+    const colonIdx = userPass.indexOf(':');
+    const user = colonIdx >= 0 ? userPass.slice(0, colonIdx) : userPass;
+    const pass = colonIdx >= 0 ? userPass.slice(colonIdx + 1) : '';
+    const hostParts = hostPort.split(':');
+    const host = hostParts[0];
+    const port = parseInt(hostParts[1], 10) || 5432;
+
     poolConfig = {
-      host: parsed.hostname,
-      port: parseInt(parsed.port, 10) || 5432,
-      database: parsed.pathname.slice(1),
-      user: decodeURIComponent(parsed.username),
-      password: decodeURIComponent(parsed.password),
+      host,
+      port,
+      database: db,
+      user: decodeURIComponent(user),
+      password: decodeURIComponent(pass),
       ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 15000,
     };
-  } catch (_) {
+    console.log('DB config parsed:', { host, port, database: db, user });
+  } catch (parseErr) {
+    console.error('URL parse failed, using connectionString:', parseErr.message);
     poolConfig = {
       connectionString: url,
       ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
@@ -51,13 +68,11 @@ if (databaseUrl) {
         const { rows } = await client.query('SELECT 1 AS ok');
         client.release();
         dbAvailable = true;
-        console.log('PostgreSQL connected to Supabase:', poolConfig.host);
+        console.log('PostgreSQL connected:', poolConfig.host + ':' + poolConfig.port + '/' + poolConfig.database);
         return;
       } catch (err) {
-        console.error(`DB connection attempt ${i + 1}/${retries} failed:`, err.message);
-        if (i < retries - 1) {
-          await new Promise(r => setTimeout(r, 3000));
-        }
+        console.error(`DB attempt ${i + 1}/${retries} failed:`, err.message);
+        if (i < retries - 1) await new Promise(r => setTimeout(r, 3000));
       }
     }
     dbAvailable = false;
