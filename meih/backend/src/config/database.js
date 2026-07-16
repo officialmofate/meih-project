@@ -9,34 +9,53 @@ if (databaseUrl) {
   const isSupabase = databaseUrl.includes('supabase');
 
   let url = databaseUrl;
-  if (isSupabase && !url.includes('sslmode=')) {
-    url += (url.includes('?') ? '&' : '?') + 'sslmode=require';
-  }
 
   async function init() {
+    // Parse connection string manually for full control over SSL
+    let user, password, host, port, database;
+    try {
+      const raw = url.replace(/^postgresql:\/\//, '');
+      const dbPart = raw.split('@').pop();
+      const pathPart = raw.split('@').slice(0, -1).join('@');
+      const slashIdx = pathPart.lastIndexOf('/');
+      const userInfo = pathPart.slice(0, slashIdx).replace(/^postgresql:\/\//, '');
+      const colonIdx = userInfo.indexOf(':');
+      user = decodeURIComponent(userInfo.slice(0, colonIdx));
+      password = decodeURIComponent(userInfo.slice(colonIdx + 1));
+      const hostPort = dbPart.split('/')[0];
+      const hpParts = hostPort.split(':');
+      host = hpParts[0];
+      port = parseInt(hpParts[1], 10) || 5432;
+      database = dbPart.split('/')[1].split('?')[0];
+    } catch (parseErr) {
+      console.error('URL parse error:', parseErr.message);
+      return;
+    }
+
+    // Force IPv4 for Supabase on Render
+    if (isSupabase) {
+      try {
+        const addrs = await dns.promises.resolve4(host);
+        host = addrs[0];
+        console.log('IPv4 resolved to:', host);
+      } catch (dnsErr) {
+        console.error('DNS IPv4 failed:', dnsErr.message);
+      }
+    }
+
     const poolConfig = {
-      connectionString: url,
+      host,
+      port,
+      database,
+      user,
+      password,
       ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 15000,
     };
 
-    // Force IPv4 for Supabase on Render
-    if (isSupabase) {
-      try {
-        const afterProto = url.replace(/^postgresql:\/\//, '');
-        const hostPort = afterProto.split('@').pop().split('/')[0];
-        const hostname = hostPort.split(':')[0];
-        const addrs = await dns.promises.resolve4(hostname);
-        // Override just the host — pg keeps user/pass/db from connectionString
-        poolConfig.host = addrs[0];
-        poolConfig.port = parseInt(hostPort.split(':')[1], 10) || 5432;
-        console.log('IPv4 resolved:', hostname, '->', addrs[0]);
-      } catch (dnsErr) {
-        console.error('DNS IPv4 failed, using connectionString:', dnsErr.message);
-      }
-    }
+    console.log('DB connecting to:', host + ':' + port + '/' + database + ' as ' + user);
 
     pool = new Pool(poolConfig);
     pool.on('error', (err) => {
