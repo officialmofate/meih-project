@@ -48,7 +48,10 @@ function createApp() {
   app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
   app.get('/health/db', async (req, res) => {
     const available = db.isAvailable();
-    if (!available) return res.json({ status: 'error', database: 'not connected' });
+    if (!available) {
+      const hasUrl = !!process.env.DATABASE_URL;
+      return res.json({ status: 'error', database: 'not connected', hasDatabaseUrl: hasUrl });
+    }
     try {
       const { rows } = await db.query('SELECT NOW() AS time, current_database() AS db');
       res.json({ status: 'ok', database: 'connected', ...rows[0] });
