@@ -21,6 +21,6 @@ exports.status = async (req, res) => {
   res.json({
     status: 'ok',
     gemini_configured: hasKey,
-    model: hasKey ? 'gemini-2.0-flash' : 'fallback',
+    model: hasKey ? 'gemini-2.5-flash' : 'fallback',
   });
 };

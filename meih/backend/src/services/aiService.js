@@ -18,7 +18,7 @@ function initGemini() {
     return;
   }
   genAI = new GoogleGenerativeAI(apiKey);
-  model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 }
 
 function getFallbackResponse(message, context) {
@@ -79,7 +79,7 @@ async function chat(message, context = 'general') {
     const response = await result.response;
     return {
       reply: response.text(),
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
     };
   } catch (err) {
     console.error('Gemini API error:', err.message);
