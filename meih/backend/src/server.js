@@ -63,10 +63,12 @@ function createApp() {
 
   const frontendPath = path.join(__dirname, '../../frontend');
   app.use(express.static(frontendPath));
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(frontendPath, 'pages', 'landing.html'));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ message: 'API endpoint not found' });
     }
+    res.sendFile(path.join(frontendPath, 'pages', 'landing.html'));
   });
 
   app.use(errorHandler);

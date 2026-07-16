@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const UPLOADS_DIR = path.join(__dirname, '../../uploads/payments');
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+try { if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true }); } catch (_) {}
 
 exports.createPayment = async (req, res, next) => {
   try {

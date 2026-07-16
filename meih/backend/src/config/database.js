@@ -9,14 +9,24 @@ if (databaseUrl) {
   pool = new Pool({
     connectionString: databaseUrl,
     ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
   });
   pool.on('error', (err) => {
     console.error('PostgreSQL pool error:', err.message);
   });
-  // Test connection silently
+
   pool.query('SELECT 1')
-    .then(() => { dbAvailable = true; console.log('PostgreSQL connected'); })
-    .catch(() => { dbAvailable = false; console.warn('PostgreSQL not available — running without database'); });
+    .then(() => {
+      dbAvailable = true;
+      console.log('PostgreSQL connected to Supabase');
+    })
+    .catch((err) => {
+      dbAvailable = false;
+      console.error('PostgreSQL connection failed:', err.message);
+      console.warn('Running without database');
+    });
 } else {
   console.warn('DATABASE_URL not set — running without database');
 }
