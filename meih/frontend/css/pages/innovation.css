@@ -4,6 +4,189 @@
 
 .innovation-layout { padding-top: var(--space-lg); }
 
+/* ── Submit Innovation Form ── */
+[data-page="submit-innovation"] .container.narrow { max-width: 640px; }
+[data-page="submit-innovation"] h1 {
+  font-size: 28px;
+  text-align: center;
+  margin-bottom: var(--space-lg);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Stepper ── */
+.stepper {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: var(--space-xl);
+  list-style: none;
+  padding: 0;
+  counter-reset: none;
+}
+.stepper .step {
+  flex: 1;
+  text-align: center;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  position: relative;
+  transition: all var(--transition-normal);
+}
+.stepper .step:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.stepper .step:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.stepper .step + .step { border-left: none; }
+.stepper .step.active {
+  color: #fff;
+  background: var(--gradient-primary);
+  border-color: transparent;
+  box-shadow: 0 4px 16px rgba(108, 92, 231, 0.3);
+}
+
+/* ── Form Card ── */
+[data-page="submit-innovation"] .card {
+  background: var(--gradient-card);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Fieldsets ── */
+[data-page="submit-innovation"] fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+[data-page="submit-innovation"] legend {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+  width: 100%;
+}
+
+/* ── Form labels ── */
+[data-page="submit-innovation"] label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin-bottom: 6px;
+  margin-top: var(--space-md);
+}
+[data-page="submit-innovation"] label:first-of-type {
+  margin-top: 0;
+}
+
+/* ── Form inputs, selects, textareas ── */
+[data-page="submit-innovation"] input[type="text"],
+[data-page="submit-innovation"] input[type="email"],
+[data-page="submit-innovation"] input[type="number"],
+[data-page="submit-innovation"] input[type="url"],
+[data-page="submit-innovation"] input[type="date"],
+[data-page="submit-innovation"] select,
+[data-page="submit-innovation"] textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: var(--font-base);
+  line-height: 1.5;
+  transition: all var(--transition-fast);
+}
+[data-page="submit-innovation"] input:focus,
+[data-page="submit-innovation"] select:focus,
+[data-page="submit-innovation"] textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+[data-page="submit-innovation"] input::placeholder,
+[data-page="submit-innovation"] textarea::placeholder {
+  color: var(--color-muted);
+}
+[data-page="submit-innovation"] textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+[data-page="submit-innovation"] select {
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+/* ── Checkbox / terms ── */
+[data-page="submit-innovation"] .checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-lg);
+  cursor: pointer;
+}
+[data-page="submit-innovation"] .checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin-top: 2px;
+  accent-color: var(--color-primary);
+}
+
+/* ── Step actions (buttons) ── */
+[data-page="submit-innovation"] .step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+/* ── Review detail grid inside form ── */
+[data-page="submit-innovation"] .detail-grid {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+[data-page="submit-innovation"] .detail-grid dt {
+  color: var(--color-primary);
+  font-size: 11px;
+}
+[data-page="submit-innovation"] .detail-grid dd {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  margin-bottom: var(--space-xs);
+}
+
+/* ── Error message ── */
+[data-page="submit-innovation"] .form-error {
+  background: var(--color-danger-light);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  color: var(--color-danger);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  margin-top: var(--space-md);
+}
+
 /* ── Page header ── */
 [data-page="innovation"] .page-header {
   flex-direction: column;

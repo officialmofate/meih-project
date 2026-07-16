@@ -24,7 +24,6 @@
         <div class="hero">
           <div class="hero-inner">
             <div class="hero-copy">
-              <span class="badge" style="background:var(--color-primary-light);color:var(--color-primary);" data-i18n="landing.badge_event">Event & Innovation Platform</span>
               <h1 data-i18n="landing.hero_event_title">Plan <span class="typewriter" id="event-typewriter" style="background:var(--gradient-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></span><span class="typewriter-cursor">|</span></h1>
               <p class="hero-sub" data-i18n="landing.hero_event_sub">
                 Connect with vetted event planners and vendors across Tanzania.
@@ -95,7 +94,6 @@
         <div class="hero">
           <div class="hero-inner">
             <div class="hero-copy">
-              <span class="badge" style="background:var(--color-secondary-light);color:var(--color-secondary);" data-i18n="landing.badge_innovation">Innovation Competitions · Tanzania</span>
               <h1 data-i18n="landing.hero_inno_title">Launch <span class="typewriter" id="innovation-typewriter" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></span><span class="typewriter-cursor" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">|</span></h1>
               <p class="hero-sub" data-i18n="landing.hero_inno_sub">
                 Submit your innovation, get validated by the public through OTP-verified
@@ -283,14 +281,18 @@
         { name: 'Sports Events', suggested_fee_usd: 150 },
       ];
 
+      var API = window.MEIH_API_URL || '/api/v1';
+      var USD_TO_TZS = 2550;
+
       function populateCategories(cats) {
         cats.forEach(function(c) {
           var name = c.name || c;
           var fee = Number(c.suggested_fee_usd || c.platform_fee || 0);
           prices[name.toLowerCase().replace(/\s+/g, '')] = fee;
+          var feeTzs = Math.round(fee * USD_TO_TZS);
           var opt = document.createElement('option');
           opt.value = name;
-          opt.textContent = name + (fee ? ' — Tsh ' + fee.toLocaleString() : '');
+          opt.textContent = name + (fee ? ' — Tsh ' + feeTzs.toLocaleString() : '');
           qeSelect.appendChild(opt);
         });
         var chipRow = document.getElementById('category-chips');
@@ -298,16 +300,18 @@
           cats.slice(0, 6).forEach(function(c) {
             var name = c.name || c;
             var fee = Number(c.suggested_fee_usd || c.platform_fee || 0);
+            var feeTzs = Math.round(fee * USD_TO_TZS);
             var a = document.createElement('a');
             a.className = 'chip';
             a.href = 'events.html?category=' + encodeURIComponent(name);
-            a.textContent = name + (fee ? ' · Tsh ' + fee.toLocaleString() : '');
+            a.textContent = name + (fee ? ' · Tsh ' + feeTzs.toLocaleString() : '');
             chipRow.appendChild(a);
           });
         }
       }
 
       var API = window.MEIH_API_URL || '/api/v1';
+      var USD_TO_TZS = 2550;
       fetch(API + '/events/categories').then(function(r) { return r.ok ? r.json() : []; }).then(function(cats) {
         if (Array.isArray(cats) && cats.length) {
           populateCategories(cats);
@@ -323,9 +327,10 @@
         var data = Object.fromEntries(new FormData(e.target));
         var base = prices[data.category] || prices[data.category.toLowerCase().replace(/\s+/g, '')] || 0;
         var guestFactor = Math.max(1, Math.ceil(Number(data.guests) / 50));
-        var estimate = base * guestFactor;
+        var estimateUsd = base * guestFactor;
+        var estimateTzs = Math.round(estimateUsd * USD_TO_TZS);
         document.getElementById('qe-result').textContent =
-          'Estimated platform service fee for ' + data.guests + ' guests in ' + data.location + ': Tsh ' + estimate.toLocaleString();
+          'Estimated platform service fee for ' + data.guests + ' guests in ' + data.location + ': Tsh ' + estimateTzs.toLocaleString();
       });
     } catch(e) { console.error('[MEIH] Quick estimate error:', e); }
 

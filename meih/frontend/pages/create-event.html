@@ -263,17 +263,17 @@
       var reviewMapInstance = null;
 
       var FallbackCategories = [
-        { name: 'Wedding', suggested_fee_usd: 500000 },
-        { name: 'Corporate Event', suggested_fee_usd: 750000 },
-        { name: 'Birthday Party', suggested_fee_usd: 300000 },
-        { name: 'Conference', suggested_fee_usd: 1000000 },
-        { name: 'Concert', suggested_fee_usd: 1000000 },
-        { name: 'Workshop', suggested_fee_usd: 400000 },
-        { name: 'Exhibition', suggested_fee_usd: 600000 },
-        { name: 'Fundraiser', suggested_fee_usd: 500000 },
-        { name: 'Community Event', suggested_fee_usd: 250000 },
-        { name: 'Cultural Festival', suggested_fee_usd: 500000 },
-        { name: 'Sports Event', suggested_fee_usd: 600000 },
+        { name: 'Wedding', suggested_fee_usd: 50 },
+        { name: 'Corporate Event', suggested_fee_usd: 100 },
+        { name: 'Birthday Party', suggested_fee_usd: 15 },
+        { name: 'Conference', suggested_fee_usd: 80 },
+        { name: 'Concert', suggested_fee_usd: 150 },
+        { name: 'Workshop', suggested_fee_usd: 30 },
+        { name: 'Exhibition', suggested_fee_usd: 120 },
+        { name: 'Fundraiser', suggested_fee_usd: 50 },
+        { name: 'Community Event', suggested_fee_usd: 25 },
+        { name: 'Cultural Festival', suggested_fee_usd: 180 },
+        { name: 'Sports Event', suggested_fee_usd: 150 },
         { name: 'Other', suggested_fee_usd: 0 }
       ];
 
@@ -537,14 +537,16 @@
       var feeHint = document.getElementById('category-fee-hint');
       var feeCard = document.getElementById('budget-summary-card');
       var feeDisplay = document.getElementById('estimated-fee');
+      var USD_TO_TZS = 2550;
 
       catSelect.addEventListener('change', function() {
         var selected = catSelect.options[catSelect.selectedIndex];
         var fee = selected.dataset.fee;
-        if (fee && parseFloat(fee) > 0) {
-          feeHint.textContent = 'Platform fee: Tsh ' + parseFloat(fee).toLocaleString();
+        var feeTzs = Math.round(parseFloat(fee) * USD_TO_TZS);
+        if (fee && feeTzs > 0) {
+          feeHint.textContent = 'Platform fee: Tsh ' + feeTzs.toLocaleString();
           feeCard.hidden = false;
-          feeDisplay.textContent = 'Tsh ' + parseFloat(fee).toLocaleString();
+          feeDisplay.textContent = 'Tsh ' + feeTzs.toLocaleString();
         } else {
           feeHint.textContent = '';
           feeCard.hidden = true;
@@ -563,10 +565,12 @@
           var cats = await res.json();
           if (Array.isArray(cats) && cats.length) {
             cats.forEach(function(c) {
+              var feeUsd = c.suggested_fee_usd || 0;
+              var feeTzs = Math.round(feeUsd * USD_TO_TZS);
               var opt = document.createElement('option');
               opt.value = c.name;
-              opt.textContent = c.name + (c.suggested_fee_usd ? ' — Tsh ' + c.suggested_fee_usd.toLocaleString() : '');
-              opt.dataset.fee = c.suggested_fee_usd || 0;
+              opt.textContent = c.name + (feeTzs > 0 ? ' — Tsh ' + feeTzs.toLocaleString() : '');
+              opt.dataset.fee = feeUsd;
               catSelect.appendChild(opt);
             });
             return;
@@ -575,9 +579,10 @@
           console.warn('[MEIH] Could not load categories from API, using defaults.');
         }
         FallbackCategories.forEach(function(c) {
+          var feeTzs = Math.round(c.suggested_fee_usd * USD_TO_TZS);
           var opt = document.createElement('option');
           opt.value = c.name;
-          opt.textContent = c.name + (c.suggested_fee_usd ? ' — Tsh ' + c.suggested_fee_usd.toLocaleString() : '');
+          opt.textContent = c.name + (feeTzs > 0 ? ' — Tsh ' + feeTzs.toLocaleString() : '');
           opt.dataset.fee = c.suggested_fee_usd || 0;
           catSelect.appendChild(opt);
         });

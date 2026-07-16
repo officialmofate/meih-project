@@ -76,8 +76,9 @@ export function initAIAssistant() {
         animation: ai-rotate 4s linear infinite;
       }
       @keyframes ai-rotate {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% { transform: perspective(200px) rotateX(0deg); }
+        50% { transform: perspective(200px) rotateX(180deg); }
+        100% { transform: perspective(200px) rotateX(360deg); }
       }
       .ai-fab:hover {
         transform: scale(1.08) rotate(0deg);
