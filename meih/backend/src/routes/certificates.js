@@ -13,7 +13,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
     );
     if (!rows.length) return res.status(404).json({ message: 'Certificate not found' });
     const cert = rows[0];
-    res.json({ url: cert.file_url || cert.url || null, certificate: cert });
+    res.json({ url: cert.file_url || cert.qr_code_url || null, certificate: cert });
   } catch (err) {
     if (err.code === '42P01') {
       return res.status(504).json({ message: 'Certificates table not available yet' });

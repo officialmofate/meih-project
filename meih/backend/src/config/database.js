@@ -5,7 +5,11 @@ let pool = null;
 let dbAvailable = false;
 
 if (databaseUrl) {
-  pool = new Pool({ connectionString: databaseUrl });
+  const isSupabase = databaseUrl.includes('supabase');
+  pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
+  });
   pool.on('error', (err) => {
     console.error('PostgreSQL pool error:', err.message);
   });

@@ -12,6 +12,12 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
       - key: CORS_ORIGIN
         sync: false
       - key: REDIS_URL
