@@ -268,25 +268,36 @@
       var prices = {};
       var qeSelect = document.getElementById('qe-category');
 
-      var API = window.MEIH_API_URL || '/api/v1';
-      // Load categories from API
-      fetch(API + '/events/categories').then(r => r.ok ? r.json() : []).then(cats => {
-        if (!Array.isArray(cats)) return;
-        cats.forEach(c => {
+      var FallbackCategories = [
+        { name: 'Birthday Events', suggested_fee_usd: 15 },
+        { name: 'Graduation', suggested_fee_usd: 20 },
+        { name: 'Wedding Planning', suggested_fee_usd: 50 },
+        { name: 'Corporate Events', suggested_fee_usd: 100 },
+        { name: 'Community Events', suggested_fee_usd: 25 },
+        { name: 'Workshops', suggested_fee_usd: 30 },
+        { name: 'Hackathons', suggested_fee_usd: 200 },
+        { name: 'Conference Planning', suggested_fee_usd: 80 },
+        { name: 'Product Launch', suggested_fee_usd: 120 },
+        { name: 'Festival Planning', suggested_fee_usd: 180 },
+        { name: 'NGO Events', suggested_fee_usd: 60 },
+        { name: 'Sports Events', suggested_fee_usd: 150 },
+      ];
+
+      function populateCategories(cats) {
+        cats.forEach(function(c) {
           var name = c.name || c;
-          var fee = c.suggested_fee_usd || c.platform_fee || 0;
+          var fee = Number(c.suggested_fee_usd || c.platform_fee || 0);
           prices[name.toLowerCase().replace(/\s+/g, '')] = fee;
           var opt = document.createElement('option');
           opt.value = name;
           opt.textContent = name + (fee ? ' — Tsh ' + fee.toLocaleString() : '');
           qeSelect.appendChild(opt);
         });
-        // Also populate category chips
         var chipRow = document.getElementById('category-chips');
         if (chipRow) {
-          cats.slice(0, 6).forEach(c => {
+          cats.slice(0, 6).forEach(function(c) {
             var name = c.name || c;
-            var fee = c.suggested_fee_usd || c.platform_fee || 0;
+            var fee = Number(c.suggested_fee_usd || c.platform_fee || 0);
             var a = document.createElement('a');
             a.className = 'chip';
             a.href = 'events.html?category=' + encodeURIComponent(name);
@@ -294,7 +305,18 @@
             chipRow.appendChild(a);
           });
         }
-      }).catch(() => {});
+      }
+
+      var API = window.MEIH_API_URL || '/api/v1';
+      fetch(API + '/events/categories').then(function(r) { return r.ok ? r.json() : []; }).then(function(cats) {
+        if (Array.isArray(cats) && cats.length) {
+          populateCategories(cats);
+        } else {
+          populateCategories(FallbackCategories);
+        }
+      }).catch(function() {
+        populateCategories(FallbackCategories);
+      });
 
       document.getElementById('quick-estimate-form').addEventListener('submit', function(e) {
         e.preventDefault();
