@@ -22,21 +22,16 @@ if (databaseUrl) {
       connectionTimeoutMillis: 15000,
     };
 
+    // Force IPv4 for Supabase on Render
     if (isSupabase) {
       try {
         const afterProto = url.replace(/^postgresql:\/\//, '');
-        const authority = afterProto.split('@').pop();
-        const hostname = authority.split('/')[0].split(':')[0];
+        const hostPort = afterProto.split('@').pop().split('/')[0];
+        const hostname = hostPort.split(':')[0];
         const addrs = await dns.promises.resolve4(hostname);
+        // Override just the host — pg keeps user/pass/db from connectionString
         poolConfig.host = addrs[0];
-        delete poolConfig.connectionString;
-        // Re-extract user/pass for direct connection
-        const userInfo = url.replace(/^postgresql:\/\//, '').split('@')[0];
-        const colonIdx = userInfo.indexOf(':');
-        poolConfig.user = decodeURIComponent(userInfo.slice(0, colonIdx));
-        poolConfig.password = decodeURIComponent(userInfo.slice(colonIdx + 1));
-        poolConfig.database = authority.split('/')[0].split('?')[0];
-        poolConfig.port = parseInt(authority.split(':')[1], 10) || 5432;
+        poolConfig.port = parseInt(hostPort.split(':')[1], 10) || 5432;
         console.log('IPv4 resolved:', hostname, '->', addrs[0]);
       } catch (dnsErr) {
         console.error('DNS IPv4 failed, using connectionString:', dnsErr.message);
