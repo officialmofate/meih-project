@@ -63,18 +63,26 @@ export function initAIAssistant() {
         color: #fff;
         border: none;
         cursor: pointer;
-        font-size: 22px;
-        font-weight: 700;
+        font-size: 16px;
+        font-weight: 800;
+        font-family: var(--font-heading);
+        letter-spacing: 0.05em;
         display: flex;
         align-items: center;
         justify-content: center;
         box-shadow: 0 4px 20px ${accentColor}44;
         z-index: 1000;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: ai-rotate 4s linear infinite;
+      }
+      @keyframes ai-rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
       .ai-fab:hover {
-        transform: scale(1.08);
+        transform: scale(1.08) rotate(0deg);
         box-shadow: 0 6px 28px ${accentColor}66;
+        animation-play-state: paused;
       }
       .ai-fab.active {
         border-radius: var(--radius-lg);
@@ -82,6 +90,7 @@ export function initAIAssistant() {
         padding: 0 16px;
         gap: 8px;
         font-size: 14px;
+        animation: none;
       }
 
       .ai-chat-panel {
@@ -243,7 +252,7 @@ export function initAIAssistant() {
         padding: 24px 16px;
         color: var(--color-muted);
       }
-      .ai-welcome .ai-icon { font-size: 32px; margin-bottom: 8px; }
+      .ai-welcome .ai-icon { font-size: 28px; font-weight: 800; font-family: var(--font-heading); background: linear-gradient(135deg, ${accentColor}, ${ctx === 'innovation' ? '#22d3ee' : '#a855f7'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px; }
       .ai-welcome p { font-size: 12px; line-height: 1.5; }
 
       @media (max-width: 480px) {
@@ -251,20 +260,19 @@ export function initAIAssistant() {
       }
     </style>
 
-    <button class="ai-fab" id="ai-fab">✦</button>
+    <button class="ai-fab" id="ai-fab">AI</button>
 
     <div class="ai-chat-panel" id="ai-chat-panel">
       <div class="ai-chat-header">
         <div>
           <h3><span class="ai-dot"></span> ${getContextLabel(ctx)}</h3>
-          <span class="ai-status">Powered by Gemini AI</span>
         </div>
         <button class="ai-close-btn" id="ai-close">&times;</button>
       </div>
 
       <div class="ai-chat-messages" id="ai-messages">
         <div class="ai-welcome">
-          <div class="ai-icon">✦</div>
+          <div class="ai-icon">AI</div>
           <p>Hi! I'm your MEIH ${ctx === 'event' ? 'event planning assistant' : ctx === 'innovation' ? 'innovation coach' : 'assistant'}.<br/>Ask me anything about ${ctx === 'event' ? 'planning events, finding vendors, or budgeting' : ctx === 'innovation' ? 'innovations, competitions, or submissions' : 'the platform'}.</p>
         </div>
       </div>
@@ -291,7 +299,7 @@ export function initAIAssistant() {
       fab.textContent = '✕';
       input.focus();
     } else {
-      fab.textContent = '✦';
+      fab.textContent = 'AI';
     }
   }
 
