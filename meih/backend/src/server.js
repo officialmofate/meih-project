@@ -50,6 +50,16 @@ function createApp() {
     const available = db.isAvailable();
     if (!available) {
       const hasUrl = !!process.env.DATABASE_URL;
+      if (hasUrl && db.pool) {
+        try {
+          const client = await db.pool.connect();
+          const result = await client.query('SELECT NOW() AS time, current_database() AS db');
+          client.release();
+          return res.json({ status: 'ok', database: 'connected (retry)', ...result.rows[0] });
+        } catch (err) {
+          return res.json({ status: 'error', database: 'not connected', hasDatabaseUrl: hasUrl, error: err.message, code: err.code });
+        }
+      }
       return res.json({ status: 'error', database: 'not connected', hasDatabaseUrl: hasUrl });
     }
     try {
