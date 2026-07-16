@@ -8,29 +8,24 @@ let dbAvailable = false;
 if (databaseUrl) {
   const isSupabase = databaseUrl.includes('supabase');
 
-  let url = databaseUrl;
-
   async function init() {
-    // Parse connection string manually for full control over SSL
-    let user, password, host, port, database;
-    try {
-      const raw = url.replace(/^postgresql:\/\//, '');
-      const dbPart = raw.split('@').pop();
-      const pathPart = raw.split('@').slice(0, -1).join('@');
-      const slashIdx = pathPart.lastIndexOf('/');
-      const userInfo = pathPart.slice(0, slashIdx).replace(/^postgresql:\/\//, '');
-      const colonIdx = userInfo.indexOf(':');
-      user = decodeURIComponent(userInfo.slice(0, colonIdx));
-      password = decodeURIComponent(userInfo.slice(colonIdx + 1));
-      const hostPort = dbPart.split('/')[0];
-      const hpParts = hostPort.split(':');
-      host = hpParts[0];
-      port = parseInt(hpParts[1], 10) || 5432;
-      database = dbPart.split('/')[1].split('?')[0];
-    } catch (parseErr) {
-      console.error('URL parse error:', parseErr.message);
-      return;
-    }
+    // Parse: postgresql://user:pass@host:port/dbname?params
+    const raw = databaseUrl.replace(/^postgresql:\/\//, '');
+    const lastAt = raw.lastIndexOf('@');
+    const userPass = raw.slice(0, lastAt);
+    const hostDb = raw.slice(lastAt + 1);
+
+    const colonIdx = userPass.indexOf(':');
+    const user = decodeURIComponent(userPass.slice(0, colonIdx));
+    const password = decodeURIComponent(userPass.slice(colonIdx + 1));
+
+    const slashIdx = hostDb.indexOf('/');
+    const hostPort = hostDb.slice(0, slashIdx);
+    const database = hostDb.slice(slashIdx + 1).split('?')[0];
+
+    const hpParts = hostPort.split(':');
+    let host = hpParts[0];
+    let port = parseInt(hpParts[1], 10) || 5432;
 
     // Force IPv4 for Supabase on Render
     if (isSupabase) {
@@ -43,6 +38,8 @@ if (databaseUrl) {
       }
     }
 
+    console.log('DB config:', { host, port, database, user });
+
     const poolConfig = {
       host,
       port,
@@ -54,8 +51,6 @@ if (databaseUrl) {
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 15000,
     };
-
-    console.log('DB connecting to:', host + ':' + port + '/' + database + ' as ' + user);
 
     pool = new Pool(poolConfig);
     pool.on('error', (err) => {
