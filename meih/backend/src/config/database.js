@@ -22,7 +22,6 @@ if (databaseUrl) {
       connectionTimeoutMillis: 15000,
     };
 
-    // For Supabase on Render: force IPv4 by resolving A records
     if (isSupabase) {
       try {
         const afterProto = url.replace(/^postgresql:\/\//, '');
@@ -30,9 +29,17 @@ if (databaseUrl) {
         const hostname = authority.split('/')[0].split(':')[0];
         const addrs = await dns.promises.resolve4(hostname);
         poolConfig.host = addrs[0];
+        delete poolConfig.connectionString;
+        // Re-extract user/pass for direct connection
+        const userInfo = url.replace(/^postgresql:\/\//, '').split('@')[0];
+        const colonIdx = userInfo.indexOf(':');
+        poolConfig.user = decodeURIComponent(userInfo.slice(0, colonIdx));
+        poolConfig.password = decodeURIComponent(userInfo.slice(colonIdx + 1));
+        poolConfig.database = authority.split('/')[0].split('?')[0];
+        poolConfig.port = parseInt(authority.split(':')[1], 10) || 5432;
         console.log('IPv4 resolved:', hostname, '->', addrs[0]);
       } catch (dnsErr) {
-        console.error('DNS IPv4 resolution failed, using default:', dnsErr.message);
+        console.error('DNS IPv4 failed, using connectionString:', dnsErr.message);
       }
     }
 
@@ -54,14 +61,14 @@ if (databaseUrl) {
         if (i < 2) await new Promise(r => setTimeout(r, 3000));
       }
     }
-    console.error('All DB connection attempts failed — running without database');
+    console.error('All DB connection attempts failed');
   }
 
   init().catch((err) => {
     console.error('DB init error:', err.message);
   });
 } else {
-  console.warn('DATABASE_URL not set — running without database');
+  console.warn('DATABASE_URL not set');
 }
 
 module.exports = {
@@ -69,6 +76,6 @@ module.exports = {
     if (!dbAvailable) throw new Error('Database not available');
     return pool.query(text, params);
   },
-  pool,
+  getPool: () => pool,
   isAvailable: () => dbAvailable,
 };

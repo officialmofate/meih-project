@@ -50,9 +50,9 @@ function createApp() {
     const available = db.isAvailable();
     if (!available) {
       const hasUrl = !!process.env.DATABASE_URL;
-      if (hasUrl && db.pool) {
+      if (hasUrl && db.getPool()) {
         try {
-          const client = await db.pool.connect();
+          const client = await db.getPool().connect();
           const result = await client.query('SELECT NOW() AS time, current_database() AS db');
           client.release();
           return res.json({ status: 'ok', database: 'connected (retry)', ...result.rows[0] });
