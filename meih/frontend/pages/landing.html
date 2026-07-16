@@ -218,8 +218,9 @@
       var prices = {};
       var qeSelect = document.getElementById('qe-category');
 
+      var API = window.MEIH_API_URL || '/api/v1';
       // Load categories from API
-      fetch('/api/v1/events/categories').then(r => r.ok ? r.json() : []).then(cats => {
+      fetch(API + '/events/categories').then(r => r.ok ? r.json() : []).then(cats => {
         if (!Array.isArray(cats)) return;
         cats.forEach(c => {
           var name = c.name || c;
@@ -257,10 +258,10 @@
     } catch(e) { console.error('[MEIH] Quick estimate error:', e); }
 
     // Load stats
-    Promise.all([
-      fetch('/api/v1/events/events').then(r => r.ok ? r.json() : []).catch(() => []),
-      fetch('/api/v1/vendors').then(r => r.ok ? r.json() : []).catch(() => []),
-      fetch('/api/v1/innovation/submissions').then(r => r.ok ? r.json() : []).catch(() => []),
+      Promise.all([
+        fetch(API + '/events/events').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch(API + '/vendors').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch(API + '/innovation/submissions').then(r => r.ok ? r.json() : []).catch(() => []),
     ]).then(([events, vendors, innovations]) => {
       if (Array.isArray(events)) document.getElementById('stat-events').textContent = events.length.toLocaleString();
       if (Array.isArray(vendors)) document.getElementById('stat-vendors').textContent = vendors.length.toLocaleString();
@@ -268,7 +269,7 @@
     }).catch(() => {});
 
     // Load competition preview
-    fetch('/api/v1/innovation/competitions').then(r => r.ok ? r.json() : []).then(comps => {
+    fetch(API + '/innovation/competitions').then(r => r.ok ? r.json() : []).then(comps => {
       if (!Array.isArray(comps) || !comps.length) return;
       var container = document.getElementById('live-competition-preview');
       container.innerHTML = comps.slice(0, 3).map(c => {

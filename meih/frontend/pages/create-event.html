@@ -557,7 +557,8 @@
           var token = localStorage.getItem('meih_token');
           var headers = {};
           if (token) headers['Authorization'] = 'Bearer ' + token;
-          var res = await fetch('/api/v1/events/categories', { headers: headers });
+          var API_BASE = window.MEIH_API_URL || '/api/v1';
+          var res = await fetch(API_BASE + '/events/categories', { headers: headers });
           if (!res.ok) throw new Error('API error');
           var cats = await res.json();
           if (Array.isArray(cats) && cats.length) {
@@ -623,7 +624,7 @@
         data.services = services.length > 0 ? services : null;
 
         try {
-          var BASE_URL = '/api/v1';
+          var BASE_URL = window.MEIH_API_URL || '/api/v1';
           var token = localStorage.getItem('meih_token');
           var headers = { 'Content-Type': 'application/json' };
           if (token) headers['Authorization'] = 'Bearer ' + token;
