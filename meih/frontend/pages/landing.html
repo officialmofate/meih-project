@@ -25,7 +25,7 @@
           <div class="hero-inner">
             <div class="hero-copy">
               <span class="badge" style="background:var(--color-primary-light);color:var(--color-primary);" data-i18n="landing.badge_event">Event & Innovation Platform</span>
-              <h1 data-i18n="landing.hero_event_title">Plan <span class="gradient-text">unforgettable</span> events.</h1>
+              <h1 data-i18n="landing.hero_event_title">Plan <span class="typewriter" id="event-typewriter" style="background:var(--gradient-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></span><span class="typewriter-cursor">|</span></h1>
               <p class="hero-sub" data-i18n="landing.hero_event_sub">
                 Connect with vetted event planners and vendors across Tanzania.
                 From birthdays to corporate galas — get quotes, compare reviews,
@@ -96,7 +96,7 @@
           <div class="hero-inner">
             <div class="hero-copy">
               <span class="badge" style="background:var(--color-secondary-light);color:var(--color-secondary);" data-i18n="landing.badge_innovation">Innovation Competitions · Tanzania</span>
-              <h1 data-i18n="landing.hero_inno_title">Launch <span class="gradient-text" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;background-clip:text;">bold</span> innovations.</h1>
+              <h1 data-i18n="landing.hero_inno_title">Launch <span class="typewriter" id="innovation-typewriter" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></span><span class="typewriter-cursor" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">|</span></h1>
               <p class="hero-sub" data-i18n="landing.hero_inno_sub">
                 Submit your innovation, get validated by the public through OTP-verified
                 voting, and be scored by expert judges. Win certificates, funding,
@@ -210,6 +210,57 @@
         if (target) target.classList.add('active');
       });
     });
+  </script>
+  <script>
+    // Typewriter effect
+    (function() {
+      var phrases = {
+        'event-typewriter': ['unforgettable events.', 'memorable gatherings.', 'perfect celebrations.'],
+        'innovation-typewriter': ['bold innovations.', 'game-changing ideas.', 'future-ready solutions.']
+      };
+      var state = {};
+
+      function type(el, text, speed, cb) {
+        var i = 0;
+        (function tick() {
+          if (i <= text.length) {
+            el.textContent = text.slice(0, i++);
+            setTimeout(tick, speed);
+          } else { cb(); }
+        })();
+      }
+
+      function del(el, speed, cb) {
+        var t = el.textContent;
+        var i = t.length;
+        (function tick() {
+          if (i >= 0) {
+            el.textContent = t.slice(0, i--);
+            setTimeout(tick, speed);
+          } else { cb(); }
+        })();
+      }
+
+      function cycle(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var list = phrases[id];
+        state[id] = state[id] || 0;
+        var phrase = list[state[id] % list.length];
+        state[id]++;
+
+        type(el, phrase, 70, function() {
+          setTimeout(function() {
+            del(el, 40, function() {
+              setTimeout(function() { cycle(id); }, 300);
+            });
+          }, 2000);
+        });
+      }
+
+      cycle('event-typewriter');
+      cycle('innovation-typewriter');
+    })();
   </script>
   <script type="module">
     // Quick Estimate — isolated from tab switching
