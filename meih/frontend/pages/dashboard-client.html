@@ -15,7 +15,6 @@
 
       <header class="page-header">
         <h1 id="dashboard-welcome">My Dashboard</h1>
-        <a id="register-event-btn" class="btn btn-primary" href="create-event.html" hidden>+ Register Event</a>
       </header>
 
       <section class="stats-row">
@@ -112,16 +111,13 @@
   <script type="module">
     import { api } from '../js/api.js';
 
-    // Show user name and conditionally show Register Event button
+    // Show user name
     try {
       const raw = localStorage.getItem('meih_user');
       if (raw) {
         const user = JSON.parse(raw);
         const name = user.full_name || user.name || user.email || 'User';
         document.getElementById('dashboard-welcome').textContent = name + "'s Dashboard";
-        if (user.role === 'planner') {
-          document.getElementById('register-event-btn').hidden = false;
-        }
       }
     } catch {}
 
@@ -196,7 +192,7 @@
         const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
         const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
         const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket" target="_blank">Ticket</a>`
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">PDF Ticket</a>`
           : '<span class="text-muted">—</span>';
         return `<tr>
           <td>${b.event_name || '—'}</td>

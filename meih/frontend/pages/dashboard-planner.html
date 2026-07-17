@@ -65,8 +65,52 @@
 
         <section class="card wide">
           <h2>Submit Event to Admin</h2>
-          <p class="text-muted">Submit your event for admin confirmation. Include your payment details for the MOFATE payment number.</p>
-          
+          <p class="text-muted">Submit your event for admin confirmation. Pay the confirmation fee below, then submit.</p>
+
+          <div class="admin-payment-info">
+            <div class="payment-info-header">
+              <div class="payment-info-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg>
+              </div>
+              <div>
+                <h3>MOFATE Payment Details</h3>
+                <p>Send confirmation fee to the number below</p>
+              </div>
+            </div>
+            <div class="payment-info-grid">
+              <div class="payment-info-item">
+                <span class="payment-info-label">Account Number</span>
+                <span class="payment-info-value">123456</span>
+              </div>
+              <div class="payment-info-item">
+                <span class="payment-info-label">Account Name</span>
+                <span class="payment-info-value">MOFATE</span>
+              </div>
+              <div class="payment-info-item">
+                <span class="payment-info-label">Payment Method</span>
+                <span class="payment-info-value">Mobile Money</span>
+              </div>
+              <div class="payment-info-item">
+                <span class="payment-info-label">Amount</span>
+                <span class="payment-info-value payment-info-amount">Set by Admin</span>
+              </div>
+            </div>
+            <div class="payment-info-steps">
+              <div class="payment-step">
+                <span class="payment-step-num">1</span>
+                <span>Send payment to the number above</span>
+              </div>
+              <div class="payment-step">
+                <span class="payment-step-num">2</span>
+                <span>Upload payment screenshot below</span>
+              </div>
+              <div class="payment-step">
+                <span class="payment-step-num">3</span>
+                <span>Submit event for admin review</span>
+              </div>
+            </div>
+          </div>
+
           <div id="events-to-confirm">
             <p class="empty-state" id="no-events-to-confirm">No draft events to submit.</p>
             <div id="events-confirm-list"></div>
@@ -76,18 +120,14 @@
             <h3 id="confirm-event-name"></h3>
             <form id="confirm-event-form" class="stacked-form">
               <input type="hidden" name="eventId" id="confirm-event-id" />
+              <input type="hidden" name="paymentNumber" value="123456" />
+              <input type="hidden" name="paymentName" value="MOFATE" />
 
-              <label for="confirm-payment-number">Payment Number (MOFATE)</label>
-              <input id="confirm-payment-number" name="paymentNumber" type="text" value="123456" required placeholder="e.g. 123456" />
+              <label for="confirm-screenshot">Upload Payment Screenshot</label>
+              <input id="confirm-screenshot" name="screenshot" type="file" accept="image/*" required />
 
-              <label for="confirm-payment-name">Payment Name</label>
-              <input id="confirm-payment-name" name="paymentName" type="text" value="MOFATE" required placeholder="e.g. MOFATE" />
-
-              <label for="confirm-screenshot">Payment Screenshot</label>
-              <input id="confirm-screenshot" name="screenshot" type="file" accept="image/*" />
-
-              <button type="submit" class="btn btn-primary">Submit for Confirmation</button>
-              <button type="button" class="btn btn-secondary" id="cancel-confirm-form">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-block">Submit for Confirmation</button>
+              <button type="button" class="btn btn-ghost btn-block" id="cancel-confirm-form">Cancel</button>
             </form>
             <p id="confirm-success" class="form-success" hidden>Event submitted for admin confirmation.</p>
           </div>

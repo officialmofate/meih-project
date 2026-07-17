@@ -85,7 +85,7 @@
           <p id="no-bookings" class="empty-state">No bookings yet.</p>
           <table class="data-table" id="bookings-table" hidden>
             <thead>
-              <tr><th>Event</th><th>Client</th><th>Date</th><th>Status</th><th>Amount</th></tr>
+              <tr><th>Event</th><th>Client</th><th>Date</th><th>Status</th><th>Amount</th><th>Ticket</th></tr>
             </thead>
             <tbody id="bookings-table-body"></tbody>
           </table>
@@ -149,13 +149,17 @@
       document.getElementById('stat-bookings').textContent = bookings.length;
       const body = document.getElementById('bookings-table-body');
       body.innerHTML = bookings.map(b => {
-        const statusClass = b.status === 'confirmed' ? '' : 'badge-muted';
+        const statusClass = b.status === 'confirmed' ? 'badge-success' : 'badge-muted';
+        const ticketBtn = b.status === 'confirmed'
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">PDF Ticket</a>`
+          : '<span class="text-muted">—</span>';
         return `<tr>
           <td>${b.event_name || '—'}</td>
           <td>${b.client_name || '—'}</td>
           <td>${b.event_date ? new Date(b.event_date).toLocaleDateString() : '—'}</td>
           <td><span class="badge ${statusClass}">${b.status || 'pending'}</span></td>
           <td>Tsh ${Number(b.deposit_amount || b.amount || 0).toLocaleString()}</td>
+          <td>${ticketBtn}</td>
         </tr>`;
       }).join('');
     }).catch(() => {

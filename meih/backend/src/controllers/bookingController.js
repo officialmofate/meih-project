@@ -2,7 +2,7 @@ const bookingService = require('../services/bookingService');
 
 exports.create = async (req, res, next) => {
   try {
-    const booking = await bookingService.create(req.user.id, req.body);
+    const booking = await bookingService.create(req.user.id, req.user.role, req.body);
     res.status(201).json(booking);
   } catch (err) { next(err); }
 };
@@ -163,5 +163,17 @@ exports.getTicket = async (req, res, next) => {
 
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
+  } catch (err) { next(err); }
+};
+
+exports.getTicketPDF = async (req, res, next) => {
+  try {
+    const pdfBuf = await bookingService.generateTicketPDF(req.params.id);
+    if (!pdfBuf) {
+      return res.status(404).send('Ticket not found or not confirmed');
+    }
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="ticket-' + req.params.id.substring(0, 8) + '.pdf"');
+    res.send(pdfBuf);
   } catch (err) { next(err); }
 };

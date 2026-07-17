@@ -1,7 +1,7 @@
 import { store } from '../state.js';
 
 const HUB_PAGES = {
-  event: ['events.html', 'create-event.html', 'event-detail.html', 'dashboard-planner.html', 'dashboard-vendor.html', 'dashboard-client.html'],
+  event: ['events.html', 'create-event.html', 'event-detail.html', 'dashboard-planner.html', 'dashboard-vendor.html', 'dashboard-client.html', 'planners.html', 'planner-detail.html'],
   innovation: ['innovation.html', 'submit-innovation.html', 'innovation-detail.html', 'leaderboard.html', 'dashboard-judge.html', 'dashboard-admin.html'],
 };
 
@@ -53,18 +53,19 @@ export function renderNavbar() {
   if (hub === 'event') {
     hubLinks = `
       <a href="events.html" class="active" data-i18n="nav.browse_events">Browse Events</a>
+      <a href="planners.html">Planners</a>
       ${dashboardLink}
     `;
   } else if (hub === 'innovation') {
     hubLinks = `
       <a href="innovation.html" class="active" data-i18n="nav.browse_innovations">Browse Innovations</a>
-      <a href="submit-innovation.html" data-i18n="nav.register_innovation">Register Innovation</a>
       <a href="leaderboard.html" data-i18n="nav.leaderboard">Leaderboard</a>
       ${dashboardLink}
     `;
   } else {
     hubLinks = `
       <a href="events.html" data-i18n="nav.events">Event Hub</a>
+      <a href="planners.html">Planners</a>
       <a href="innovation.html" data-i18n="nav.innovation">Innovation Hub</a>
       ${dashboardLink}
     `;

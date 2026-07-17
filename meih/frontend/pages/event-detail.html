@@ -56,70 +56,27 @@
 
       <aside class="detail-sidebar">
         <div class="card sticky-card">
-          <h2>Submit a Quote / Book This Event</h2>
+          <h2>Book This Event</h2>
+          <p class="text-muted">Confirm your attendance. The planner will set the deposit amount.</p>
           <form id="booking-form" class="stacked-form">
             <input type="hidden" name="eventId" id="booking-event-id" />
 
-            <label for="quote-amount" data-i18n="event.quote_amount">Your quote (Tsh)</label>
-            <input id="quote-amount" name="quoteAmount" type="number" min="1" required />
+            <label for="booking-name">Your name</label>
+            <input id="booking-name" name="clientName" type="text" required />
 
-            <label for="quote-notes">Notes for the client</label>
-            <textarea id="quote-notes" name="notes" rows="4" placeholder="Describe what's included..."></textarea>
+            <label for="booking-phone">Phone number</label>
+            <input id="booking-phone" name="clientPhone" type="tel" required />
 
-            <label for="quote-availability">Available on event date?</label>
-            <select id="quote-availability" name="availability">
-              <option value="yes">Yes, fully available</option>
-              <option value="tentative">Tentative</option>
-            </select>
-
-            <button type="submit" class="btn btn-primary btn-block">Submit Quote</button>
+            <button type="submit" class="btn btn-primary btn-block">Book This Event</button>
           </form>
-          <p id="booking-confirmation" class="form-success" hidden>Quote submitted — the client will be notified.</p>
-        </div>
-
-        <div class="card sticky-card" style="margin-top: var(--space-md);" id="payment-section" hidden>
-          <h2>Make a Payment</h2>
-          <p class="text-muted">Pay to the planner's number, then upload your payment screenshot below.</p>
-
-          <div id="pay-details-box" class="info-box" hidden>
-            <p><strong>Pay to:</strong> <span id="payee-name">—</span></p>
-            <p><strong>Number:</strong> <span id="payee-number">—</span></p>
-            <p><strong>Method:</strong> <span id="payee-method">—</span></p>
-          </div>
-
-          <form id="event-payment-form" class="stacked-form">
-            <input type="hidden" name="bookingId" id="pay-booking-id" />
-
-            <label for="ep-amount" data-i18n="event.pay_amount">Amount (Tsh)</label>
-            <input id="ep-amount" name="amount" type="number" min="1" required />
-
-            <label for="ep-method">Payment method</label>
-            <select id="ep-method" name="method">
-              <option value="mobile_money">Mobile Money</option>
-              <option value="bank_transfer">Bank Transfer</option>
-            </select>
-
-            <label for="ep-number">Your payment number</label>
-            <input id="ep-number" name="paymentNumber" type="text" placeholder="e.g. 0754 123 456" />
-
-            <label for="ep-name">Account holder name</label>
-            <input id="ep-name" name="paymentName" type="text" placeholder="e.g. John Mwakasege" />
-
-            <label for="ep-screenshot">Payment screenshot</label>
-            <input id="ep-screenshot" name="screenshot" type="file" accept="image/*" />
-
-            <label for="ep-notes">Notes</label>
-            <textarea id="ep-notes" name="notes" rows="2" placeholder="Optional..."></textarea>
-
-            <button type="submit" class="btn btn-primary btn-block">Submit Payment Proof</button>
-          </form>
-          <p id="ep-success" class="form-success" hidden>Payment proof submitted — awaiting planner confirmation.</p>
+          <p id="booking-confirmation" class="form-success" hidden>Booking submitted — awaiting planner confirmation.</p>
         </div>
 
         <div class="card sticky-card" style="margin-top: var(--space-md);" id="ticket-section" hidden>
           <h2>Your Ticket</h2>
-          <p class="text-muted">Your booking is confirmed! Download or print your event ticket.</p>
-          <a id="ticket-link" class="btn btn-primary btn-block" href="#" target="_blank">Download Ticket</a>
+          <p class="text-muted">Your booking is confirmed! Download your ticket.</p>
+          <a id="ticket-pdf-link" class="btn btn-primary btn-block" href="#" target="_blank">Download PDF Ticket</a>
+          <a id="ticket-html-link" class="btn btn-ghost btn-block" href="#" target="_blank" style="margin-top:8px;">View Printable Ticket</a>
         </div>
       </aside>
 
@@ -143,6 +100,13 @@
       throw new Error('No event ID');
     }
     document.getElementById('booking-event-id').value = eventId;
+
+    const userRaw = localStorage.getItem('meih_user');
+    const currentUser = userRaw ? JSON.parse(userRaw) : null;
+    if (currentUser) {
+      document.getElementById('booking-name').value = currentUser.full_name || currentUser.name || '';
+      document.getElementById('booking-phone').value = currentUser.phone || '';
+    }
 
     function paintEvent(ev) {
       document.getElementById('event-name').textContent = ev.name || 'Untitled Event';
@@ -185,66 +149,39 @@
     });
     api.get(`/events/events/${eventId}/bookings`).then(paintVendors).catch(() => paintVendors([]));
 
-    // Check if current user has a confirmed booking for this event
+    // Check if current user has a booking for this event
     api.get('/bookings').then((bookings) => {
       if (!Array.isArray(bookings)) return;
       const myBooking = bookings.find(b => b.event_id === eventId && b.status === 'confirmed');
       if (myBooking) {
         document.getElementById('ticket-section').hidden = false;
-        document.getElementById('ticket-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket';
+        document.getElementById('booking-form').hidden = true;
+        document.getElementById('booking-confirmation').hidden = false;
+        document.getElementById('booking-confirmation').textContent = 'Your booking is confirmed!';
+        document.getElementById('ticket-pdf-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket-pdf';
+        document.getElementById('ticket-html-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket';
+      } else {
+        const pendingBooking = bookings.find(b => b.event_id === eventId && b.status === 'pending');
+        if (pendingBooking) {
+          document.getElementById('booking-form').hidden = true;
+          document.getElementById('booking-confirmation').hidden = false;
+          document.getElementById('booking-confirmation').textContent = 'Booking submitted — awaiting planner confirmation.';
+        }
       }
     }).catch(() => {});
 
     document.getElementById('booking-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const data = Object.fromEntries(new FormData(e.target));
-      const userRaw = localStorage.getItem('meih_user');
-      const user = userRaw ? JSON.parse(userRaw) : null;
-      if (user) {
-        data.clientName = user.full_name || user.name || '';
-        data.clientPhone = user.phone || '';
-      }
       try {
-        const booking = await api.post('/bookings', data);
+        await api.post('/bookings', data);
+        document.getElementById('booking-form').hidden = true;
         document.getElementById('booking-confirmation').hidden = false;
-        document.getElementById('payment-section').hidden = false;
-        document.getElementById('pay-booking-id').value = booking.id;
-        loadPaymentDetails(booking.id);
-      } catch {
-        document.getElementById('booking-confirmation').hidden = false;
-      }
-      e.target.reset();
-      document.getElementById('booking-event-id').value = eventId;
-    });
-
-    async function loadPaymentDetails(bookingId) {
-      try {
-        const details = await api.get(`/payments/booking/${bookingId}`);
-        if (details && details.payment_number) {
-          document.getElementById('pay-details-box').hidden = false;
-          document.getElementById('payee-name').textContent = details.payee_name || '—';
-          document.getElementById('payee-number').textContent = details.payment_number || '—';
-          document.getElementById('payee-method').textContent = details.payment_method || 'mobile_money';
-        }
-      } catch {}
-    }
-
-    document.getElementById('event-payment-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const fileInput = document.getElementById('ep-screenshot');
-      if (fileInput.files.length > 0) {
-        formData.set('screenshot', fileInput.files[0]);
-      }
-      for (const [key, val] of [...formData.entries()]) {
-        if (!val || (typeof val === 'string' && !val.trim())) formData.delete(key);
-      }
-      try {
-        await api.upload('/payments', formData);
-        document.getElementById('ep-success').hidden = false;
-        e.target.reset();
+        document.getElementById('booking-confirmation').textContent = 'Booking submitted — awaiting planner confirmation.';
       } catch (err) {
-        alert(err.message);
+        document.getElementById('booking-confirmation').hidden = false;
+        document.getElementById('booking-confirmation').textContent = err.message || 'Booking failed.';
+        document.getElementById('booking-confirmation').classList.add('form-error');
       }
     });
 

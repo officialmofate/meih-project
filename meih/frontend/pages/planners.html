@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Event Planners — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/events.css" />
+  <style>
+    .planners-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-lg);
+    }
+    .planner-card {
+      text-align: center;
+      padding: var(--space-xl) var(--space-lg);
+      transition: all var(--transition-normal);
+      cursor: pointer;
+    }
+    .planner-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(108, 92, 231, 0.3);
+      box-shadow: 0 12px 40px rgba(108, 92, 231, 0.15);
+    }
+    .planner-card-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6c5ce7, #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--space-md);
+    }
+    .planner-card-avatar span {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .planner-card-body h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .planner-card-owner {
+      font-size: 13px;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-sm);
+    }
+    .planner-card-bio {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+      margin-bottom: var(--space-md);
+    }
+    .planner-card-rating {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-xs);
+    }
+    .planner-card-rating .stars {
+      color: #f9ca24;
+      font-size: 14px;
+      letter-spacing: 1px;
+    }
+    .planner-card-rating .rating-num {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    @media (max-width: 600px) {
+      .planners-grid { grid-template-columns: 1fr; }
+      .planner-card { padding: var(--space-lg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page" data-page="planners">
+    <div class="container">
+
+      <header class="page-header">
+        <h1>Event Planners</h1>
+        <p>Browse professional event planners across Tanzania. View their profiles, portfolios, and ratings.</p>
+      </header>
+
+      <div class="filter-bar card">
+        <input id="search-input" type="search" placeholder="Search planners by name or company..." aria-label="Search planners" />
+      </div>
+
+      <p id="results-count" class="results-count"></p>
+
+      <div id="planners-grid" class="planners-grid" aria-live="polite"></div>
+      <p id="empty-state" class="empty-state" hidden>No planners found. Try broadening your search.</p>
+
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script src="../js/config.js"></script>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+    import { plannerCard } from '../js/components/planner-card.js';
+    import { debounce } from '../js/utils/helpers.js';
+
+    let planners = [];
+    let filtered = [];
+
+    const grid = document.getElementById('planners-grid');
+    const emptyState = document.getElementById('empty-state');
+    const resultsCount = document.getElementById('results-count');
+
+    function render() {
+      grid.innerHTML = filtered.map(plannerCard).join('');
+      grid.querySelectorAll('.planner-card').forEach((card, i) => {
+        card.addEventListener('click', () => {
+          window.location.href = `planner-detail.html?id=${filtered[i].id}`;
+        });
+      });
+      emptyState.hidden = filtered.length !== 0;
+      resultsCount.textContent = `${filtered.length} planner${filtered.length === 1 ? '' : 's'} found`;
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      filtered = planners.filter(p =>
+        !q ||
+        (p.company_name || '').toLowerCase().includes(q) ||
+        (p.full_name || '').toLowerCase().includes(q)
+      );
+      render();
+    }
+
+    document.getElementById('search-input').addEventListener('input', debounce(applyFilters, 250));
+
+    grid.innerHTML = '<p class="results-count">Loading planners...</p>';
+    api.get('/planners')
+      .then((data) => {
+        if (Array.isArray(data)) planners = data;
+      })
+      .catch(() => {})
+      .finally(() => {
+        applyFilters();
+      });
+  </script>
+</body>
+</html>
