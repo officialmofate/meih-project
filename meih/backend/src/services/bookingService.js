@@ -22,7 +22,6 @@ exports.create = async (userId, role, payload) => {
 
   let clientId = role === 'client' ? userId : null;
   let vendorId = null;
-  let plannerId = null;
 
   if (role === 'vendor') {
     const { rows: vendorRows } = await db.query(
@@ -31,12 +30,17 @@ exports.create = async (userId, role, payload) => {
     if (vendorRows[0]) vendorId = vendorRows[0].id;
   }
 
+  const { rows: plannerRows } = await db.query(
+    `SELECT id FROM planners WHERE user_id = $1`, [ev.client_id]
+  );
+  const plannerId = plannerRows[0] ? plannerRows[0].id : null;
+
   const { rows } = await db.query(
     `INSERT INTO bookings (client_id, event_id, vendor_id, planner_id, deposit_amount, client_name, client_phone, status)
      VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
      RETURNING *`,
     [clientId, payload.eventId, vendorId || payload.vendorId || null,
-     payload.plannerId || null, payload.depositAmount || 0,
+     plannerId, payload.depositAmount || 0,
      payload.clientName || null, payload.clientPhone || null]
   );
   return rows[0];
@@ -82,12 +86,14 @@ exports.list = async (userId, role, { page = 1, limit = 50 } = {}) => {
              LIMIT $1 OFFSET $2`;
     params.splice(2, 0, userId);
   } else if (role === 'planner') {
-    query = `SELECT b.*, e.name AS event_name, e.event_date, e.guest_count, e.location AS event_location, u.full_name AS client_name
+    query = `SELECT b.*, e.name AS event_name, e.event_date, e.guest_count, e.location AS event_location,
+                    e.client_id AS planner_user_id, u.full_name AS client_name,
+                    p.company_name AS planner_name
              FROM bookings b
              LEFT JOIN events e ON e.id = b.event_id
              LEFT JOIN planners p ON p.id = b.planner_id
              LEFT JOIN users u ON u.id = b.client_id
-             WHERE p.user_id = $3
+             WHERE (p.user_id = $3 OR e.client_id = $3)
              ORDER BY b.created_at DESC
              LIMIT $1 OFFSET $2`;
     params.splice(2, 0, userId);
@@ -125,7 +131,8 @@ exports.confirm = async (id, userId, role) => {
     const { rows } = await db.query(
       `UPDATE bookings SET status = 'confirmed', updated_at = now()
        WHERE id = $1 AND status = 'pending'
-       AND planner_id IN (SELECT id FROM planners WHERE user_id = $2)
+       AND (planner_id IN (SELECT id FROM planners WHERE user_id = $2)
+            OR event_id IN (SELECT id FROM events WHERE client_id = $2))
        RETURNING *`,
       [id, userId]
     );
@@ -140,7 +147,18 @@ exports.confirm = async (id, userId, role) => {
   return rows[0];
 };
 
-exports.cancel = async (id) => {
+exports.cancel = async (id, userId, role) => {
+  if (role === 'planner') {
+    const { rows } = await db.query(
+      `UPDATE bookings SET status = 'cancelled', updated_at = now()
+       WHERE id = $1 AND status IN ('pending', 'confirmed')
+       AND (planner_id IN (SELECT id FROM planners WHERE user_id = $2)
+            OR event_id IN (SELECT id FROM events WHERE client_id = $2))
+       RETURNING *`,
+      [id, userId]
+    );
+    return rows[0];
+  }
   const { rows } = await db.query(
     `UPDATE bookings SET status = 'cancelled', updated_at = now()
      WHERE id = $1 AND status IN ('pending', 'confirmed')
@@ -153,7 +171,8 @@ exports.cancel = async (id) => {
 exports.setDeposit = async (id, plannerUserId, amount) => {
   const { rows } = await db.query(
     `UPDATE bookings SET deposit_amount = $3, updated_at = now()
-     WHERE id = $1 AND planner_id IN (SELECT id FROM planners WHERE user_id = $2)
+     WHERE id = $1 AND (planner_id IN (SELECT id FROM planners WHERE user_id = $2)
+                        OR event_id IN (SELECT id FROM events WHERE client_id = $2))
      RETURNING *`,
     [id, plannerUserId, amount]
   );

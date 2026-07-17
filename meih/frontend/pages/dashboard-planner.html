@@ -57,7 +57,7 @@
           <p id="no-projects" class="empty-state">No active projects yet.</p>
           <table class="data-table" id="projects-table" hidden>
             <thead>
-              <tr><th>Event</th><th>Client</th><th>Stage</th><th>Deadline</th><th>Budget</th></tr>
+              <tr><th>Event</th><th>Client</th><th>Stage</th><th>Date</th><th>Deposit</th><th>Ticket</th></tr>
             </thead>
             <tbody id="projects-body"></tbody>
           </table>
@@ -326,12 +326,16 @@
       table.hidden = false;
       tbody.innerHTML = active.map(b => {
         const statusClass = b.status === 'completed' ? 'badge-success' : b.status === 'confirmed' ? 'badge' : 'badge-muted';
+        const ticketBtn = b.status === 'confirmed'
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank" style="margin-left:var(--space-xs);">PDF Ticket</a>`
+          : '';
         return `<tr>
           <td>${b.event_name || '—'}</td>
           <td>${b.client_name || '—'}</td>
           <td><span class="badge ${statusClass}">${b.status || 'pending'}</span></td>
-          <td>${b.deadline ? new Date(b.deadline).toLocaleDateString() : '—'}</td>
-          <td>Tsh ${Number(b.amount || b.budget || 0).toLocaleString()}</td>
+          <td>${b.event_date ? new Date(b.event_date).toLocaleDateString() : '—'}</td>
+          <td>Tsh ${Number(b.deposit_amount || 0).toLocaleString()}</td>
+          <td>${ticketBtn}</td>
         </tr>`;
       }).join('');
     }).catch(() => {});
