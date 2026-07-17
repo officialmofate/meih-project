@@ -31,7 +31,7 @@
             from the event record.
           </p>
           <dl class="detail-grid">
-            <dt>Budget</dt><dd id="event-budget">—</dd>
+            <dt id="budget-label">Budget</dt><dd id="event-budget">—</dd>
             <dt>Date</dt><dd id="event-date">—</dd>
             <dt>Deposit required</dt><dd id="event-deposit">30% on award</dd>
             <dt>Created by</dt><dd id="event-client">—</dd>
@@ -103,6 +103,14 @@
 
     const userRaw = localStorage.getItem('meih_user');
     const currentUser = userRaw ? JSON.parse(userRaw) : null;
+    const userRole = currentUser ? currentUser.role : '';
+    const showBudget = userRole === 'planner' || userRole === 'admin' || userRole === 'superadmin';
+
+    if (!showBudget) {
+      document.getElementById('budget-label').hidden = true;
+      document.getElementById('event-budget').hidden = true;
+    }
+
     if (currentUser) {
       document.getElementById('booking-name').value = currentUser.full_name || currentUser.name || '';
       document.getElementById('booking-phone').value = currentUser.phone || '';

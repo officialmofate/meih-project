@@ -20,7 +20,7 @@ exports.create = async (userId, role, payload) => {
     throw Object.assign(new Error('Event is not available for booking'), { status: 400 });
   }
 
-  let clientId = null;
+  let clientId = role === 'client' ? userId : null;
   let vendorId = null;
   let plannerId = null;
 

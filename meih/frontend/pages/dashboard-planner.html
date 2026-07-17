@@ -367,9 +367,15 @@
 
     api.get('/events/events').then((events) => {
       const myEvents = Array.isArray(events) ? events.filter(e => 
-        e.client_id === (plannerUser && plannerUser.id) &&
-        (e.confirmation_status === 'unconfirmed' || e.confirmation_status === 'rejected' || !e.confirmation_status)
+        e.client_id === (plannerUser && plannerUser.id)
       ) : [];
+      
+      const pendingEvents = myEvents.filter(e => 
+        e.confirmation_status === 'unconfirmed' || e.confirmation_status === 'rejected' || !e.confirmation_status
+      );
+      const confirmedEvents = myEvents.filter(e => 
+        e.confirmation_status === 'confirmed' || e.confirmation_status === 'pending'
+      );
       
       if (myEvents.length === 0) {
         document.getElementById('no-events-to-confirm').hidden = false;
@@ -377,16 +383,45 @@
       }
       
       const list = document.getElementById('events-confirm-list');
-      list.innerHTML = myEvents.map(ev => `
-        <div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <strong>${ev.name || 'Untitled'}</strong>
-            <span class="badge badge-muted" style="margin-left:var(--space-xs);">${ev.confirmation_status || 'unconfirmed'}</span>
-            <span class="text-muted" style="margin-left:var(--space-sm);">${ev.category_name || ''}</span>
+      const allItems = [];
+      
+      // Pending events - can submit to admin
+      pendingEvents.forEach(ev => {
+        const screenshotLink = ev.confirmation_screenshot_url
+          ? `<a href="${ev.confirmation_screenshot_url}" target="_blank" class="btn btn-sm btn-secondary" style="margin-left:var(--space-xs);">View Screenshot</a>`
+          : '';
+        allItems.push(`
+          <div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
+            <div>
+              <strong>${ev.name || 'Untitled'}</strong>
+              <span class="badge badge-muted" style="margin-left:var(--space-xs);">${ev.confirmation_status || 'unconfirmed'}</span>
+              <span class="text-muted" style="margin-left:var(--space-sm);">${ev.category_name || ''}</span>
+              ${screenshotLink}
+            </div>
+            <button class="btn btn-sm btn-primary submit-confirm-btn" data-id="${ev.id}" data-name="${ev.name || 'Untitled'}">Submit to Admin</button>
           </div>
-          <button class="btn btn-sm btn-primary submit-confirm-btn" data-id="${ev.id}" data-name="${ev.name || 'Untitled'}">Submit to Admin</button>
-        </div>
-      `).join('');
+        `);
+      });
+      
+      // Confirmed/pending events - read-only with screenshot
+      confirmedEvents.forEach(ev => {
+        const confBadge = ev.confirmation_status === 'confirmed' ? 'badge-success' : 'badge-warning';
+        const screenshotLink = ev.confirmation_screenshot_url
+          ? `<a href="${ev.confirmation_screenshot_url}" target="_blank" class="btn btn-sm btn-secondary" style="margin-left:var(--space-xs);">View Screenshot</a>`
+          : '';
+        allItems.push(`
+          <div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
+            <div>
+              <strong>${ev.name || 'Untitled'}</strong>
+              <span class="badge ${confBadge}" style="margin-left:var(--space-xs);">${ev.confirmation_status}</span>
+              <span class="text-muted" style="margin-left:var(--space-sm);">${ev.category_name || ''}</span>
+              ${screenshotLink}
+            </div>
+          </div>
+        `);
+      });
+      
+      list.innerHTML = allItems.join('');
       
       list.querySelectorAll('.submit-confirm-btn').forEach(btn => {
         btn.addEventListener('click', () => {
