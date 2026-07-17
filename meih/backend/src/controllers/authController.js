@@ -54,24 +54,27 @@ exports.register = async (req, res, next) => {
     if (existing.length > 0) return res.status(409).json({ message: 'Email already registered for this role' });
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
     const { rows: userRows } = await db.query(
-      'INSERT INTO users (email, password_hash, full_name, role, email_verified) VALUES ($1, $2, $3, $4, false) RETURNING id, email, full_name, role, status, email_verified, created_at',
-      [cleanEmail, passwordHash, fullName || '', userRole]
+      'INSERT INTO users (email, password_hash, full_name, role, email_verified) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, role, status, email_verified, created_at',
+      [cleanEmail, passwordHash, fullName || '', userRole, !smtpConfigured]
     );
     const user = userRows[0];
 
     let verificationResult = null;
-    try {
-      verificationResult = await emailVerification.createVerification(user.id, cleanEmail, fullName || user.full_name);
-    } catch (emailErr) {
-      console.error('[REGISTER] Email verification error:', emailErr.message);
+    if (smtpConfigured) {
+      try {
+        verificationResult = await emailVerification.createVerification(user.id, cleanEmail, fullName || user.full_name);
+      } catch (emailErr) {
+        console.error('[REGISTER] Email verification error:', emailErr.message);
+      }
     }
 
     const tokens = signTokens(user);
     res.status(201).json({
       user,
       ...tokens,
-      emailVerificationRequired: true,
+      emailVerificationRequired: smtpConfigured,
       emailVerificationSent: verificationResult?.sent === true,
     });
   } catch (err) {
@@ -122,13 +125,14 @@ exports.login = async (req, res, next) => {
       profileComplete = vendorRows.length > 0;
     }
 
+    const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
     const tokens = signTokens(user);
     res.json({
       token: tokens.accessToken,
       ...tokens,
       user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, name: user.full_name, email_verified: user.email_verified },
       profileComplete,
-      emailVerified: user.email_verified
+      emailVerified: smtpConfigured ? user.email_verified : true
     });
   } catch (err) {
     next(err);
