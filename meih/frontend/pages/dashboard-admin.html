@@ -60,12 +60,24 @@
         <section class="card wide" id="event-confirmations-section">
           <h2>Event Confirmations</h2>
           <p class="text-muted">Events submitted by planners awaiting your confirmation.</p>
-          <p class="empty-state" id="no-pending-confirmations">No events pending confirmation.</p>
+          <p class="empty-state" id="no-pending-confirmations">No events pending confirmation. Planners must submit events first.</p>
           <table class="data-table" id="confirmations-table" hidden>
             <thead>
               <tr><th>Event</th><th>Planner</th><th>Category</th><th>Payment Number</th><th>Payment Name</th><th>Screenshot</th><th>Date</th><th>Actions</th></tr>
             </thead>
             <tbody id="confirmations-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide" id="all-events-section">
+          <h2>All Events</h2>
+          <p class="text-muted">Overview of all events with their confirmation and publication status.</p>
+          <p class="empty-state" id="no-all-events">No events found.</p>
+          <table class="data-table" id="all-events-table" hidden>
+            <thead>
+              <tr><th>Event</th><th>Created By</th><th>Category</th><th>Status</th><th>Confirmation</th><th>Date</th></tr>
+            </thead>
+            <tbody id="all-events-body"></tbody>
           </table>
         </section>
 
@@ -265,6 +277,28 @@
           } catch (err) { alert(err.message); }
         });
       });
+    }).catch(() => {});
+
+    // Load all events
+    api.get('/admin/events/all').then((events) => {
+      if (!Array.isArray(events) || !events.length) {
+        document.getElementById('no-all-events').hidden = false;
+        return;
+      }
+      document.getElementById('no-all-events').hidden = true;
+      document.getElementById('all-events-table').hidden = false;
+      document.getElementById('all-events-body').innerHTML = events.map(ev => {
+        const statusClass = ev.status === 'published' ? 'badge-success' : ev.status === 'draft' ? 'badge-muted' : 'badge';
+        const confClass = ev.confirmation_status === 'confirmed' ? 'badge-success' : ev.confirmation_status === 'pending' ? 'badge' : ev.confirmation_status === 'rejected' ? 'badge-danger' : 'badge-muted';
+        return `<tr>
+          <td>${ev.name || '—'}</td>
+          <td>${ev.client_name || '—'}</td>
+          <td>${ev.category_name || '—'}</td>
+          <td><span class="badge ${statusClass}">${ev.status || 'draft'}</span></td>
+          <td><span class="badge ${confClass}">${ev.confirmation_status || 'unconfirmed'}</span></td>
+          <td>${new Date(ev.created_at).toLocaleDateString()}</td>
+        </tr>`;
+      }).join('');
     }).catch(() => {});
 
     // Load pending innovation payments

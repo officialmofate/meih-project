@@ -260,11 +260,13 @@
     });
 
     // Load events by this planner for confirmation
+    const userRaw = localStorage.getItem('meih_user');
+    const plannerUser = userRaw ? JSON.parse(userRaw) : null;
+
     api.get('/events/events').then((events) => {
-      const userRaw = localStorage.getItem('meih_user');
-      const user = userRaw ? JSON.parse(userRaw) : null;
       const myEvents = Array.isArray(events) ? events.filter(e => 
-        (e.confirmation_status === 'unconfirmed' || e.confirmation_status === 'rejected')
+        e.client_id === (plannerUser && plannerUser.id) &&
+        (e.confirmation_status === 'unconfirmed' || e.confirmation_status === 'rejected' || !e.confirmation_status)
       ) : [];
       
       if (myEvents.length === 0) {

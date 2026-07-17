@@ -79,16 +79,29 @@ exports.updateUserStatus = async (id, status) => {
   return rows[0];
 };
 
-exports.listAllEvents = async ({ page = 1, limit = 50 } = {}) => {
+exports.listAllEvents = async ({ page = 1, limit = 50, confirmationStatus } = {}) => {
   const offset = (page - 1) * limit;
+  const conditions = [];
+  const params = [];
+  let idx = 1;
+
+  if (confirmationStatus) {
+    conditions.push(`e.confirmation_status = $${idx++}`);
+    params.push(confirmationStatus);
+  }
+
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+  params.push(limit, offset);
+
   const { rows } = await db.query(
     `SELECT e.*, c.name AS category_name, u.full_name AS client_name
      FROM events e
      LEFT JOIN event_categories c ON c.id = e.category_id
      LEFT JOIN users u ON u.id = e.client_id
+     ${where}
      ORDER BY e.created_at DESC
-     LIMIT $1 OFFSET $2`,
-    [limit, offset]
+     LIMIT $${idx++} OFFSET $${idx}`,
+    params
   );
   return rows;
 };
@@ -108,18 +121,25 @@ exports.listAllPayments = async ({ page = 1, limit = 50 } = {}) => {
 
 exports.listPendingConfirmations = async ({ page = 1, limit = 50 } = {}) => {
   const offset = (page - 1) * limit;
-  const { rows } = await db.query(
-    `SELECT e.*, c.name AS category_name, u.full_name AS planner_name,
-            u.email AS planner_email
-     FROM events e
-     LEFT JOIN event_categories c ON c.id = e.category_id
-     LEFT JOIN users u ON u.id = e.client_id
-     WHERE e.confirmation_status = 'pending'
-     ORDER BY e.created_at DESC
-     LIMIT $1 OFFSET $2`,
-    [limit, offset]
-  );
-  return rows;
+  try {
+    const { rows } = await db.query(
+      `SELECT e.*, c.name AS category_name, u.full_name AS planner_name,
+              u.email AS planner_email
+       FROM events e
+       LEFT JOIN event_categories c ON c.id = e.category_id
+       LEFT JOIN users u ON u.id = e.client_id
+       WHERE e.confirmation_status = 'pending'
+       ORDER BY e.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return rows;
+  } catch (err) {
+    if (err.message && err.message.includes('confirmation_status')) {
+      return [];
+    }
+    throw err;
+  }
 };
 
 exports.getPendingApprovals = async () => {

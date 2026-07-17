@@ -1,6 +1,25 @@
 const db = require('../config/database');
 
 exports.create = async (clientId, payload) => {
+  if (!payload.eventId) {
+    throw Object.assign(new Error('Event ID is required'), { status: 400 });
+  }
+
+  const { rows: events } = await db.query(
+    `SELECT id, client_id, status, confirmation_status FROM events WHERE id = $1`,
+    [payload.eventId]
+  );
+  if (!events[0]) {
+    throw Object.assign(new Error('Event not found'), { status: 404 });
+  }
+  if (events[0].client_id === clientId) {
+    throw Object.assign(new Error('You cannot book your own event'), { status: 400 });
+  }
+  const ev = events[0];
+  if (ev.status !== 'published' || ev.confirmation_status !== 'confirmed') {
+    throw Object.assign(new Error('Event is not available for booking'), { status: 400 });
+  }
+
   const { rows } = await db.query(
     `INSERT INTO bookings (client_id, event_id, vendor_id, planner_id, deposit_amount, client_name, client_phone, status)
      VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')

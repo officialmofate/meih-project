@@ -180,65 +180,93 @@ exports.listQuotes = async (eventId) => {
 };
 
 exports.requestConfirmation = async (id, plannerUserId, payload) => {
-  const { rows: event } = await db.query(
-    'SELECT id, client_id FROM events WHERE id = $1', [id]
-  );
-  if (!event[0]) return null;
-  if (event[0].client_id !== plannerUserId) return { unauthorized: true };
+  try {
+    const { rows: event } = await db.query(
+      'SELECT id, client_id FROM events WHERE id = $1', [id]
+    );
+    if (!event[0]) return null;
+    if (event[0].client_id !== plannerUserId) return { unauthorized: true };
 
-  const { rows } = await db.query(
-    `UPDATE events SET
-       confirmation_status = 'pending',
-       confirmation_payment_number = $2,
-       confirmation_payment_name = $3,
-       confirmation_screenshot_url = $4,
-       updated_at = now()
-     WHERE id = $1
-     RETURNING *`,
-    [id, payload.paymentNumber, payload.paymentName, payload.screenshotUrl || null]
-  );
-  return rows[0];
+    const { rows } = await db.query(
+      `UPDATE events SET
+         confirmation_status = 'pending',
+         confirmation_payment_number = $2,
+         confirmation_payment_name = $3,
+         confirmation_screenshot_url = $4,
+         updated_at = now()
+       WHERE id = $1
+       RETURNING *`,
+      [id, payload.paymentNumber, payload.paymentName, payload.screenshotUrl || null]
+    );
+    return rows[0];
+  } catch (err) {
+    if (err.message && err.message.includes('confirmation_status')) {
+      throw Object.assign(new Error('Please run database migration 014 first'), { status: 500 });
+    }
+    throw err;
+  }
 };
 
 exports.listPendingConfirmation = async ({ page = 1, limit = 50 } = {}) => {
   const offset = (page - 1) * limit;
-  const { rows } = await db.query(
-    `SELECT e.*, c.name AS category_name, u.full_name AS planner_name,
-            u.email AS planner_email
-     FROM events e
-     LEFT JOIN event_categories c ON c.id = e.category_id
-     LEFT JOIN users u ON u.id = e.client_id
-     WHERE e.confirmation_status = 'pending'
-     ORDER BY e.created_at DESC
-     LIMIT $1 OFFSET $2`,
-    [limit, offset]
-  );
-  return rows;
+  try {
+    const { rows } = await db.query(
+      `SELECT e.*, c.name AS category_name, u.full_name AS planner_name,
+              u.email AS planner_email
+       FROM events e
+       LEFT JOIN event_categories c ON c.id = e.category_id
+       LEFT JOIN users u ON u.id = e.client_id
+       WHERE e.confirmation_status = 'pending'
+       ORDER BY e.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return rows;
+  } catch (err) {
+    if (err.message && err.message.includes('confirmation_status')) {
+      return [];
+    }
+    throw err;
+  }
 };
 
 exports.confirmEvent = async (id, adminId) => {
-  const { rows } = await db.query(
-    `UPDATE events SET
-       confirmation_status = 'confirmed',
-       status = 'published',
-       confirmed_by = $2,
-       confirmed_at = now(),
-       updated_at = now()
-     WHERE id = $1 AND confirmation_status = 'pending'
-     RETURNING *`,
-    [id, adminId]
-  );
-  return rows[0];
+  try {
+    const { rows } = await db.query(
+      `UPDATE events SET
+         confirmation_status = 'confirmed',
+         status = 'published',
+         confirmed_by = $2,
+         confirmed_at = now(),
+         updated_at = now()
+       WHERE id = $1 AND confirmation_status = 'pending'
+       RETURNING *`,
+      [id, adminId]
+    );
+    return rows[0];
+  } catch (err) {
+    if (err.message && err.message.includes('confirmation_status')) {
+      throw Object.assign(new Error('Please run database migration 014 first'), { status: 500 });
+    }
+    throw err;
+  }
 };
 
 exports.rejectEvent = async (id, adminId) => {
-  const { rows } = await db.query(
-    `UPDATE events SET
-       confirmation_status = 'rejected',
-       updated_at = now()
-     WHERE id = $1 AND confirmation_status = 'pending'
-     RETURNING *`,
-    [id, adminId]
-  );
-  return rows[0];
+  try {
+    const { rows } = await db.query(
+      `UPDATE events SET
+         confirmation_status = 'rejected',
+         updated_at = now()
+       WHERE id = $1 AND confirmation_status = 'pending'
+       RETURNING *`,
+      [id, adminId]
+    );
+    return rows[0];
+  } catch (err) {
+    if (err.message && err.message.includes('confirmation_status')) {
+      throw Object.assign(new Error('Please run database migration 014 first'), { status: 500 });
+    }
+    throw err;
+  }
 };

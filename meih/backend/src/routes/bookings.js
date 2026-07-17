@@ -1,8 +1,8 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/bookingController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 
-router.post('/', authenticate, ctrl.create);
+router.post('/', authenticate, authorize('client'), ctrl.create);
 router.get('/', authenticate, ctrl.list);
 router.get('/:id', authenticate, ctrl.getById);
 router.put('/:id', authenticate, ctrl.update);
