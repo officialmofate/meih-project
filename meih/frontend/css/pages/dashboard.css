@@ -27,3 +27,16 @@
 
 /* Dashboard sections */
 .dashboard section.card { overflow: visible; }
+
+@media (max-width: 768px) {
+  .dashboard .data-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .dashboard .stat-card { padding: var(--space-md); }
+  .dashboard .stat-number { font-size: 24px; }
+}
+
+@media (max-width: 480px) {
+  .dashboard .stats-row { grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+  .dashboard .card h2 { font-size: 16px; }
+  .dashboard .data-table td, .dashboard .data-table th { padding: 6px 8px; font-size: 12px; }
+  .dashboard .card { padding: var(--space-sm); }
+}

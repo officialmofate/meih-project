@@ -542,4 +542,12 @@
   }
   .navbar-links.open { display: flex; }
   .navbar-toggle { display: block; }
+  .navbar { padding: 10px var(--space-md); }
+}
+@media (max-width: 480px) {
+  .navbar-logo { font-size: 18px; }
+  .ai-fab { bottom: 16px; right: 16px; min-width: 48px; height: 48px; font-size: 14px; }
+  .ai-chat-panel { right: 8px; left: 8px; width: auto; bottom: 76px; }
+  .chip { padding: 5px 10px; font-size: 12px; }
+  .chip-row { gap: var(--space-xs); }
 }

@@ -160,3 +160,11 @@
   margin-top: 6px;
   line-height: 1.4;
 }
+
+@media (max-width: 480px) {
+  .auth-page { padding: var(--space-md) var(--space-sm); }
+  .auth-card { padding: var(--space-lg) var(--space-md); }
+  .auth-card h1 { font-size: 20px; }
+  .auth-card .form-group select,
+  .auth-card input { font-size: 16px; }
+}

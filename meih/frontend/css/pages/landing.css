@@ -162,14 +162,14 @@
 .section-sub { color: var(--color-muted); margin-bottom: var(--space-lg); font-size: 15px; }
 .occasion-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: var(--space-md);
 }
 .occasion-item {
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  aspect-ratio: 1/1;
+  aspect-ratio: 4/3;
   cursor: pointer;
   border: 1px solid var(--color-glass-border);
   transition: all var(--transition-normal);
@@ -314,15 +314,39 @@
 @media (max-width: 900px) {
   .hero-inner, .hub-cards, .stats { grid-template-columns: 1fr; }
   .hero-copy h1 { font-size: 36px; }
+  .typewriter-cursor { font-size: 36px; }
   .hero { padding: var(--space-xl) 0; }
-  .occasion-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero-actions { flex-wrap: wrap; }
+  .occasion-grid { grid-template-columns: repeat(3, 1fr); }
   .steps-grid { grid-template-columns: repeat(2, 1fr); }
   .innovation-showcase { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .hero-copy h1 { font-size: 28px; }
+  .typewriter-cursor { font-size: 28px; }
+  .hero-sub { font-size: 14px; }
+  .hero-actions { flex-direction: column; }
+  .hero-actions .btn { width: 100%; text-align: center; }
+  .occasion-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-sm); }
+  .steps-grid { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .hub-tabs { width: 100%; }
+  .hub-tab { flex: 1; padding: 10px 12px; font-size: 13px; }
+  .occasion-gallery h2, .innovation-gallery h2 { font-size: 22px; }
 }
 @media (max-width: 480px) {
-  .occasion-grid { grid-template-columns: 1fr 1fr; }
+  .hero-copy h1 { font-size: 24px; }
+  .typewriter-cursor { font-size: 24px; }
+  .hero-panel { padding: var(--space-md); }
+  .occasion-grid { grid-template-columns: 1fr 1fr; gap: var(--space-xs); }
+  .occasion-item { border-radius: var(--radius-md); }
+  .occasion-label { font-size: 10px; padding: var(--space-sm) var(--space-xs) var(--space-xs); }
   .steps-grid { grid-template-columns: 1fr; }
   .hub-tabs { flex-direction: column; border-radius: var(--radius-lg); }
   .hub-tab { border-radius: var(--radius-md); }
   .innovation-icon { font-size: 36px; }
+  .stats { grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+  .stat-number { font-size: 20px; }
+  .container { padding-left: var(--space-sm); padding-right: var(--space-sm); }
 }

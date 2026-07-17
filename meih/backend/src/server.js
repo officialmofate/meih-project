@@ -154,7 +154,7 @@ function createApp() {
     if (req.path.startsWith('/api')) {
       return res.status(404).json({ message: 'API endpoint not found' });
     }
-    res.sendFile(path.join(frontendPath, 'pages', 'landing.html'));
+    res.sendFile(path.join(frontendPath, 'index.html'));
   });
 
   app.use(errorHandler);

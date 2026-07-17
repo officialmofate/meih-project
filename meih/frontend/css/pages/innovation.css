@@ -373,3 +373,14 @@
 .comment-item .comment-author { font-weight: 600; font-size: 14px; }
 .comment-item .comment-date { font-size: 12px; color: var(--color-muted); }
 .comment-item .comment-body { margin-top: var(--space-xs); font-size: 14px; color: var(--color-text-secondary); }
+
+@media (max-width: 768px) {
+  .innovation-layout { grid-template-columns: 1fr; }
+  .innovation-card-body { -webkit-line-clamp: 2; }
+}
+@media (max-width: 480px) {
+  .innovation-grid { grid-template-columns: 1fr; }
+  .vote-section .vote-count { font-size: 36px; }
+  .step-actions { flex-direction: column; gap: var(--space-sm); }
+  .step-actions .btn { width: 100%; }
+}

@@ -169,6 +169,7 @@ img { max-width: 100%; height: auto; display: block; }
   h2 { font-size: 24px; }
 }
 @media (max-width: 480px) {
-  .stats-row { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
   .container { padding: 0 var(--space-md); }
+  .portfolio-grid { grid-template-columns: 1fr 1fr; }
 }

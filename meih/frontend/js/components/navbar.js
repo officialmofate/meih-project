@@ -73,7 +73,7 @@ export function renderNavbar() {
 
   el.innerHTML = `
     <nav class="navbar">
-      <a href="landing.html" class="navbar-logo">MEIH</a>
+      <a href="/" class="navbar-logo">MEIH</a>
       <div class="navbar-links">
         ${hubLinks}
         <button id="lang-toggle" class="btn-ghost lang-toggle-btn" title="${langTitle}">${langLabel}</button>

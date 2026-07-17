@@ -39,7 +39,7 @@ npm run dev            # starts with nodemon hot reload
 
 ### Frontend
 The backend serves the frontend statically in development. Once the backend
-is running, open `http://localhost:4000/pages/landing.html`.
+is running, open `http://localhost:4000`.
 
 Alternatively, serve the `frontend/` folder with any static file server.
 
