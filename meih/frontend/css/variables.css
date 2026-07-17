@@ -74,9 +74,22 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-spring: 600ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
   /* ── Glassmorphism ── */
   --glass-bg: rgba(18, 18, 26, 0.7);
   --glass-blur: blur(16px);
   --glass-border: 1px solid rgba(255, 255, 255, 0.06);
+  --color-glass-hover: rgba(255, 255, 255, 0.06);
+
+  /* ── Mesh / Ambient ── */
+  --gradient-mesh: radial-gradient(at 40% 20%, rgba(108, 92, 231, 0.08) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(0, 206, 201, 0.06) 0px, transparent 50%);
+
+  /* ── Depth / Elevation ── */
+  --shadow-depth: 0 20px 60px -15px rgba(0, 0, 0, 0.5);
+
+  /* ── Z-index layers ── */
+  --z-overlay: 1050;
+  --z-toast: 1100;
 }

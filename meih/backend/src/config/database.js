@@ -5,6 +5,23 @@ const { databaseUrl } = require('./env');
 let pool = null;
 let dbAvailable = false;
 
+// Query cache for queryWithCache
+const queryCache = new Map();
+let cacheIdCounter = 0;
+
+// Pool monitoring
+const poolStats = {
+  totalQueries: 0,
+  slowQueries: 0,
+  lastPoolCheck: null,
+  activeConnections: 0,
+  idleConnections: 0,
+  waitingClients: 0,
+};
+
+// Slow query threshold in ms
+const SLOW_QUERY_THRESHOLD = 500;
+
 if (databaseUrl) {
   const isSupabase = databaseUrl.includes('supabase');
 
@@ -57,6 +74,18 @@ if (databaseUrl) {
       console.error('PostgreSQL pool error:', err.message);
     });
 
+    // Pool monitoring: sample stats periodically
+    if (process.env.NODE_ENV !== 'production') {
+      setInterval(function () {
+        if (pool) {
+          poolStats.activeConnections = pool.totalCount - pool.idleCount;
+          poolStats.idleConnections = pool.idleCount;
+          poolStats.waitingClients = pool.waitingCount;
+          poolStats.lastPoolCheck = new Date().toISOString();
+        }
+      }, 30000);
+    }
+
     for (let i = 0; i < 3; i++) {
       try {
         const client = await pool.connect();
@@ -83,8 +112,109 @@ if (databaseUrl) {
 module.exports = {
   query: async (text, params) => {
     if (!dbAvailable) throw new Error('Database not available');
-    return pool.query(text, params);
+    const start = Date.now();
+    const result = await pool.query(text, params);
+    const duration = Date.now() - start;
+
+    poolStats.totalQueries++;
+
+    // Log slow queries in development
+    if (process.env.NODE_ENV !== 'production' && duration > SLOW_QUERY_THRESHOLD) {
+      poolStats.slowQueries++;
+      console.error(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'SLOW_QUERY',
+        duration: duration + 'ms',
+        query: text.substring(0, 200),
+        rowCount: result.rowCount,
+      }));
+    }
+
+    return result;
   },
+
+  queryWithCache: async (text, params, cacheKey, ttlMs) => {
+    if (!dbAvailable) throw new Error('Database not available');
+
+    ttlMs = ttlMs || 60000;
+    const now = Date.now();
+
+    // Check cache
+    if (cacheKey && queryCache.has(cacheKey)) {
+      const cached = queryCache.get(cacheKey);
+      if (now - cached.timestamp < ttlMs) {
+        return cached.result;
+      }
+      queryCache.delete(cacheKey);
+    }
+
+    const start = Date.now();
+    const result = await pool.query(text, params);
+    const duration = Date.now() - start;
+
+    poolStats.totalQueries++;
+
+    if (process.env.NODE_ENV !== 'production' && duration > SLOW_QUERY_THRESHOLD) {
+      poolStats.slowQueries++;
+      console.error(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'SLOW_QUERY',
+        duration: duration + 'ms',
+        query: text.substring(0, 200),
+        rowCount: result.rowCount,
+      }));
+    }
+
+    // Store in cache
+    if (cacheKey) {
+      // Evict oldest entries if cache grows too large (max 1000 entries)
+      if (queryCache.size > 1000) {
+        const firstKey = queryCache.keys().next().value;
+        queryCache.delete(firstKey);
+      }
+      queryCache.set(cacheKey, { result: result, timestamp: now });
+    }
+
+    return result;
+  },
+
+  invalidateCache: function (pattern) {
+    if (!pattern) {
+      queryCache.clear();
+      return;
+    }
+    for (const key of queryCache.keys()) {
+      if (key.includes(pattern)) {
+        queryCache.delete(key);
+      }
+    }
+  },
+
   getPool: () => pool,
+
   isAvailable: () => dbAvailable,
+
+  getPoolStats: function () {
+    if (pool) {
+      poolStats.activeConnections = pool.totalCount - pool.idleCount;
+      poolStats.idleConnections = pool.idleCount;
+      poolStats.waitingClients = pool.waitingCount;
+    }
+    return { ...poolStats };
+  },
+
+  drainPool: async function () {
+    if (!pool) return;
+    try {
+      // Clear query cache
+      queryCache.clear();
+      // End all connections
+      await pool.end();
+      dbAvailable = false;
+      pool = null;
+    } catch (err) {
+      console.error('Error draining pool:', err.message);
+      throw err;
+    }
+  },
 };

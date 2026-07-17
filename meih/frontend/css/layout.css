@@ -28,7 +28,7 @@ a:hover { color: var(--color-secondary); }
 img { max-width: 100%; height: auto; display: block; }
 
 /* ── Container ── */
-.container { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-lg); }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-lg); animation: slideUp 0.5s ease; }
 .container.narrow { max-width: 720px; }
 
 /* ── Flex ── */
@@ -46,6 +46,7 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* ── Page structure ── */
 .page { padding-top: var(--space-xl); padding-bottom: var(--space-2xl); }
+.page[data-page] { animation: fadeIn 0.4s ease; scroll-margin-top: 80px; }
 .page-header {
   display: flex;
   align-items: center;
@@ -147,6 +148,18 @@ img { max-width: 100%; height: auto; display: block; }
 .detail-grid { display: grid; grid-template-columns: auto 1fr; gap: var(--space-xs) var(--space-lg); }
 .detail-grid dt { font-weight: 600; color: var(--color-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; }
 .detail-grid dd { font-size: 15px; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: var(--color-surface-raised); border-radius: var(--radius-full); border: 2px solid var(--color-bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-surface-hover); }
+
+/* ── Selection ── */
+::selection { background: rgba(108, 92, 231, 0.35); color: var(--color-text); }
+
+/* ── Anchor scroll offset ── */
+[id] { scroll-margin-top: 80px; }
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
