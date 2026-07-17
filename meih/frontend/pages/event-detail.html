@@ -158,6 +158,7 @@
     api.get(`/events/events/${eventId}/bookings`).then(paintVendors).catch(() => paintVendors([]));
 
     // Check if current user has a booking for this event
+    const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
     api.get('/bookings').then((bookings) => {
       if (!Array.isArray(bookings)) return;
       const myBooking = bookings.find(b => b.event_id === eventId && b.status === 'confirmed');
@@ -166,8 +167,8 @@
         document.getElementById('booking-form').hidden = true;
         document.getElementById('booking-confirmation').hidden = false;
         document.getElementById('booking-confirmation').textContent = 'Your booking is confirmed!';
-        document.getElementById('ticket-pdf-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket-pdf';
-        document.getElementById('ticket-html-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket';
+        document.getElementById('ticket-pdf-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket-pdf?token=' + encodeURIComponent(authToken);
+        document.getElementById('ticket-html-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket?token=' + encodeURIComponent(authToken);
       } else {
         const pendingBooking = bookings.find(b => b.event_id === eventId && b.status === 'pending');
         if (pendingBooking) {

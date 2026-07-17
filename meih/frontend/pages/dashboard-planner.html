@@ -270,6 +270,7 @@
     }).catch(() => {});
 
     // Load active projects (bookings assigned to this planner)
+    const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
     api.get('/bookings').then((bookings) => {
       if (!Array.isArray(bookings) || !bookings.length) return;
 
@@ -327,7 +328,7 @@
       tbody.innerHTML = active.map(b => {
         const statusClass = b.status === 'completed' ? 'badge-success' : b.status === 'confirmed' ? 'badge' : 'badge-muted';
         const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank" style="margin-left:var(--space-xs);">PDF Ticket</a>`
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank" style="margin-left:var(--space-xs);">PDF Ticket</a>`
           : '';
         return `<tr>
           <td>${b.event_name || '—'}</td>

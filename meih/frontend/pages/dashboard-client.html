@@ -180,6 +180,7 @@
     });
 
     // Load bookings
+    const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
     api.get('/bookings').then((bookings) => {
       if (!Array.isArray(bookings) || !bookings.length) {
         document.getElementById('no-bookings').hidden = false;
@@ -192,7 +193,7 @@
         const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
         const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
         const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">PDF Ticket</a>`
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank">PDF Ticket</a>`
           : '<span class="text-muted">—</span>';
         return `<tr>
           <td>${b.event_name || '—'}</td>

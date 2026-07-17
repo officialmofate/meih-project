@@ -24,11 +24,20 @@ function trackSensitiveOp(userId) {
 }
 
 function authenticate(req, res, next) {
+  let token = null;
+
   const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
+  if (header && header.startsWith('Bearer ')) {
+    token = header.split(' ')[1];
+  }
+
+  if (!token && req.query && req.query.token) {
+    token = req.query.token;
+  }
+
+  if (!token) {
     return res.status(401).json({ message: 'Missing or invalid Authorization header' });
   }
-  const token = header.split(' ')[1];
   try {
     const payload = jwt.verify(token, jwtSecret || 'dev-secret');
 
