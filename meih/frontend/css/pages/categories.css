@@ -94,24 +94,7 @@
   font-size: 0.8rem;
 }
 
-/* Animated emoji icons for different categories */
-.category-icon[data-category="wedding"]::after { content: '💒'; animation: icon-float 3s ease-in-out infinite; }
-.category-icon[data-category="corporate"]::after { content: '🏢'; animation: icon-float 3s ease-in-out infinite 0.3s; }
-.category-icon[data-category="birthday"]::after { content: '🎂'; animation: icon-float 3s ease-in-out infinite 0.6s; }
-.category-icon[data-category="conference"]::after { content: '🎤'; animation: icon-float 3s ease-in-out infinite 0.9s; }
-.category-icon[data-category="concert"]::after { content: '🎵'; animation: icon-float 3s ease-in-out infinite 1.2s; }
-.category-icon[data-category="exhibition"]::after { content: '🎨'; animation: icon-float 3s ease-in-out infinite 1.5s; }
-.category-icon[data-category="festival"]::after { content: '🎪'; animation: icon-float 3s ease-in-out infinite 1.8s; }
-.category-icon[data-category="sports"]::after { content: '⚽'; animation: icon-float 3s ease-in-out infinite 2.1s; }
-.category-icon[data-category="charity"]::after { content: '❤️'; animation: icon-float 3s ease-in-out infinite 2.4s; }
-.category-icon[data-category="graduation"]::after { content: '🎓'; animation: icon-float 3s ease-in-out infinite 2.7s; }
-.category-icon[data-category="hackathon"]::after { content: '💻'; animation: icon-float 3s ease-in-out infinite 3.0s; }
-.category-icon[data-category="community"]::after { content: '🤝'; animation: icon-float 3s ease-in-out infinite 3.3s; }
-.category-icon[data-category="celebration"]::after { content: '🎉'; animation: icon-float 3s ease-in-out infinite 3.6s; }
-.category-icon[data-category="workshop"]::after { content: '🔧'; animation: icon-float 3s ease-in-out infinite 3.9s; }
-.category-icon[data-category="ngo"]::after { content: '🌍'; animation: icon-float 3s ease-in-out infinite 4.2s; }
-.category-icon[data-category="product"]::after { content: '🚀'; animation: icon-float 3s ease-in-out infinite 4.5s; }
-.category-icon[data-category="other"]::after { content: '✨'; animation: icon-float 3s ease-in-out infinite 4.8s; }
+/* Category icons — now use <img> tags instead of emoji ::after */
 
 @keyframes gradient-rotate {
   to { --gradient-angle: 360deg; }

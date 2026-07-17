@@ -202,27 +202,12 @@
 }
 
 /* ── Innovation Gallery Items ── */
-.innovation-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--gradient-card);
+.innovation-grid .occasion-item {
   border-color: rgba(0, 206, 201, 0.15);
 }
-.innovation-item:hover {
+.innovation-grid .occasion-item:hover {
   border-color: var(--color-secondary);
   box-shadow: var(--shadow-glow-secondary);
-}
-.innovation-icon {
-  font-size: 48px;
-  margin-bottom: var(--space-sm);
-}
-.innovation-item .occasion-label {
-  position: relative;
-  background: none;
-  padding: var(--space-xs) var(--space-sm);
-  font-size: 11px;
 }
 
 /* ── Stats ── */

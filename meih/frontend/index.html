@@ -92,7 +92,7 @@
         <section class="categories">
           <h2 data-i18n="landing.categories_title">Popular Event Categories</h2>
           <p class="section-sub" data-i18n="landing.occasion_sub">Browse events by category — click to explore.</p>
-          <div class="category-grid-animated" id="category-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-md);margin-top:var(--space-lg);"></div>
+          <div class="occasion-grid" id="category-grid" style="margin-top:var(--space-lg);"></div>
           <div class="chip-row" id="category-chips" style="margin-top:var(--space-md);">
             <a class="chip" href="pages/events.html">Browse All Events</a>
           </div>
@@ -130,16 +130,16 @@
           <h2 data-i18n="landing.inno_gallery_title">Explore Innovation Categories</h2>
           <p class="section-sub" data-i18n="landing.inno_gallery_sub">From health tech to clean energy — find innovations solving real problems.</p>
           <div class="occasion-grid innovation-grid">
-            <div class="occasion-item innovation-item"><div class="innovation-icon">🏥</div><span class="occasion-label">Health & Wellness</span></div>
-            <div class="occasion-item innovation-item"><div class="innovation-icon">🌾</div><span class="occasion-label">AgriTech</span></div>
-            <div class="occasion-item innovation-item"><div class="innovation-icon">📚</div><span class="occasion-label">Education</span></div>
-            <div class="occasion-item innovation-item"><div class="innovation-icon">🤖</div><span class="occasion-label">Artificial Intelligence</span></div>
-            <div class="occasion-item innovation-item"><div class="innovation-icon">🌍</div><span class="occasion-label">Climate Action</span></div>
-            <div class="occasion-item innovation-item"><div class="innovation-icon">💰</div><span class="occasion-label">FinTech</span></div>
-            <div class="occasion-item innovation-item"><div class="innovation-icon">⚡</div><span class="occasion-label">Clean Energy</span></div>
-            <div class="occasion-item innovation-item"><div class="innovation-icon">🚌</div><span class="occasion-label">Smart Transport</span></div>
-            <div class="occasion-item innovation-item"><div class="innovation-icon">🔧</div><span class="occasion-label">Robotics</span></div>
-            <div class="occasion-item innovation-item"><div class="innovation-icon">💧</div><span class="occasion-label">Water Innovation</span></div>
+            <div class="occasion-item"><img src="./assets/images/health.gif" alt="Health" loading="lazy" /><span class="occasion-label">Health & Wellness</span></div>
+            <div class="occasion-item"><img src="./assets/images/agritech.gif" alt="AgriTech" loading="lazy" /><span class="occasion-label">AgriTech</span></div>
+            <div class="occasion-item"><img src="./assets/images/education.gif" alt="Education" loading="lazy" /><span class="occasion-label">Education</span></div>
+            <div class="occasion-item"><img src="./assets/images/ai.gif" alt="AI" loading="lazy" /><span class="occasion-label">Artificial Intelligence</span></div>
+            <div class="occasion-item"><img src="./assets/images/climate.gif" alt="Climate" loading="lazy" /><span class="occasion-label">Climate Action</span></div>
+            <div class="occasion-item"><img src="./assets/images/fintech.gif" alt="FinTech" loading="lazy" /><span class="occasion-label">FinTech</span></div>
+            <div class="occasion-item"><img src="./assets/images/energy.gif" alt="Energy" loading="lazy" /><span class="occasion-label">Clean Energy</span></div>
+            <div class="occasion-item"><img src="./assets/images/transport.gif" alt="Transport" loading="lazy" /><span class="occasion-label">Smart Transport</span></div>
+            <div class="occasion-item"><img src="./assets/images/robotics.gif" alt="Robotics" loading="lazy" /><span class="occasion-label">Robotics</span></div>
+            <div class="occasion-item"><img src="./assets/images/water.gif" alt="Water" loading="lazy" /><span class="occasion-label">Water Innovation</span></div>
           </div>
         </section>
 
@@ -347,16 +347,34 @@
           });
         }
         if (catGrid) {
-          var catIcons = { wedding: '\uD83D\uDC92', corporate: '\uD83C\uDFE2', birthday: '\uD83C\uDF82', conference: '\uD83C\uDFA4', concert: '\uD83C\uDFB5', exhibition: '\uD83C\uDFA8', festival: '\uD83C\uDFAA', sports: '\u26BD', charity: '\u2764\uFE0F', graduation: '\uD83C\uDF93', other: '\u2728' };
+          var imgMap = {
+            wedding: 'wedding.gif', 'wedding planning': 'wedding.gif',
+            corporate: 'corporate.gif', 'corporate events': 'corporate.gif',
+            birthday: 'birthday.gif', 'birthday events': 'birthday.gif',
+            conference: 'conference.gif', 'conference planning': 'conference.gif',
+            concert: 'concert.gif', concerts: 'concert.gif',
+            exhibition: 'exhibition.gif', exhibitions: 'exhibition.gif',
+            festival: 'festival.gif', 'festival planning': 'festival.gif',
+            sports: 'sports.gif', 'sports events': 'sports.gif',
+            charity: 'charity.gif', 'charity galas': 'charity.gif',
+            graduation: 'graduation.gif', graduations: 'graduation.gif',
+            hackathon: 'hackathon.gif', hackathons: 'hackathon.gif',
+            community: 'community.gif', 'community events': 'community.gif',
+            celebration: 'celebration.gif', celebrations: 'celebration.gif',
+            workshop: 'workshop.gif', workshops: 'workshop.gif',
+            ngo: 'ngo.gif', 'ngo events': 'ngo.gif',
+            product: 'product.gif', 'product launch': 'product.gif',
+            other: 'other.gif'
+          };
           cats.forEach(function(c) {
             var name = c.name || c;
-            var slug = name.toLowerCase().replace(/\s+/g, '').replace(/events?/g, '');
-            var icon = catIcons[slug] || catIcons['other'];
-            var div = document.createElement('div');
-            div.className = 'category-card';
-            div.innerHTML = '<div class="category-icon" data-category="' + slug + '"></div><div class="category-name">' + name + '</div>';
-            div.addEventListener('click', function() { window.location.href = 'pages/events.html?category=' + encodeURIComponent(name); });
-            catGrid.appendChild(div);
+            var key = name.toLowerCase().replace(/\s+/g, ' ').trim();
+            var img = imgMap[key] || imgMap[key.replace(/ events?$/, '').replace(/ planning$/, '').trim()] || 'other.gif';
+            var item = document.createElement('div');
+            item.className = 'occasion-item';
+            item.innerHTML = '<img src="./assets/images/' + img + '" alt="' + name + '" loading="lazy" /><span class="occasion-label">' + name + '</span>';
+            item.addEventListener('click', function() { window.location.href = 'pages/events.html?category=' + encodeURIComponent(name); });
+            catGrid.appendChild(item);
           });
         }
       }
