@@ -29,8 +29,21 @@ function createApp() {
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   }));
+  const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'https://meih-project1.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:4000',
+  ].filter(Boolean);
+
   app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   }));
   app.use(compression());

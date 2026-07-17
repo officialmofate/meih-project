@@ -2,6 +2,9 @@ const router = require('express').Router();
 const ctrl = require('../controllers/adminController');
 const { authenticate, authorize } = require('../middleware/auth');
 
+const VALID_ROLES = ['client', 'planner', 'vendor', 'innovator', 'innovator_manager', 'judge', 'public_voter', 'admin', 'superadmin'];
+const PRIVILEGED_ROLES = ['admin', 'superadmin'];
+
 router.use(authenticate, authorize('admin'));
 
 router.get('/dashboard', ctrl.dashboard);

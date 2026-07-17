@@ -3,6 +3,10 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { jwtSecret, jwtExpiresIn, jwtRefreshSecret, jwtRefreshExpiresIn } = require('../config/env');
 const db = require('../config/database');
+const { validateEmail } = require('../utils/emailValidator');
+const emailVerification = require('../services/emailVerificationService');
+
+const PUBLIC_ROLES = ['client', 'planner', 'vendor', 'innovator', 'public_voter'];
 
 // In-memory store for when database is not available
 const memoryUsers = new Map();
@@ -22,32 +26,54 @@ exports.register = async (req, res, next) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
+    const userRole = role || 'client';
+    if (!PUBLIC_ROLES.includes(userRole)) {
+      return res.status(403).json({ message: 'Cannot self-register with this role' });
+    }
+
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.valid) {
+      return res.status(400).json({ message: 'Invalid email', errors: emailCheck.errors });
+    }
+    const cleanEmail = emailCheck.email;
+
     if (!db.isAvailable()) {
-      const key = `${email}:${role || 'client'}`;
+      const key = `${cleanEmail}:${userRole}`;
       if (memoryUsers.has(key)) {
         return res.status(409).json({ message: 'Email already registered for this role' });
       }
       const passwordHash = await bcrypt.hash(password, 12);
       const id = `mem-${memoryIdCounter++}`;
-      const user = { id, email, full_name: fullName || email.split('@')[0], role: role || 'client', status: 'active', created_at: new Date().toISOString() };
+      const user = { id, email: cleanEmail, full_name: fullName || cleanEmail.split('@')[0], role: userRole, status: 'active', email_verified: false, created_at: new Date().toISOString() };
       memoryUsers.set(key, { ...user, password_hash: passwordHash });
       const tokens = signTokens(user);
-      return res.status(201).json({ user, ...tokens });
+      return res.status(201).json({ user, ...tokens, emailVerificationRequired: true });
     }
 
-    const userRole = role || 'client';
-    const { rows: existing } = await db.query('SELECT id FROM users WHERE email = $1 AND role = $2', [email, userRole]);
+    const { rows: existing } = await db.query('SELECT id FROM users WHERE email = $1 AND role = $2', [cleanEmail, userRole]);
     if (existing.length > 0) return res.status(409).json({ message: 'Email already registered for this role' });
 
     const passwordHash = await bcrypt.hash(password, 12);
     const { rows: userRows } = await db.query(
-      'INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, full_name, role, status, created_at',
-      [email, passwordHash, fullName || '', userRole]
+      'INSERT INTO users (email, password_hash, full_name, role, email_verified) VALUES ($1, $2, $3, $4, false) RETURNING id, email, full_name, role, status, email_verified, created_at',
+      [cleanEmail, passwordHash, fullName || '', userRole]
     );
     const user = userRows[0];
 
+    let verificationResult = null;
+    try {
+      verificationResult = await emailVerification.createVerification(user.id, cleanEmail, fullName || user.full_name);
+    } catch (emailErr) {
+      console.error('[REGISTER] Email verification error:', emailErr.message);
+    }
+
     const tokens = signTokens(user);
-    res.status(201).json({ user, ...tokens });
+    res.status(201).json({
+      user,
+      ...tokens,
+      emailVerificationRequired: true,
+      emailVerificationSent: verificationResult?.sent === true,
+    });
   } catch (err) {
     next(err);
   }
@@ -70,7 +96,7 @@ exports.login = async (req, res, next) => {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
       const tokens = signTokens(stored);
-      return res.json({ token: tokens.accessToken, ...tokens, user: { id: stored.id, email: stored.email, full_name: stored.full_name, role: stored.role } });
+      return res.json({ token: tokens.accessToken, ...tokens, user: { id: stored.id, email: stored.email, full_name: stored.full_name, role: stored.role, name: stored.full_name } });
     }
 
     const { rows } = await db.query('SELECT * FROM users WHERE email = $1 ORDER BY created_at DESC LIMIT 1', [email]);
@@ -78,10 +104,8 @@ exports.login = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
-    if (user.role !== 'superadmin') {
-      if (!(await bcrypt.compare(password, user.password_hash))) {
-        return res.status(401).json({ message: 'Invalid email or password' });
-      }
+    if (!(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
     if (user.status === 'suspended') {
       return res.status(403).json({ message: 'Account has been suspended' });
@@ -100,8 +124,9 @@ exports.login = async (req, res, next) => {
     res.json({
       token: tokens.accessToken,
       ...tokens,
-      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
-      profileComplete
+      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, name: user.full_name, email_verified: user.email_verified },
+      profileComplete,
+      emailVerified: user.email_verified
     });
   } catch (err) {
     next(err);
@@ -109,7 +134,44 @@ exports.login = async (req, res, next) => {
 };
 
 exports.verifyEmail = async (req, res) => {
-  res.json({ message: 'Email verification is available once the verification table is set up' });
+  try {
+    const { token, otp, userId } = req.body;
+
+    if (token) {
+      const result = await emailVerification.verifyByToken(token);
+      if (!result.verified) {
+        return res.status(400).json({ message: result.error || 'Verification failed' });
+      }
+      return res.json({ message: 'Email verified successfully' });
+    }
+
+    if (otp && userId) {
+      const result = await emailVerification.verifyByOTP(userId, otp);
+      if (!result.verified) {
+        return res.status(400).json({ message: result.error || 'Verification failed' });
+      }
+      return res.json({ message: 'Email verified successfully' });
+    }
+
+    return res.status(400).json({ message: 'Token or OTP + userId required' });
+  } catch (err) {
+    res.status(500).json({ message: 'Verification failed' });
+  }
+};
+
+exports.resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+
+    const result = await emailVerification.resendVerification(email);
+    if (result.sent === false && result.error) {
+      return res.status(400).json({ message: result.error });
+    }
+    res.json({ message: 'Verification email sent' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to resend verification' });
+  }
 };
 
 exports.verifyPhone = async (req, res) => {

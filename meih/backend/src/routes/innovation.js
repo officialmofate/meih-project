@@ -7,7 +7,7 @@ router.get('/competitions/:id', ctrl.getCompetition);
 router.post('/competitions', authenticate, authorize('admin', 'innovator_manager'), ctrl.createCompetition);
 router.put('/competitions/:id', authenticate, authorize('admin', 'innovator_manager'), ctrl.updateCompetition);
 router.get('/competitions/:id/submissions', ctrl.listCompetitionSubmissions);
-router.post('/competitions/:id/submit', authenticate, ctrl.submitInnovation);
+router.post('/competitions/:id/submit', authenticate, authorize('innovator'), ctrl.submitInnovation);
 
 router.get('/categories', ctrl.listCategories);
 router.get('/submissions', ctrl.listSubmissions);

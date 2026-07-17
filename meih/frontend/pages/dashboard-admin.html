@@ -14,7 +14,7 @@
     <div class="container">
 
       <header class="page-header">
-        <h1 data-i18n="admin_dashboard">Admin Dashboard</h1>
+        <h1 id="admin-welcome" data-i18n="admin_dashboard">Admin Dashboard</h1>
         <p data-i18n="admin_dashboard_desc">Platform-wide oversight for events, innovations, users, and payments.</p>
       </header>
 
@@ -39,6 +39,8 @@
               <option value="innovator">Innovator</option>
               <option value="judge">Judge</option>
               <option value="admin">Admin</option>
+              <option value="superadmin">Superadmin</option>
+              <option value="innovator_manager">Innovation Manager</option>
             </select>
           </div>
           <p id="no-users" class="empty-state">No users found.</p>
@@ -86,6 +88,16 @@
     import { api } from '../js/api.js';
     import { debounce } from '../js/utils/helpers.js';
 
+    var currentUser = null;
+    try {
+      const raw = localStorage.getItem('meih_user');
+      if (raw) {
+        currentUser = JSON.parse(raw);
+        const name = currentUser.full_name || currentUser.name || currentUser.email || 'Admin';
+        document.getElementById('admin-welcome').textContent = (currentUser.role === 'superadmin' ? 'Superadmin' : 'Admin') + ' Dashboard — ' + name;
+      }
+    } catch {}
+
     // Load stats
     Promise.all([
       api.get('/admin/users').catch(() => []),
@@ -112,14 +124,34 @@
         const statusClass = u.status === 'active' ? 'badge-success' : 'badge-muted';
         const action = u.status === 'active' ? 'suspend' : 'reinstate';
         const actionLabel = u.status === 'active' ? 'Suspend' : 'Reinstate';
+        const isSuperadmin = currentUser && currentUser.role === 'superadmin';
+        const privilegedRoles = ['admin', 'superadmin'];
+        const canChangeRole = isSuperadmin || !privilegedRoles.includes(u.role);
+        const allRoles = ['client','planner','vendor','innovator','innovator_manager','judge','public_voter','admin','superadmin'];
+        const roleOptions = allRoles.map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`).join('');
         return `<tr data-user-id="${u.id}">
           <td>${u.full_name || u.name || '—'}</td>
           <td>${u.email || '—'}</td>
-          <td>${u.role || '—'}</td>
+          <td>${canChangeRole ? `<select class="role-select" data-user-id="${u.id}" style="font-size:12px;padding:2px 4px;">${roleOptions}</select>` : u.role}</td>
           <td><span class="badge ${statusClass}">${u.status || 'active'}</span></td>
-          <td><button class="btn-link" data-action="${action}">${actionLabel}</button></td>
+          <td>
+            <button class="btn-link" data-action="${action}">${actionLabel}</button>
+          </td>
         </tr>`;
       }).join('');
+
+      tbody.querySelectorAll('.role-select').forEach(select => {
+        select.addEventListener('change', async () => {
+          const userId = select.dataset.userId;
+          const newRole = select.value;
+          try {
+            await api.put(`/admin/users/${userId}/role`, { role: newRole });
+          } catch (err) {
+            alert(err.message || 'Failed to change role');
+            select.value = users.find(u => u.id === userId)?.role || newRole;
+          }
+        });
+      });
 
       tbody.querySelectorAll('[data-action]').forEach(btn => {
         btn.addEventListener('click', async () => {

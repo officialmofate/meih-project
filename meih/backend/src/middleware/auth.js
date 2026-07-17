@@ -17,7 +17,14 @@ function authenticate(req, res, next) {
 
 function authorize(...allowedRoles) {
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    if (!req.user) {
+      return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+    }
+    // superadmin has access to everything
+    if (req.user.role === 'superadmin') {
+      return next();
+    }
+    if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
     }
     next();

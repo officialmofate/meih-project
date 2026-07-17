@@ -73,6 +73,32 @@
     import { auth } from '../js/auth.js';
     import { isEmail, minLength } from '../js/utils/validators.js';
 
+    var DISPOSABLE_DOMAINS = [
+      'tempmail.com', 'throwaway.email', 'guerrillamail.com', 'temp-mail.org',
+      'fakeinbox.com', 'sharklasers.com', 'dispostable.com', 'yopmail.com',
+      'mailinator.com', 'maildrop.cc', '10minutemail.com', 'trashmail.com',
+      'discard.email', 'mailnesia.com', 'getnada.com', 'emailondeck.com',
+      'tempail.com', 'tmpmail.net', 'mohmal.com', 'discardmail.com',
+      'spambox.us', 'mailnull.com', 'mailsac.com', 'harakirimail.com',
+      'binkmail.com', 'bobmail.info', 'letthemeatspam.com', 'pookmail.com',
+    ];
+
+    var DISPOSABLE_TLDS = ['tk', 'ml', 'ga', 'cf', 'gq'];
+
+    function validateEmailStrict(email) {
+      if (!isEmail(email)) return { valid: false, error: 'Please enter a valid email address.' };
+      var parts = email.toLowerCase().split('@');
+      var domain = parts[1] || '';
+      if (DISPOSABLE_DOMAINS.indexOf(domain) !== -1) {
+        return { valid: false, error: 'Disposable email addresses are not allowed. Please use a permanent email.' };
+      }
+      var tld = domain.split('.').pop();
+      if (DISPOSABLE_TLDS.indexOf(tld) !== -1) {
+        return { valid: false, error: 'Email domains from this TLD are not allowed.' };
+      }
+      return { valid: true };
+    }
+
     var roleSelect = document.getElementById('reg-role');
 
     var roleDescriptions = {
@@ -97,7 +123,8 @@
       errorEl.hidden = true;
       var data = Object.fromEntries(new FormData(e.target));
 
-      if (!isEmail(data.email)) return showError('Please enter a valid email address.');
+      var emailCheck = validateEmailStrict(data.email);
+      if (!emailCheck.valid) return showError(emailCheck.error);
       if (!minLength(data.password, 8)) return showError('Password must be at least 8 characters.');
       if (data.password !== data.passwordConfirm) return showError('Passwords do not match.');
       if (!data.acceptTerms) return showError('Please accept the Terms of Service.');
@@ -106,8 +133,12 @@
       delete data.acceptTerms;
 
       try {
-        await auth.register(data);
-        window.location.href = 'login.html?registered=1';
+        var result = await auth.register(data);
+        if (result.emailVerificationRequired) {
+          window.location.href = 'verify-email.html';
+        } else {
+          window.location.href = 'login.html?registered=1';
+        }
       } catch (err) {
         showError(err.message || 'Registration failed. Please try again.');
       }

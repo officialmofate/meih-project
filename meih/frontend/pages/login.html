@@ -46,6 +46,7 @@
       innovator: 'dashboard-client.html',
       judge: 'dashboard-judge.html',
       admin: 'dashboard-admin.html',
+      superadmin: 'dashboard-admin.html',
       public_voter: 'innovation.html',
       innovator_manager: 'dashboard-admin.html',
     };
@@ -68,6 +69,8 @@
         var user = result.user;
         if (!user) {
           window.location.href = 'dashboard-client.html';
+        } else if (result.emailVerified === false) {
+          window.location.href = 'verify-email.html';
         } else if ((user.role === 'planner' || user.role === 'vendor') && result.profileComplete === false) {
           window.location.href = 'complete-profile.html';
         } else {

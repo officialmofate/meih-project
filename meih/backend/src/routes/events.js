@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/eventController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 
 router.get('/categories', ctrl.listCategories);
 router.get('/categories/:id', ctrl.getCategory);
-router.post('/events', authenticate, ctrl.createEvent);
+router.post('/events', authenticate, authorize('planner'), ctrl.createEvent);
 router.get('/events', ctrl.listEvents);
 router.get('/events/:id', ctrl.getEvent);
 router.put('/events/:id', authenticate, ctrl.updateEvent);

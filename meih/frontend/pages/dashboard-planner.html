@@ -115,6 +115,16 @@
   <script type="module">
     import { api } from '../js/api.js';
 
+    // Show user name
+    try {
+      const raw = localStorage.getItem('meih_user');
+      if (raw) {
+        const user = JSON.parse(raw);
+        const name = user.full_name || user.name || user.email || 'Planner';
+        document.getElementById('planner-name').textContent = name;
+      }
+    } catch {}
+
     // Load planner profile
     api.get('/planners/me').then((planner) => {
       if (planner && (planner.business_name || planner.company_name)) {

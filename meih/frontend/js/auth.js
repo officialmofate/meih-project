@@ -22,6 +22,23 @@ export const auth = {
   isAuthenticated() {
     return Boolean(localStorage.getItem('meih_token'));
   },
+  isEmailVerified() {
+    try {
+      const raw = localStorage.getItem('meih_user');
+      if (raw) {
+        const user = JSON.parse(raw);
+        return user.email_verified === true;
+      }
+    } catch {}
+    return false;
+  },
+  getUser() {
+    try {
+      const raw = localStorage.getItem('meih_user');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+  },
   restore() {
     const raw = localStorage.getItem('meih_user');
     if (raw) {

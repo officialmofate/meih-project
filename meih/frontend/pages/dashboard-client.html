@@ -14,8 +14,8 @@
     <div class="container">
 
       <header class="page-header">
-        <h1>My Dashboard</h1>
-        <a class="btn btn-primary" href="create-event.html">+ Register Event</a>
+        <h1 id="dashboard-welcome">My Dashboard</h1>
+        <a id="register-event-btn" class="btn btn-primary" href="create-event.html" hidden>+ Register Event</a>
       </header>
 
       <section class="stats-row">
@@ -102,6 +102,19 @@
   <script type="module" src="../js/app.js"></script>
   <script type="module">
     import { api } from '../js/api.js';
+
+    // Show user name and conditionally show Register Event button
+    try {
+      const raw = localStorage.getItem('meih_user');
+      if (raw) {
+        const user = JSON.parse(raw);
+        const name = user.full_name || user.name || user.email || 'User';
+        document.getElementById('dashboard-welcome').textContent = name + "'s Dashboard";
+        if (user.role === 'planner') {
+          document.getElementById('register-event-btn').hidden = false;
+        }
+      }
+    } catch {}
 
     // Load stats
     api.get('/events/events').then((events) => {

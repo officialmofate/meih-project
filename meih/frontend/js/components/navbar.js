@@ -42,6 +42,7 @@ export function renderNavbar() {
       innovator: 'dashboard-client.html',
       judge: 'dashboard-judge.html',
       admin: 'dashboard-admin.html',
+      superadmin: 'dashboard-admin.html',
       public_voter: 'innovation.html',
       innovator_manager: 'dashboard-admin.html',
     };
