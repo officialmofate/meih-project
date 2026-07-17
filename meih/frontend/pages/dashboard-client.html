@@ -36,6 +36,15 @@
         </section>
 
         <section class="card wide">
+          <h2>My Bookings</h2>
+          <p id="no-bookings" class="empty-state" hidden>No bookings yet. <a href="events.html">Browse events</a> to book one.</p>
+          <table class="data-table" id="bookings-table" hidden>
+            <thead><tr><th>Event</th><th>Location</th><th>Date</th><th>Status</th><th>Ticket</th></tr></thead>
+            <tbody id="bookings-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide">
           <h2>Payments</h2>
           <p id="no-payments" class="empty-state" hidden>No payments yet.</p>
           <table class="data-table" id="payments-table" hidden>
@@ -172,6 +181,33 @@
       }).join('');
     }).catch(() => {
       document.getElementById('no-payments').hidden = false;
+    });
+
+    // Load bookings
+    api.get('/bookings').then((bookings) => {
+      if (!Array.isArray(bookings) || !bookings.length) {
+        document.getElementById('no-bookings').hidden = false;
+        return;
+      }
+      const table = document.getElementById('bookings-table');
+      const tbody = document.getElementById('bookings-body');
+      table.hidden = false;
+      tbody.innerHTML = bookings.map(b => {
+        const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
+        const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
+        const ticketBtn = b.status === 'confirmed'
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket" target="_blank">Ticket</a>`
+          : '<span class="text-muted">—</span>';
+        return `<tr>
+          <td>${b.event_name || '—'}</td>
+          <td>${b.event_location || '—'}</td>
+          <td>${eventDate}</td>
+          <td><span class="badge ${statusClass}">${b.status}</span></td>
+          <td>${ticketBtn}</td>
+        </tr>`;
+      }).join('');
+    }).catch(() => {
+      document.getElementById('no-bookings').hidden = false;
     });
 
     // Handle screenshot upload button in payment table

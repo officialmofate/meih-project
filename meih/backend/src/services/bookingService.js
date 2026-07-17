@@ -156,3 +156,20 @@ exports.getInvoice = async (id) => {
   );
   return rows[0];
 };
+
+exports.getTicketData = async (id) => {
+  const { rows } = await db.query(
+    `SELECT b.*, e.name AS event_name, e.location AS event_location,
+            e.event_date, e.category_id, e.budget, e.guest_count,
+            v.business_name AS vendor_name, p.company_name AS planner_name,
+            u.full_name AS client_name, u.email AS client_email
+     FROM bookings b
+     LEFT JOIN events e ON e.id = b.event_id
+     LEFT JOIN vendors v ON v.id = b.vendor_id
+     LEFT JOIN planners p ON p.id = b.planner_id
+     LEFT JOIN users u ON u.id = b.client_id
+     WHERE b.id = $1`,
+    [id]
+  );
+  return rows[0];
+};
