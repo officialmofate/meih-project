@@ -210,9 +210,9 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 56px;
+  min-width: 56px;
   height: 56px;
-  border-radius: 50%;
+  border-radius: 28px;
   background: linear-gradient(135deg, #6c5ce7, #a855f7);
   color: #fff;
   border: none;
@@ -222,14 +222,27 @@
   font-family: var(--font-heading);
   letter-spacing: 0.05em;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0;
+  padding: 0 16px;
   box-shadow: 0 4px 20px rgba(108, 92, 231, 0.44);
   z-index: 1000;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
-.ai-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(108, 92, 231, 0.66); }
-.ai-fab.active { border-radius: var(--radius-lg); width: auto; padding: 0 16px; gap: 8px; font-size: 14px; }
+.ai-fab:hover { transform: scale(1.05); box-shadow: 0 6px 28px rgba(108, 92, 231, 0.66); }
+.ai-fab.active { border-radius: 50%; width: 56px; min-width: 56px; padding: 0; }
+.ai-fab-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  opacity: 0.9;
+  line-height: 1;
+  margin-top: -2px;
+}
+.ai-fab.active .ai-fab-label { display: none; }
 
 /* AI text rotation inside the button */
 .ai-fab-text {

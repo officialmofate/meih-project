@@ -56,9 +56,9 @@ export function initAIAssistant() {
         position: fixed;
         bottom: 24px;
         right: 24px;
-        width: 56px;
+        min-width: 56px;
         height: 56px;
-        border-radius: 50%;
+        border-radius: 28px;
         background: linear-gradient(135deg, ${accentColor}, ${ctx === 'innovation' ? '#22d3ee' : '#a855f7'});
         color: #fff;
         border: none;
@@ -68,24 +68,45 @@ export function initAIAssistant() {
         font-family: var(--font-heading);
         letter-spacing: 0.05em;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 0;
+        padding: 0 16px;
         box-shadow: 0 4px 20px ${accentColor}44;
         z-index: 1000;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
       }
-      .ai-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px ${accentColor}99; }
+      .ai-fab:hover { transform: scale(1.05); box-shadow: 0 6px 28px ${accentColor}99; }
+      .ai-fab-label {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        opacity: 0.9;
+        line-height: 1;
+        margin-top: -2px;
+      }
 
       .ai-fab-text {
-        display: inline-block;
+        display: block;
         animation: ai-text-rotate 3s ease-in-out infinite;
         transform-style: preserve-3d;
+        font-size: 18px;
+        line-height: 1;
       }
       @keyframes ai-text-rotate {
         0%, 100% { transform: perspective(200px) rotateX(0deg); }
         50% { transform: perspective(200px) rotateX(360deg); }
       }
-      .ai-fab.active .ai-fab-text { animation: none; }
+      .ai-fab.active {
+        border-radius: 50%;
+        width: 56px;
+        min-width: 56px;
+        padding: 0;
+      }
+      .ai-fab.active .ai-fab-text { animation: none; font-size: 20px; }
+      .ai-fab.active .ai-fab-label { display: none; }
 
       .ai-chat-panel {
         position: fixed;
@@ -254,7 +275,7 @@ export function initAIAssistant() {
       }
     </style>
 
-    <button class="ai-fab" id="ai-fab"><span class="ai-fab-text">AI</span></button>
+    <button class="ai-fab" id="ai-fab"><span class="ai-fab-text">AI</span><span class="ai-fab-label">Ask AI</span></button>
 
     <div class="ai-chat-panel" id="ai-chat-panel">
       <div class="ai-chat-header">
@@ -290,10 +311,12 @@ export function initAIAssistant() {
     panel.classList.toggle('open');
     fab.classList.toggle('active');
     if (panel.classList.contains('open')) {
-      fab.textContent = '✕';
+      fab.querySelector('.ai-fab-text').textContent = '✕';
+      fab.querySelector('.ai-fab-label').textContent = '';
       input.focus();
     } else {
-      fab.textContent = 'AI';
+      fab.querySelector('.ai-fab-text').textContent = 'AI';
+      fab.querySelector('.ai-fab-label').textContent = 'Ask AI';
     }
   }
 
