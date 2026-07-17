@@ -23,8 +23,36 @@ const adminRoutes = require('./routes/admin');
 const aiRoutes = require('./routes/ai');
 const certificateRoutes = require('./routes/certificates');
 
+async function autoMigrate() {
+  try {
+    const db = require('./config/database');
+    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_status VARCHAR(20) DEFAULT 'unconfirmed'`);
+    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_payment_number VARCHAR(50)`);
+    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_payment_name VARCHAR(100)`);
+    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_screenshot_url VARCHAR(500)`);
+    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmed_by UUID REFERENCES users(id)`);
+    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) DEFAULT 'unpaid'`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_amount NUMERIC(12,2) DEFAULT 0`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_number VARCHAR(50)`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_name VARCHAR(100)`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_screenshot_url VARCHAR(500)`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50)`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_confirmed_by UUID REFERENCES users(id)`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_confirmed_at TIMESTAMPTZ`);
+    await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_name VARCHAR(200)`);
+    await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_phone VARCHAR(50)`);
+    console.log('[MIGRATION] 014 auto-applied successfully');
+  } catch (err) {
+    console.error('[MIGRATION] 014 auto-migration error:', err.message);
+  }
+}
+
 function createApp() {
   const app = express();
+
+  // Run auto-migration after DB is ready
+  setTimeout(autoMigrate, 5000);
 
   // Request ID middleware
   app.use(function (req, res, next) {

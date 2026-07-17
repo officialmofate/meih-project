@@ -53,7 +53,7 @@ export function renderNavbar() {
   if (hub === 'event') {
     hubLinks = `
       <a href="events.html" class="active" data-i18n="nav.browse_events">Browse Events</a>
-      <a href="create-event.html" data-i18n="nav.register_event">Register Event</a>
+      ${user && user.role === 'planner' ? '<a href="create-event.html" data-i18n="nav.register_event">Register Event</a>' : ''}
       ${dashboardLink}
     `;
   } else if (hub === 'innovation') {

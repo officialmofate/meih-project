@@ -249,6 +249,19 @@
   <div id="footer-root"></div>
   <div id="ai-root"></div>
   <script src="../js/config.js"></script>
+  <script>
+    (function() {
+      try {
+        var raw = localStorage.getItem('meih_user');
+        var user = raw ? JSON.parse(raw) : null;
+        if (!user || user.role !== 'planner') {
+          window.location.href = 'events.html';
+        }
+      } catch (e) {
+        window.location.href = 'events.html';
+      }
+    })();
+  </script>
   <script type="module" src="../js/app.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>

@@ -313,13 +313,13 @@
         const fd = new FormData();
         fd.append('screenshot', screenshotFile);
         try {
-          const uploadResult = await api.upload('/payments', fd);
-          screenshotUrl = uploadResult?.screenshot_url || uploadResult?.url || null;
+          const uploadResult = await api.upload('/upload-screenshot', fd);
+          screenshotUrl = uploadResult?.screenshot_url || null;
         } catch {}
       }
       
       try {
-        await api.post(`/events/${eventId}/request-confirmation`, {
+        await api.post(`/events/events/${eventId}/request-confirmation`, {
           paymentNumber: formData.get('paymentNumber'),
           paymentName: formData.get('paymentName'),
           screenshotUrl: screenshotUrl
