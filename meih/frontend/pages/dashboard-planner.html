@@ -13,9 +13,12 @@
   <main class="page dashboard" data-page="dashboard-planner">
     <div class="container">
 
-      <header class="page-header">
-        <h1>Planner Dashboard</h1>
-        <p id="planner-name"></p>
+      <header class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h1>Planner Dashboard</h1>
+          <p id="planner-name"></p>
+        </div>
+        <a href="create-event.html" class="btn btn-primary">Create Event</a>
       </header>
 
       <section class="stats-row">
@@ -313,7 +316,7 @@
         const fd = new FormData();
         fd.append('screenshot', screenshotFile);
         try {
-          const uploadResult = await api.upload('/upload-screenshot', fd);
+          const uploadResult = await api.upload('/events/upload-screenshot', fd);
           screenshotUrl = uploadResult?.screenshot_url || null;
         } catch {}
       }
