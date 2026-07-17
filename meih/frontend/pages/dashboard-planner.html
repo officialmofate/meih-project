@@ -42,6 +42,17 @@
         </section>
 
         <section class="card wide">
+          <h2>Bookings to Confirm</h2>
+          <p class="empty-state" id="no-pending-bookings">No bookings awaiting confirmation.</p>
+          <table class="data-table" id="pending-bookings-table" hidden>
+            <thead>
+              <tr><th>Event</th><th>Client</th><th>Guests</th><th>Date</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody id="pending-bookings-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide">
           <h2>Active Projects</h2>
           <p id="no-projects" class="empty-state">No active projects yet.</p>
           <table class="data-table" id="projects-table" hidden>
@@ -221,11 +232,59 @@
     // Load active projects (bookings assigned to this planner)
     api.get('/bookings').then((bookings) => {
       if (!Array.isArray(bookings) || !bookings.length) return;
+
+      // Pending bookings for confirmation
+      const pending = bookings.filter(b => b.status === 'pending');
+      const pendingTable = document.getElementById('pending-bookings-table');
+      const pendingBody = document.getElementById('pending-bookings-body');
+      if (pending.length > 0) {
+        document.getElementById('no-pending-bookings').hidden = true;
+        pendingTable.hidden = false;
+        pendingBody.innerHTML = pending.map(b => {
+          const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
+          return `<tr>
+            <td>${b.event_name || '—'}</td>
+            <td>${b.client_name || '—'}</td>
+            <td>${b.guest_count || '—'}</td>
+            <td>${eventDate}</td>
+            <td><span class="badge badge-warning">Pending</span></td>
+            <td>
+              <button class="btn btn-sm btn-success confirm-booking-btn" data-id="${b.id}">Confirm</button>
+              <button class="btn btn-sm btn-danger reject-booking-btn" data-id="${b.id}">Reject</button>
+            </td>
+          </tr>`;
+        }).join('');
+
+        pendingBody.querySelectorAll('.confirm-booking-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Confirm this booking?')) return;
+            try {
+              await api.post(`/bookings/${btn.dataset.id}/confirm`);
+              alert('Booking confirmed!');
+              window.location.reload();
+            } catch (err) { alert(err.message); }
+          });
+        });
+        pendingBody.querySelectorAll('.reject-booking-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Reject this booking?')) return;
+            try {
+              await api.post(`/bookings/${btn.dataset.id}/cancel`);
+              alert('Booking rejected.');
+              window.location.reload();
+            } catch (err) { alert(err.message); }
+          });
+        });
+      }
+
+      // Active projects (confirmed/completed)
+      const active = bookings.filter(b => b.status !== 'pending');
+      if (active.length === 0) return;
       const table = document.getElementById('projects-table');
       const tbody = document.getElementById('projects-body');
       document.getElementById('no-projects').hidden = true;
       table.hidden = false;
-      tbody.innerHTML = bookings.map(b => {
+      tbody.innerHTML = active.map(b => {
         const statusClass = b.status === 'completed' ? 'badge-success' : b.status === 'confirmed' ? 'badge' : 'badge-muted';
         return `<tr>
           <td>${b.event_name || '—'}</td>

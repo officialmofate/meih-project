@@ -70,7 +70,7 @@ exports.list = async (userId, role, { page = 1, limit = 50 } = {}) => {
              LIMIT $1 OFFSET $2`;
     params.splice(2, 0, userId);
   } else if (role === 'planner') {
-    query = `SELECT b.*, e.name AS event_name, u.full_name AS client_name
+    query = `SELECT b.*, e.name AS event_name, e.event_date, e.guest_count, e.location AS event_location, u.full_name AS client_name
              FROM bookings b
              LEFT JOIN events e ON e.id = b.event_id
              LEFT JOIN planners p ON p.id = b.planner_id
@@ -108,7 +108,17 @@ exports.update = async (id, userId, payload) => {
   return rows[0];
 };
 
-exports.confirm = async (id) => {
+exports.confirm = async (id, userId, role) => {
+  if (role === 'planner') {
+    const { rows } = await db.query(
+      `UPDATE bookings SET status = 'confirmed', updated_at = now()
+       WHERE id = $1 AND status = 'pending'
+       AND planner_id IN (SELECT id FROM planners WHERE user_id = $2)
+       RETURNING *`,
+      [id, userId]
+    );
+    return rows[0];
+  }
   const { rows } = await db.query(
     `UPDATE bookings SET status = 'confirmed', updated_at = now()
      WHERE id = $1 AND status = 'pending'
