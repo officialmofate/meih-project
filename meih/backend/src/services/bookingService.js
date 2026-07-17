@@ -2,10 +2,11 @@ const db = require('../config/database');
 
 exports.create = async (clientId, payload) => {
   const { rows } = await db.query(
-    `INSERT INTO bookings (client_id, event_id, vendor_id, planner_id, deposit_amount, status)
-     VALUES ($1, $2, $3, $4, $5, 'pending')
+    `INSERT INTO bookings (client_id, event_id, vendor_id, planner_id, deposit_amount, client_name, client_phone, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
      RETURNING *`,
-    [clientId, payload.eventId, payload.vendorId || null, payload.plannerId || null, payload.depositAmount || 0]
+    [clientId, payload.eventId, payload.vendorId || null, payload.plannerId || null,
+     payload.depositAmount || 0, payload.clientName || null, payload.clientPhone || null]
   );
   return rows[0];
 };
@@ -104,6 +105,16 @@ exports.cancel = async (id) => {
      WHERE id = $1 AND status IN ('pending', 'confirmed')
      RETURNING *`,
     [id]
+  );
+  return rows[0];
+};
+
+exports.setDeposit = async (id, plannerUserId, amount) => {
+  const { rows } = await db.query(
+    `UPDATE bookings SET deposit_amount = $3, updated_at = now()
+     WHERE id = $1 AND planner_id IN (SELECT id FROM planners WHERE user_id = $2)
+     RETURNING *`,
+    [id, plannerUserId, amount]
   );
   return rows[0];
 };

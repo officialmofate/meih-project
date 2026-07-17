@@ -88,6 +88,35 @@
         </fieldset>
 
       </form>
+
+      <section class="card" id="innovation-payment-section" hidden style="margin-top:var(--space-md);">
+        <h2>Innovation Payment</h2>
+        <p class="text-muted">Submit your payment to confirm your innovation submission.</p>
+        <form id="innovation-payment-form" class="stacked-form">
+          <input type="hidden" name="submissionId" id="inno-pay-submission-id" />
+
+          <label for="inno-pay-amount">Amount (Tsh)</label>
+          <input id="inno-pay-amount" name="amount" type="number" min="1" required />
+
+          <label for="inno-pay-number">Payment Number</label>
+          <input id="inno-pay-number" name="paymentNumber" type="text" placeholder="e.g. 0754 123 456" required />
+
+          <label for="inno-pay-name">Account Holder Name</label>
+          <input id="inno-pay-name" name="paymentName" type="text" placeholder="e.g. John Doe" required />
+
+          <label for="inno-pay-method">Payment Method</label>
+          <select id="inno-pay-method" name="method">
+            <option value="mobile_money">Mobile Money</option>
+            <option value="bank_transfer">Bank Transfer</option>
+          </select>
+
+          <label for="inno-pay-screenshot">Payment Screenshot</label>
+          <input id="inno-pay-screenshot" name="screenshot" type="file" accept="image/*" />
+
+          <button type="submit" class="btn btn-primary">Submit Payment</button>
+        </form>
+        <p id="inno-pay-success" class="form-success" hidden>Payment submitted — awaiting confirmation.</p>
+      </section>
     </div>
   </main>
 
@@ -197,13 +226,50 @@
           if (token) headers['Authorization'] = 'Bearer ' + token;
           var res = await fetch(BASE_URL + '/innovation/competitions/' + competitionId + '/submit', { method: 'POST', headers: headers, body: JSON.stringify(data) });
           if (!res.ok) { var err = await res.json().catch(function() { return {}; }); throw new Error(err.message || 'Request failed'); }
-          window.location.href = 'innovation.html';
+          var result = await res.json();
+          document.getElementById('innovation-payment-section').hidden = false;
+          document.getElementById('inno-pay-submission-id').value = result.id || '';
+          errorEl.hidden = true;
         } catch (err) {
           errorEl.textContent = err.message || 'Could not register the innovation. Please try again.';
           errorEl.hidden = false;
         }
       });
     } catch(e) { console.error('[MEIH] Innovation form error:', e); }
+
+    // Innovation payment form
+    var innoPayForm = document.getElementById('innovation-payment-form');
+    if (innoPayForm) {
+      innoPayForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(innoPayForm);
+        const submissionId = formData.get('submissionId');
+        
+        let screenshotUrl = null;
+        const screenshotFile = document.getElementById('inno-pay-screenshot').files[0];
+        if (screenshotFile) {
+          const fd = new FormData();
+          fd.append('screenshot', screenshotFile);
+          try {
+            const uploadResult = await api.upload('/payments', fd);
+            screenshotUrl = uploadResult?.screenshot_url || uploadResult?.url || null;
+          } catch {}
+        }
+        
+        try {
+          await api.post(`/innovation/submissions/${submissionId}/payment`, {
+            amount: formData.get('amount'),
+            paymentNumber: formData.get('paymentNumber'),
+            paymentName: formData.get('paymentName'),
+            method: formData.get('method'),
+            screenshotUrl: screenshotUrl
+          });
+          document.getElementById('inno-pay-success').hidden = false;
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    }
   </script>
 </body>
 </html>

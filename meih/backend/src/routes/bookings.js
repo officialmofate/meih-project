@@ -9,5 +9,6 @@ router.put('/:id', authenticate, ctrl.update);
 router.post('/:id/confirm', authenticate, ctrl.confirm);
 router.post('/:id/cancel', authenticate, ctrl.cancel);
 router.get('/:id/invoice', authenticate, ctrl.getInvoice);
+router.put('/:id/deposit', authenticate, ctrl.setDeposit);
 
 module.exports = router;

@@ -276,3 +276,68 @@ exports.listCategories = async () => {
     'Clean Energy', 'Food Security', 'Water Innovation'
   ];
 };
+
+exports.submitPayment = async (id, userId, payload) => {
+  const { rows: sub } = await db.query(
+    'SELECT id, user_id FROM innovation_submissions WHERE id = $1', [id]
+  );
+  if (!sub[0]) return null;
+  if (sub[0].user_id !== userId) return { unauthorized: true };
+
+  const { rows } = await db.query(
+    `UPDATE innovation_submissions SET
+       payment_status = 'pending',
+       payment_amount = $2,
+       payment_number = $3,
+       payment_name = $4,
+       payment_screenshot_url = $5,
+       payment_method = $6,
+       updated_at = now()
+     WHERE id = $1
+     RETURNING *`,
+    [id, payload.amount, payload.paymentNumber, payload.paymentName,
+     payload.screenshotUrl || null, payload.method || 'mobile_money']
+  );
+  return rows[0];
+};
+
+exports.confirmInnovationPayment = async (id, adminId) => {
+  const { rows } = await db.query(
+    `UPDATE innovation_submissions SET
+       payment_status = 'confirmed',
+       payment_confirmed_by = $2,
+       payment_confirmed_at = now(),
+       updated_at = now()
+     WHERE id = $1 AND payment_status = 'pending'
+     RETURNING *`,
+    [id, adminId]
+  );
+  return rows[0];
+};
+
+exports.rejectInnovationPayment = async (id) => {
+  const { rows } = await db.query(
+    `UPDATE innovation_submissions SET
+       payment_status = 'rejected',
+       updated_at = now()
+     WHERE id = $1 AND payment_status = 'pending'
+     RETURNING *`,
+    [id]
+  );
+  return rows[0];
+};
+
+exports.listPendingPayment = async ({ page = 1, limit = 50 } = {}) => {
+  const offset = (page - 1) * limit;
+  const { rows } = await db.query(
+    `SELECT s.*, u.full_name AS author_name, c.title AS competition_title
+     FROM innovation_submissions s
+     LEFT JOIN users u ON u.id = s.user_id
+     LEFT JOIN innovation_competitions c ON c.id = s.competition_id
+     WHERE s.payment_status = 'pending'
+     ORDER BY s.created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
+  return rows;
+};

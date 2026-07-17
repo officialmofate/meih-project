@@ -84,7 +84,9 @@
 
         <section class="categories">
           <h2 data-i18n="landing.categories_title">Popular Event Categories</h2>
-          <div class="chip-row" id="category-chips">
+          <div class="grid" id="category-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-md); margin-top: var(--space-md);">
+          </div>
+          <div class="chip-row" id="category-chips" style="margin-top:var(--space-sm);">
             <a class="chip" href="events.html">Browse All Events</a>
           </div>
         </section>
@@ -321,6 +323,7 @@
           qeSelect.appendChild(opt);
         });
         var chipRow = document.getElementById('category-chips');
+        var catGrid = document.getElementById('category-grid');
         if (chipRow) {
           cats.slice(0, 6).forEach(function(c) {
             var name = c.name || c;
@@ -331,6 +334,19 @@
             a.href = 'events.html?category=' + encodeURIComponent(name);
             a.textContent = name + (fee ? ' · Tsh ' + feeTzs.toLocaleString() : '');
             chipRow.appendChild(a);
+          });
+        }
+        if (catGrid) {
+          var catIcons = { wedding: '\uD83D\uDC92', corporate: '\uD83C\uDFE2', birthday: '\uD83C\uDF82', conference: '\uD83C\uDFA4', concert: '\uD83C\uDFB5', exhibition: '\uD83C\uDFA8', festival: '\uD83C\uDFAA', sports: '\u26BD', charity: '\u2764\uFE0F', graduation: '\uD83C\uDF93', other: '\u2728' };
+          cats.forEach(function(c) {
+            var name = c.name || c;
+            var slug = name.toLowerCase().replace(/\s+/g, '').replace(/events?/g, '');
+            var icon = catIcons[slug] || catIcons['other'];
+            var div = document.createElement('div');
+            div.className = 'category-card';
+            div.innerHTML = '<div class="category-icon" data-category="' + slug + '"></div><div class="category-name">' + name + '</div>';
+            div.addEventListener('click', function() { window.location.href = 'events.html?category=' + encodeURIComponent(name); });
+            catGrid.appendChild(div);
           });
         }
       }

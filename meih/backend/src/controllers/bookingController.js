@@ -53,3 +53,11 @@ exports.getInvoice = async (req, res, next) => {
     res.json(invoice);
   } catch (err) { next(err); }
 };
+
+exports.setDeposit = async (req, res, next) => {
+  try {
+    const booking = await bookingService.setDeposit(req.params.id, req.user.id, req.body.amount);
+    if (!booking) return res.status(404).json({ message: 'Booking not found or unauthorized' });
+    res.json(booking);
+  } catch (err) { next(err); }
+};

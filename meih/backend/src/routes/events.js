@@ -14,5 +14,6 @@ router.get('/events/:id/bookings', authenticate, ctrl.listEventBookings);
 router.post('/events/:id/quotes', authenticate, ctrl.createQuote);
 router.get('/events/:id/quotes', authenticate, ctrl.listQuotes);
 router.put('/events/:id/status', authenticate, ctrl.updateStatus);
+router.post('/events/:id/request-confirmation', authenticate, ctrl.requestConfirmation);
 
 module.exports = router;

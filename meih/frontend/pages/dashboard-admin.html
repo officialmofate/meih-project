@@ -57,6 +57,30 @@
           </ul>
         </section>
 
+        <section class="card wide" id="event-confirmations-section">
+          <h2>Event Confirmations</h2>
+          <p class="text-muted">Events submitted by planners awaiting your confirmation.</p>
+          <p class="empty-state" id="no-pending-confirmations">No events pending confirmation.</p>
+          <table class="data-table" id="confirmations-table" hidden>
+            <thead>
+              <tr><th>Event</th><th>Planner</th><th>Category</th><th>Payment Number</th><th>Payment Name</th><th>Screenshot</th><th>Date</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="confirmations-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide" id="innovation-payments-section">
+          <h2>Innovation Payments</h2>
+          <p class="text-muted">Innovation submissions with pending payment confirmation.</p>
+          <p class="empty-state" id="no-pending-innovation-payments">No innovation payments pending.</p>
+          <table class="data-table" id="innovation-payments-table" hidden>
+            <thead>
+              <tr><th>Submission</th><th>Author</th><th>Amount</th><th>Number</th><th>Screenshot</th><th>Date</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="innovation-payments-body"></tbody>
+          </table>
+        </section>
+
         <section class="card">
           <h2 data-i18n="system_settings">System Settings</h2>
           <form id="settings-form" class="stacked-form">
@@ -194,6 +218,101 @@
 
     document.getElementById('user-search').addEventListener('input', search);
     document.getElementById('role-filter').addEventListener('change', search);
+
+    // Load pending event confirmations
+    api.get('/admin/events/pending-confirmation').then((events) => {
+      if (!Array.isArray(events) || !events.length) {
+        document.getElementById('no-pending-confirmations').hidden = false;
+        return;
+      }
+      document.getElementById('no-pending-confirmations').hidden = true;
+      document.getElementById('confirmations-table').hidden = false;
+      document.getElementById('confirmations-body').innerHTML = events.map(ev => `
+        <tr>
+          <td>${ev.name || '—'}</td>
+          <td>${ev.planner_name || '—'}</td>
+          <td>${ev.category_name || '—'}</td>
+          <td>${ev.confirmation_payment_number || '—'}</td>
+          <td>${ev.confirmation_payment_name || '—'}</td>
+          <td>${ev.confirmation_screenshot_url 
+            ? `<a href="${ev.confirmation_screenshot_url}" target="_blank" class="btn btn-sm btn-secondary">View</a>`
+            : '<span class="text-muted">None</span>'}</td>
+          <td>${new Date(ev.created_at).toLocaleDateString()}</td>
+          <td>
+            <button class="btn btn-sm btn-success confirm-event-btn" data-id="${ev.id}">Confirm</button>
+            <button class="btn btn-sm btn-danger reject-event-btn" data-id="${ev.id}">Reject</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('confirmations-body').querySelectorAll('.confirm-event-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Confirm this event?')) return;
+          try {
+            await api.put(`/admin/events/${btn.dataset.id}/confirm`);
+            alert('Event confirmed and published!');
+            window.location.reload();
+          } catch (err) { alert(err.message); }
+        });
+      });
+      document.getElementById('confirmations-body').querySelectorAll('.reject-event-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Reject this event?')) return;
+          try {
+            await api.put(`/admin/events/${btn.dataset.id}/reject`);
+            alert('Event rejected.');
+            window.location.reload();
+          } catch (err) { alert(err.message); }
+        });
+      });
+    }).catch(() => {});
+
+    // Load pending innovation payments
+    api.get('/admin/innovation/pending-payment').then((subs) => {
+      if (!Array.isArray(subs) || !subs.length) {
+        document.getElementById('no-pending-innovation-payments').hidden = false;
+        return;
+      }
+      document.getElementById('no-pending-innovation-payments').hidden = true;
+      document.getElementById('innovation-payments-table').hidden = false;
+      document.getElementById('innovation-payments-body').innerHTML = subs.map(s => `
+        <tr>
+          <td>${s.title || '—'}</td>
+          <td>${s.author_name || '—'}</td>
+          <td>Tsh ${Number(s.payment_amount || 0).toLocaleString()}</td>
+          <td>${s.payment_number || '—'}</td>
+          <td>${s.payment_screenshot_url
+            ? `<a href="${s.payment_screenshot_url}" target="_blank" class="btn btn-sm btn-secondary">View</a>`
+            : '<span class="text-muted">None</span>'}</td>
+          <td>${new Date(s.created_at).toLocaleDateString()}</td>
+          <td>
+            <button class="btn btn-sm btn-success confirm-inno-pay-btn" data-id="${s.id}">Confirm</button>
+            <button class="btn btn-sm btn-danger reject-inno-pay-btn" data-id="${s.id}">Reject</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('innovation-payments-body').querySelectorAll('.confirm-inno-pay-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Confirm this innovation payment?')) return;
+          try {
+            await api.put(`/admin/innovation/${btn.dataset.id}/confirm-payment`);
+            alert('Payment confirmed!');
+            window.location.reload();
+          } catch (err) { alert(err.message); }
+        });
+      });
+      document.getElementById('innovation-payments-body').querySelectorAll('.reject-inno-pay-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Reject this innovation payment?')) return;
+          try {
+            await api.put(`/admin/innovation/${btn.dataset.id}/reject-payment`);
+            alert('Payment rejected.');
+            window.location.reload();
+          } catch (err) { alert(err.message); }
+        });
+      });
+    }).catch(() => {});
   </script>
 </body>
 </html>

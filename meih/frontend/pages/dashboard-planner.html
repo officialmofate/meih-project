@@ -49,6 +49,36 @@
           </table>
         </section>
 
+        <section class="card wide">
+          <h2>Submit Event to Admin</h2>
+          <p class="text-muted">Submit your event for admin confirmation. Include your payment details for the MOFATE payment number.</p>
+          
+          <div id="events-to-confirm">
+            <p class="empty-state" id="no-events-to-confirm">No draft events to submit.</p>
+            <div id="events-confirm-list"></div>
+          </div>
+
+          <div id="confirm-event-form-wrapper" hidden>
+            <h3 id="confirm-event-name"></h3>
+            <form id="confirm-event-form" class="stacked-form">
+              <input type="hidden" name="eventId" id="confirm-event-id" />
+
+              <label for="confirm-payment-number">Payment Number (MOFATE)</label>
+              <input id="confirm-payment-number" name="paymentNumber" type="text" value="123456" required placeholder="e.g. 123456" />
+
+              <label for="confirm-payment-name">Payment Name</label>
+              <input id="confirm-payment-name" name="paymentName" type="text" value="MOFATE" required placeholder="e.g. MOFATE" />
+
+              <label for="confirm-screenshot">Payment Screenshot</label>
+              <input id="confirm-screenshot" name="screenshot" type="file" accept="image/*" />
+
+              <button type="submit" class="btn btn-primary">Submit for Confirmation</button>
+              <button type="button" class="btn btn-secondary" id="cancel-confirm-form">Cancel</button>
+            </form>
+            <p id="confirm-success" class="form-success" hidden>Event submitted for admin confirmation.</p>
+          </div>
+        </section>
+
         <section class="card">
           <h2>My Payment Details</h2>
           <p class="text-muted">Clients will see these details when making a payment to you.</p>
@@ -226,6 +256,77 @@
         alert('Availability updated.');
       } catch (err) {
         alert(err.message || 'Availability updated.');
+      }
+    });
+
+    // Load events by this planner for confirmation
+    api.get('/events/events').then((events) => {
+      const userRaw = localStorage.getItem('meih_user');
+      const user = userRaw ? JSON.parse(userRaw) : null;
+      const myEvents = Array.isArray(events) ? events.filter(e => 
+        (e.confirmation_status === 'unconfirmed' || e.confirmation_status === 'rejected')
+      ) : [];
+      
+      if (myEvents.length === 0) {
+        document.getElementById('no-events-to-confirm').hidden = false;
+        return;
+      }
+      
+      const list = document.getElementById('events-confirm-list');
+      list.innerHTML = myEvents.map(ev => `
+        <div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <strong>${ev.name || 'Untitled'}</strong>
+            <span class="badge badge-muted" style="margin-left:var(--space-xs);">${ev.confirmation_status || 'unconfirmed'}</span>
+            <span class="text-muted" style="margin-left:var(--space-sm);">${ev.category_name || ''}</span>
+          </div>
+          <button class="btn btn-sm btn-primary submit-confirm-btn" data-id="${ev.id}" data-name="${ev.name || 'Untitled'}">Submit to Admin</button>
+        </div>
+      `).join('');
+      
+      list.querySelectorAll('.submit-confirm-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('confirm-event-id').value = btn.dataset.id;
+          document.getElementById('confirm-event-name').textContent = btn.dataset.name;
+          document.getElementById('confirm-event-form-wrapper').hidden = false;
+          list.hidden = true;
+          document.getElementById('no-events-to-confirm').hidden = true;
+        });
+      });
+    }).catch(() => {});
+
+    document.getElementById('cancel-confirm-form').addEventListener('click', () => {
+      document.getElementById('confirm-event-form-wrapper').hidden = true;
+      document.getElementById('events-confirm-list').hidden = false;
+    });
+
+    document.getElementById('confirm-event-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const eventId = formData.get('eventId');
+      
+      let screenshotUrl = null;
+      const screenshotFile = document.getElementById('confirm-screenshot').files[0];
+      if (screenshotFile) {
+        const fd = new FormData();
+        fd.append('screenshot', screenshotFile);
+        try {
+          const uploadResult = await api.upload('/payments', fd);
+          screenshotUrl = uploadResult?.screenshot_url || uploadResult?.url || null;
+        } catch {}
+      }
+      
+      try {
+        await api.post(`/events/${eventId}/request-confirmation`, {
+          paymentNumber: formData.get('paymentNumber'),
+          paymentName: formData.get('paymentName'),
+          screenshotUrl: screenshotUrl
+        });
+        document.getElementById('confirm-success').hidden = false;
+        e.target.reset();
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        alert(err.message);
       }
     });
   </script>

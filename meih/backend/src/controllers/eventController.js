@@ -89,3 +89,12 @@ exports.updateStatus = async (req, res, next) => {
     res.json(event);
   } catch (err) { next(err); }
 };
+
+exports.requestConfirmation = async (req, res, next) => {
+  try {
+    const event = await eventService.requestConfirmation(req.params.id, req.user.id, req.body);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (event.unauthorized) return res.status(403).json({ message: 'Not your event' });
+    res.json(event);
+  } catch (err) { next(err); }
+};

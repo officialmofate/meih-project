@@ -106,6 +106,22 @@ exports.listAllPayments = async ({ page = 1, limit = 50 } = {}) => {
   return rows;
 };
 
+exports.listPendingConfirmations = async ({ page = 1, limit = 50 } = {}) => {
+  const offset = (page - 1) * limit;
+  const { rows } = await db.query(
+    `SELECT e.*, c.name AS category_name, u.full_name AS planner_name,
+            u.email AS planner_email
+     FROM events e
+     LEFT JOIN event_categories c ON c.id = e.category_id
+     LEFT JOIN users u ON u.id = e.client_id
+     WHERE e.confirmation_status = 'pending'
+     ORDER BY e.created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
+  return rows;
+};
+
 exports.getPendingApprovals = async () => {
   const [vendors, submissions, events] = await Promise.all([
     db.query(`SELECT v.*, u.full_name FROM vendors v LEFT JOIN users u ON u.id = v.user_id WHERE v.verified = false ORDER BY v.created_at DESC LIMIT 20`),

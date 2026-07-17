@@ -142,3 +142,60 @@ exports.getLogs = async (req, res, next) => {
     res.json({ logs: [], message: 'Log retrieval not yet implemented' });
   } catch (err) { next(err); }
 };
+
+exports.listPendingConfirmations = async (req, res, next) => {
+  try {
+    const pagination = parsePagination(req.query);
+    const events = await adminService.listPendingConfirmations(pagination);
+    res.json(events);
+  } catch (err) { next(err); }
+};
+
+exports.confirmEvent = async (req, res, next) => {
+  try {
+    const eventService = require('../services/eventService');
+    const event = await eventService.confirmEvent(req.params.id, req.user.id);
+    if (!event) return res.status(404).json({ message: 'Event not found or not pending confirmation' });
+    auditLog('EVENT_CONFIRMED', { targetId: req.params.id }, req);
+    res.json(event);
+  } catch (err) { next(err); }
+};
+
+exports.rejectEvent = async (req, res, next) => {
+  try {
+    const eventService = require('../services/eventService');
+    const event = await eventService.rejectEvent(req.params.id, req.user.id);
+    if (!event) return res.status(404).json({ message: 'Event not found or not pending confirmation' });
+    auditLog('EVENT_REJECTED', { targetId: req.params.id }, req);
+    res.json(event);
+  } catch (err) { next(err); }
+};
+
+exports.listPendingInnovationPayments = async (req, res, next) => {
+  try {
+    const innovationService = require('../services/innovationService');
+    const pagination = parsePagination(req.query);
+    const submissions = await innovationService.listPendingPayment(pagination);
+    res.json(submissions);
+  } catch (err) { next(err); }
+};
+
+exports.confirmInnovationPayment = async (req, res, next) => {
+  try {
+    const innovationService = require('../services/innovationService');
+    const submission = await innovationService.confirmInnovationPayment(req.params.id, req.user.id);
+    if (!submission) return res.status(404).json({ message: 'Submission not found or not pending payment' });
+    auditLog('INNOVATION_PAYMENT_CONFIRMED', { targetId: req.params.id }, req);
+    res.json(submission);
+  } catch (err) { next(err); }
+};
+
+exports.rejectInnovationPayment = async (req, res, next) => {
+  try {
+    const innovationService = require('../services/innovationService');
+    const submission = await innovationService.rejectInnovationPayment(req.params.id);
+    if (!submission) return res.status(404).json({ message: 'Submission not found or not pending payment' });
+    auditLog('INNOVATION_PAYMENT_REJECTED', { targetId: req.params.id }, req);
+    res.json(submission);
+  } catch (err) { next(err); }
+};
