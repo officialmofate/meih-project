@@ -86,6 +86,25 @@
 }
 .btn-link:hover { color: var(--color-secondary); }
 
+.btn-nav-logout {
+  background: rgba(255, 107, 107, 0.12);
+  color: var(--color-danger, #ff6b6b);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: var(--radius-md);
+  padding: 6px 18px;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.btn-nav-logout:hover {
+  background: var(--color-danger, #ff6b6b);
+  color: #fff;
+  border-color: var(--color-danger, #ff6b6b);
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
 /* ── Cards ── */
 .card {
   border: 1px solid var(--color-glass-border);

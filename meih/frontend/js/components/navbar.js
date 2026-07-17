@@ -12,9 +12,15 @@ function detectHub() {
   return null;
 }
 
-function hubLink(href, label, currentHub, targetHub) {
-  const active = currentHub === targetHub ? ' active' : '';
-  return `<a href="${href}" class="${active}">${label}</a>`;
+function isRootPage() {
+  const path = window.location.pathname;
+  const depth = path.split('/').filter(Boolean).length;
+  const lastSegment = path.split('/').pop() || '';
+  return lastSegment === 'index.html' || lastSegment === '' || lastSegment === '/';
+}
+
+function p(href) {
+  return isRootPage() ? 'pages/' + href : href;
 }
 
 export function renderNavbar() {
@@ -46,27 +52,27 @@ export function renderNavbar() {
       public_voter: 'innovation.html',
       innovator_manager: 'dashboard-admin.html',
     };
-    dashboardLink = `<a href="${dashMap[user.role] || 'dashboard-client.html'}" data-i18n="nav.dashboard">Dashboard</a>`;
+    dashboardLink = `<a href="${p(dashMap[user.role] || 'dashboard-client.html')}" data-i18n="nav.dashboard">Dashboard</a>`;
   }
 
   let hubLinks = '';
   if (hub === 'event') {
     hubLinks = `
-      <a href="events.html" class="active" data-i18n="nav.browse_events">Browse Events</a>
-      <a href="planners.html">Planners</a>
+      <a href="${p('events.html')}" class="active" data-i18n="nav.browse_events">Browse Events</a>
+      <a href="${p('planners.html')}">Planners</a>
       ${dashboardLink}
     `;
   } else if (hub === 'innovation') {
     hubLinks = `
-      <a href="innovation.html" class="active" data-i18n="nav.browse_innovations">Browse Innovations</a>
-      <a href="leaderboard.html" data-i18n="nav.leaderboard">Leaderboard</a>
+      <a href="${p('innovation.html')}" class="active" data-i18n="nav.browse_innovations">Browse Innovations</a>
+      <a href="${p('leaderboard.html')}" data-i18n="nav.leaderboard">Leaderboard</a>
       ${dashboardLink}
     `;
   } else {
     hubLinks = `
-      <a href="events.html" data-i18n="nav.events">Event Hub</a>
-      <a href="planners.html">Planners</a>
-      <a href="innovation.html" data-i18n="nav.innovation">Innovation Hub</a>
+      <a href="${p('events.html')}" data-i18n="nav.events">Event Hub</a>
+      <a href="${p('planners.html')}">Planners</a>
+      <a href="${p('innovation.html')}" data-i18n="nav.innovation">Innovation Hub</a>
       ${dashboardLink}
     `;
   }
@@ -79,9 +85,9 @@ export function renderNavbar() {
         <button id="lang-toggle" class="btn-ghost lang-toggle-btn" title="${langTitle}">${langLabel}</button>
         <button id="ai-assistant-toggle" class="btn-ghost" style="font-size:18px;padding:4px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);" title="AI Assistant" data-i18n="nav.ai">AI ✦</button>
         ${user
-          ? `<button id="nav-logout" class="btn-link" style="font-weight:600" data-i18n="nav.logout">Logout</button>`
-          : `<a href="register.html" class="btn btn-ghost" style="padding:6px 14px;font-size:13px;" data-i18n="nav.signup">Sign Up</a>
-             <a href="login.html" class="btn btn-primary" style="padding:6px 18px;" data-i18n="nav.login">Login</a>`}
+          ? `<button id="nav-logout" class="btn-nav-logout" data-i18n="nav.logout">Logout</button>`
+          : `<a href="${p('register.html')}" class="btn btn-ghost" style="padding:6px 14px;font-size:13px;" data-i18n="nav.signup">Sign Up</a>
+             <a href="${p('login.html')}" class="btn btn-primary" style="padding:6px 18px;" data-i18n="nav.login">Login</a>`}
       </div>
       <button id="mobile-menu-toggle" class="navbar-toggle" aria-label="Toggle menu">&#9776;</button>
     </nav>
@@ -113,7 +119,7 @@ export function renderNavbar() {
     logoutBtn.addEventListener('click', () => {
       localStorage.removeItem('meih_token');
       store.set({ user: null });
-      window.location.href = 'login.html';
+      window.location.href = p('login.html');
     });
   }
 

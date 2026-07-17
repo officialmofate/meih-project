@@ -20,7 +20,6 @@
       <section class="stats-row">
         <div class="card stat-card"><span class="stat-number" id="stat-active">—</span><span class="stat-label">Active Events</span></div>
         <div class="card stat-card"><span class="stat-number" id="stat-completed">—</span><span class="stat-label">Completed Events</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-spent">—</span><span class="stat-label">Total Spent</span></div>
       </section>
 
       <div class="dashboard-grid">
@@ -52,45 +51,6 @@
             </thead>
             <tbody id="payments-body"></tbody>
           </table>
-        </section>
-
-        <section class="card">
-          <h2>Pay with Screenshot</h2>
-          <p class="text-muted">Send payment to the planner's number, then upload the screenshot here for confirmation.</p>
-
-          <div id="payment-details-box" class="info-box" hidden>
-            <p><strong>Pay to:</strong> <span id="payee-name">—</span></p>
-            <p><strong>Number:</strong> <span id="payee-number">—</span></p>
-            <p><strong>Method:</strong> <span id="payee-method">—</span></p>
-          </div>
-
-          <form id="screenshot-payment-form" class="stacked-form">
-            <input type="hidden" name="bookingId" id="pay-booking-id" />
-
-            <label for="pay-amount" data-i18n="event.pay_amount">Amount (Tsh)</label>
-            <input id="pay-amount" name="amount" type="number" min="1" required />
-
-            <label for="pay-method-select">Payment method</label>
-            <select id="pay-method-select" name="method">
-              <option value="mobile_money">Mobile Money</option>
-              <option value="bank_transfer">Bank Transfer</option>
-            </select>
-
-            <label for="pay-number-input">Your payment number</label>
-            <input id="pay-number-input" name="paymentNumber" type="text" placeholder="e.g. 0754 123 456" />
-
-            <label for="pay-name-input">Account holder name</label>
-            <input id="pay-name-input" name="paymentName" type="text" placeholder="e.g. John Mwakasege" />
-
-            <label for="pay-screenshot">Payment screenshot</label>
-            <input id="pay-screenshot" name="screenshot" type="file" accept="image/*" />
-
-            <label for="pay-notes">Notes</label>
-            <textarea id="pay-notes" name="notes" rows="2" placeholder="Optional payment notes..."></textarea>
-
-            <button type="submit" class="btn btn-primary btn-block">Submit Payment Proof</button>
-          </form>
-          <p id="screenshot-success" class="form-success" hidden>Payment proof submitted — waiting for planner confirmation.</p>
         </section>
 
         <section class="card">
@@ -126,10 +86,8 @@
       if (!Array.isArray(events)) return;
       const active = events.filter(e => e.status !== 'completed').length;
       const completed = events.filter(e => e.status === 'completed').length;
-      const totalSpent = events.reduce((sum, e) => sum + (e.budget || 0), 0);
       document.getElementById('stat-active').textContent = active;
       document.getElementById('stat-completed').textContent = completed;
-      document.getElementById('stat-spent').textContent = 'Tsh ' + totalSpent.toLocaleString();
 
       // Render events table
       if (events.length) {
@@ -206,78 +164,6 @@
     }).catch(() => {
       document.getElementById('no-bookings').hidden = false;
     });
-
-    // Handle screenshot upload button in payment table
-    document.getElementById('payments-body').addEventListener('click', async (e) => {
-      const btn = e.target.closest('.upload-screenshot-btn');
-      if (!btn) return;
-      const paymentId = btn.dataset.paymentId;
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.onchange = async () => {
-        const file = fileInput.files[0];
-        if (!file) return;
-        const fd = new FormData();
-        fd.append('screenshot', file);
-        try {
-          await api.putUpload(`/payments/${paymentId}/screenshot`, fd);
-          alert('Screenshot uploaded — awaiting confirmation.');
-          window.location.reload();
-        } catch (err) {
-          alert(err.message);
-        }
-      };
-      fileInput.click();
-    });
-
-    // Screenshot payment form
-    const payForm = document.getElementById('screenshot-payment-form');
-    payForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(payForm);
-      const screenshotInput = document.getElementById('pay-screenshot');
-      if (screenshotInput.files.length > 0) {
-        formData.set('screenshot', screenshotInput.files[0]);
-      }
-      for (const [key, val] of [...formData.entries()]) {
-        if (!val || (typeof val === 'string' && !val.trim())) formData.delete(key);
-      }
-      try {
-        await api.upload('/payments', formData);
-        document.getElementById('screenshot-success').hidden = false;
-        payForm.reset();
-        window.location.reload();
-      } catch (err) {
-        alert(err.message);
-      }
-    });
-
-    // Load payment details when bookingId changes
-    const bookingInput = document.getElementById('pay-booking-id');
-    if (bookingInput.value) {
-      loadPaymentDetails(bookingInput.value);
-    }
-
-    async function loadPaymentDetails(bookingId) {
-      try {
-        const details = await api.get(`/payments/booking/${bookingId}`);
-        if (details && details.payment_number) {
-          document.getElementById('payment-details-box').hidden = false;
-          document.getElementById('payee-name').textContent = details.payee_name || '—';
-          document.getElementById('payee-number').textContent = details.payment_number || '—';
-          document.getElementById('payee-method').textContent = details.payment_method || 'mobile_money';
-        }
-      } catch {}
-    }
-
-    // Check URL params for booking
-    const params = new URLSearchParams(window.location.search);
-    const bookingParam = params.get('booking');
-    if (bookingParam) {
-      bookingInput.value = bookingParam;
-      loadPaymentDetails(bookingParam);
-    }
 
     // Notifications
     api.get('/notifications').then((items) => {

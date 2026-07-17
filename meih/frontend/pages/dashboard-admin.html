@@ -22,7 +22,6 @@
         <div class="card stat-card"><span class="stat-number" id="stat-users">—</span><span class="stat-label" data-i18n="total_users">Total Users</span></div>
         <div class="card stat-card"><span class="stat-number" id="stat-events">—</span><span class="stat-label" data-i18n="events">Events</span></div>
         <div class="card stat-card"><span class="stat-number" id="stat-innovations">—</span><span class="stat-label" data-i18n="innovation_submissions">Innovation Submissions</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-gmv">—</span><span class="stat-label" data-i18n="total_gmv">Total GMV</span></div>
       </section>
 
       <div class="dashboard-grid">
@@ -143,8 +142,6 @@
       document.getElementById('stat-users').textContent = Array.isArray(users) ? users.length : '—';
       document.getElementById('stat-events').textContent = Array.isArray(events) ? events.length : '—';
       document.getElementById('stat-innovations').textContent = Array.isArray(innovations) ? innovations.length : '—';
-      const totalGMV = Array.isArray(events) ? events.reduce((s, e) => s + (e.budget || 0), 0) : 0;
-      document.getElementById('stat-gmv').textContent = totalGMV ? 'Tsh ' + totalGMV.toLocaleString() : '—';
     });
 
     // Load users
