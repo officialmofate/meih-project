@@ -24,6 +24,7 @@
         <div class="hero">
           <div class="hero-inner">
             <div class="hero-copy">
+              <span class="hero-badge">Powered by <strong>MOFATE</strong></span>
               <h1 data-i18n="landing.hero_event_title">Plan <span class="typewriter" id="event-typewriter" style="background:var(--gradient-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></span><span class="typewriter-cursor">|</span></h1>
               <p class="hero-sub" data-i18n="landing.hero_event_sub">
                 Connect with vetted event planners and vendors across Tanzania.
@@ -94,6 +95,7 @@
         <div class="hero">
           <div class="hero-inner">
             <div class="hero-copy">
+              <span class="hero-badge hero-badge--teal">Powered by <strong>MOFATE</strong></span>
               <h1 data-i18n="landing.hero_inno_title">Launch <span class="typewriter" id="innovation-typewriter" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></span><span class="typewriter-cursor" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">|</span></h1>
               <p class="hero-sub" data-i18n="landing.hero_inno_sub">
                 Submit your innovation, get validated by the public through OTP-verified
@@ -210,7 +212,7 @@
     });
   </script>
   <script>
-    // Typewriter effect — always typing & deleting
+    // Typewriter effect — always typing & deleting (continuous)
     (function() {
       var phrases = {
         'event-typewriter': ['unforgettable events.', 'memorable gatherings.', 'perfect celebrations.'],
@@ -228,8 +230,21 @@
         var deleteSpeed = 40;
         var pauseEnd = 1800;
         var pauseStart = 400;
+        var lastTime = 0;
+        var accumulated = 0;
 
-        function tick() {
+        function tick(timestamp) {
+          if (!lastTime) lastTime = timestamp;
+          accumulated += timestamp - lastTime;
+          lastTime = timestamp;
+
+          var currentDelay = isDeleting ? deleteSpeed : typeSpeed;
+          if (accumulated < currentDelay) {
+            requestAnimationFrame(tick);
+            return;
+          }
+          accumulated = 0;
+
           var current = list[phraseIdx];
 
           if (!isDeleting) {
@@ -237,27 +252,37 @@
             el.textContent = current.slice(0, charIdx);
             if (charIdx === current.length) {
               isDeleting = true;
-              setTimeout(tick, pauseEnd);
+              lastTime = 0;
+              accumulated = 0;
+              setTimeout(function() { requestAnimationFrame(tick); }, pauseEnd);
               return;
             }
-            setTimeout(tick, typeSpeed);
           } else {
             charIdx--;
             el.textContent = current.slice(0, charIdx);
             if (charIdx === 0) {
               isDeleting = false;
               phraseIdx = (phraseIdx + 1) % list.length;
-              setTimeout(tick, pauseStart);
+              lastTime = 0;
+              accumulated = 0;
+              setTimeout(function() { requestAnimationFrame(tick); }, pauseStart);
               return;
             }
-            setTimeout(tick, deleteSpeed);
           }
+          requestAnimationFrame(tick);
         }
-        tick();
+        requestAnimationFrame(tick);
       }
 
-      runTypewriter('event-typewriter');
-      runTypewriter('innovation-typewriter');
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          runTypewriter('event-typewriter');
+          runTypewriter('innovation-typewriter');
+        });
+      } else {
+        runTypewriter('event-typewriter');
+        runTypewriter('innovation-typewriter');
+      }
     })();
   </script>
   <script type="module">

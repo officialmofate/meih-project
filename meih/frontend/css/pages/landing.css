@@ -41,6 +41,41 @@
 .hub-section { display: none; }
 .hub-section.active { display: block; animation: fadeIn 0.3s ease; }
 
+/* ── Hero Badge ── */
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  background: rgba(108, 92, 231, 0.12);
+  border: 1px solid rgba(108, 92, 231, 0.25);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-md);
+  animation: fadeIn 0.6s ease;
+}
+.hero-badge strong {
+  font-weight: 800;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-badge--teal {
+  background: rgba(0, 206, 201, 0.1);
+  border-color: rgba(0, 206, 201, 0.25);
+  color: var(--color-secondary);
+}
+.hero-badge--teal strong {
+  background: linear-gradient(135deg, #00cec9, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* ── Hero ── */
 .hero {
   padding: var(--space-2xl) 0;

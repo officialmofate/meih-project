@@ -119,3 +119,44 @@
 .auth-switch a:hover {
   text-decoration: underline;
 }
+
+/* ── Password Field with Eye Toggle ── */
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-field input {
+  width: 100%;
+  padding-right: 44px;
+}
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast);
+}
+.password-toggle:hover {
+  color: var(--color-text);
+}
+.password-toggle svg {
+  display: block;
+}
+
+/* ── Password Hint ── */
+.password-hint {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin-top: 6px;
+  line-height: 1.4;
+}
