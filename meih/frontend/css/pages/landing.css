@@ -285,13 +285,32 @@
 .competition-card .comp-meta { font-size: 13px; color: var(--color-muted); margin-top: var(--space-sm); }
 
 /* ── Typewriter ── */
-.typewriter { display: inline; }
+.typewriter {
+  display: inline-block;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  min-width: 0;
+}
+.gradient-text--teal {
+  background: linear-gradient(135deg, #00cec9, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
 .typewriter-cursor {
-  display: inline;
+  display: inline-block;
   font-weight: 100;
   animation: blink 0.7s step-end infinite;
-  -webkit-text-fill-color: initial;
   color: var(--color-primary);
+  -webkit-text-fill-color: var(--color-primary);
+}
+.typewriter-cursor--teal {
+  color: #00cec9;
+  -webkit-text-fill-color: #00cec9;
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
@@ -299,7 +318,7 @@
 @media (max-width: 900px) {
   .hero-inner, .hub-cards, .stats { grid-template-columns: 1fr; }
   .hero-copy h1 { font-size: 36px; }
-  .typewriter-cursor { font-size: 36px; }
+  .typewriter, .typewriter-cursor { font-size: 36px; }
   .hero { padding: var(--space-xl) 0; }
   .hero-actions { flex-wrap: wrap; }
   .occasion-grid { grid-template-columns: repeat(3, 1fr); }

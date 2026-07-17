@@ -25,7 +25,7 @@
           <div class="hero-inner">
             <div class="hero-copy">
               <span class="hero-badge">Powered by <strong>MOFATE</strong></span>
-              <h1>Plan <span class="typewriter" id="event-typewriter" style="background:var(--gradient-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></span><span class="typewriter-cursor">|</span></h1>
+              <h1>Plan <span class="typewriter gradient-text" id="event-typewriter"></span><span class="typewriter-cursor">|</span></h1>
               <p class="hero-sub" data-i18n="landing.hero_event_sub">
                 Connect with vetted event planners and vendors across Tanzania.
                 From birthdays to corporate galas — get quotes, compare reviews,
@@ -89,14 +89,6 @@
           </div>
         </section>
 
-        <section class="categories">
-          <h2 data-i18n="landing.categories_title">Popular Event Categories</h2>
-          <p class="section-sub" data-i18n="landing.occasion_sub">Browse events by category — click to explore.</p>
-          <div class="occasion-grid" id="category-grid" style="margin-top:var(--space-lg);"></div>
-          <div class="chip-row" id="category-chips" style="margin-top:var(--space-md);">
-            <a class="chip" href="pages/events.html">Browse All Events</a>
-          </div>
-        </section>
       </section>
 
       <!-- ═══ INNOVATION HUB SECTION ═══ -->
@@ -105,7 +97,7 @@
           <div class="hero-inner">
             <div class="hero-copy">
               <span class="hero-badge hero-badge--teal">Powered by <strong>MOFATE</strong></span>
-              <h1>Launch <span class="typewriter" id="innovation-typewriter" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></span><span class="typewriter-cursor" style="background:linear-gradient(135deg, #00cec9, #22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">|</span></h1>
+              <h1>Launch <span class="typewriter gradient-text gradient-text--teal" id="innovation-typewriter"></span><span class="typewriter-cursor typewriter-cursor--teal">|</span></h1>
               <p class="hero-sub" data-i18n="landing.hero_inno_sub">
                 Submit your innovation, get validated by the public through OTP-verified
                 voting, and be scored by expert judges. Win certificates, funding,
@@ -332,51 +324,6 @@
           opt.textContent = name + (fee ? ' — Tsh ' + feeTzs.toLocaleString() : '');
           qeSelect.appendChild(opt);
         });
-        var chipRow = document.getElementById('category-chips');
-        var catGrid = document.getElementById('category-grid');
-        if (chipRow) {
-          cats.slice(0, 6).forEach(function(c) {
-            var name = c.name || c;
-            var fee = Number(c.suggested_fee_usd || c.platform_fee || 0);
-            var feeTzs = Math.round(fee * USD_TO_TZS);
-            var a = document.createElement('a');
-            a.className = 'chip';
-            a.href = 'pages/events.html?category=' + encodeURIComponent(name);
-            a.textContent = name + (fee ? ' · Tsh ' + feeTzs.toLocaleString() : '');
-            chipRow.appendChild(a);
-          });
-        }
-        if (catGrid) {
-          var imgMap = {
-            wedding: 'wedding.gif', 'wedding planning': 'wedding.gif',
-            corporate: 'corporate.gif', 'corporate events': 'corporate.gif',
-            birthday: 'birthday.gif', 'birthday events': 'birthday.gif',
-            conference: 'conference.gif', 'conference planning': 'conference.gif',
-            concert: 'concert.gif', concerts: 'concert.gif',
-            exhibition: 'exhibition.gif', exhibitions: 'exhibition.gif',
-            festival: 'festival.gif', 'festival planning': 'festival.gif',
-            sports: 'sports.gif', 'sports events': 'sports.gif',
-            charity: 'charity.gif', 'charity galas': 'charity.gif',
-            graduation: 'graduation.gif', graduations: 'graduation.gif',
-            hackathon: 'hackathon.gif', hackathons: 'hackathon.gif',
-            community: 'community.gif', 'community events': 'community.gif',
-            celebration: 'celebration.gif', celebrations: 'celebration.gif',
-            workshop: 'workshop.gif', workshops: 'workshop.gif',
-            ngo: 'ngo.gif', 'ngo events': 'ngo.gif',
-            product: 'product.gif', 'product launch': 'product.gif',
-            other: 'other.gif'
-          };
-          cats.forEach(function(c) {
-            var name = c.name || c;
-            var key = name.toLowerCase().replace(/\s+/g, ' ').trim();
-            var img = imgMap[key] || imgMap[key.replace(/ events?$/, '').replace(/ planning$/, '').trim()] || 'other.gif';
-            var item = document.createElement('div');
-            item.className = 'occasion-item';
-            item.innerHTML = '<img src="./assets/images/' + img + '" alt="' + name + '" loading="lazy" /><span class="occasion-label">' + name + '</span>';
-            item.addEventListener('click', function() { window.location.href = 'pages/events.html?category=' + encodeURIComponent(name); });
-            catGrid.appendChild(item);
-          });
-        }
       }
 
       var CITY_TIERS = {
