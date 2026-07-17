@@ -2,13 +2,19 @@
 .category-card {
   position: relative;
   border-radius: var(--radius-lg);
-  padding: var(--space-xl);
+  padding: var(--space-lg) var(--space-md);
   text-align: center;
   cursor: pointer;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
               box-shadow 0.3s ease;
   overflow: hidden;
-  background: var(--surface, #fff);
+  background: var(--gradient-card, linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)));
+  border: 1px solid var(--color-glass-border, rgba(255,255,255,0.08));
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .category-card::before {
@@ -30,7 +36,7 @@
   mask-composite: exclude;
   animation: gradient-rotate 3s linear infinite;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease;
 }
 
 .category-card:hover::before {
@@ -38,50 +44,74 @@
 }
 
 .category-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 32px rgba(124, 58, 237, 0.15),
-              0 4px 12px rgba(6, 182, 212, 0.1);
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 12px 32px rgba(124, 58, 237, 0.2),
+              0 4px 12px rgba(6, 182, 212, 0.15);
+}
+
+/* Shimmer sweep on hover */
+.category-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+.category-card:hover::after {
+  left: 120%;
 }
 
 .category-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto var(--space-md);
+  width: 72px;
+  height: 72px;
+  margin: 0 auto var(--space-sm);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+  font-size: 2.2rem;
   background: linear-gradient(135deg,
-    rgba(124, 58, 237, 0.1),
-    rgba(6, 182, 212, 0.1)
+    rgba(124, 58, 237, 0.12),
+    rgba(6, 182, 212, 0.12)
   );
   animation: icon-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 .category-name {
   font-weight: 600;
-  font-size: 1rem;
-  margin-bottom: var(--space-xs);
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+  color: var(--color-text, #fff);
 }
 
 .category-count {
   color: var(--text-muted, #6b7280);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 /* Animated emoji icons for different categories */
-.category-icon[data-category="wedding"]::after { content: '\1F492'; animation: icon-float 3s ease-in-out infinite; }
-.category-icon[data-category="corporate"]::after { content: '\1F3E2'; animation: icon-float 3s ease-in-out infinite 0.3s; }
-.category-icon[data-category="birthday"]::after { content: '\1F382'; animation: icon-float 3s ease-in-out infinite 0.6s; }
-.category-icon[data-category="conference"]::after { content: '\1F3A4'; animation: icon-float 3s ease-in-out infinite 0.9s; }
-.category-icon[data-category="concert"]::after { content: '\1F3B5'; animation: icon-float 3s ease-in-out infinite 1.2s; }
-.category-icon[data-category="exhibition"]::after { content: '\1F3A8'; animation: icon-float 3s ease-in-out infinite 1.5s; }
-.category-icon[data-category="festival"]::after { content: '\1F3AA'; animation: icon-float 3s ease-in-out infinite 1.8s; }
-.category-icon[data-category="sports"]::after { content: '\26BD'; animation: icon-float 3s ease-in-out infinite 2.1s; }
-.category-icon[data-category="charity"]::after { content: '\2764\uFE0F'; animation: icon-float 3s ease-in-out infinite 2.4s; }
-.category-icon[data-category="graduation"]::after { content: '\1F393'; animation: icon-float 3s ease-in-out infinite 2.7s; }
-.category-icon[data-category="other"]::after { content: '\2728'; animation: icon-float 3s ease-in-out infinite 3s; }
+.category-icon[data-category="wedding"]::after { content: '💒'; animation: icon-float 3s ease-in-out infinite; }
+.category-icon[data-category="corporate"]::after { content: '🏢'; animation: icon-float 3s ease-in-out infinite 0.3s; }
+.category-icon[data-category="birthday"]::after { content: '🎂'; animation: icon-float 3s ease-in-out infinite 0.6s; }
+.category-icon[data-category="conference"]::after { content: '🎤'; animation: icon-float 3s ease-in-out infinite 0.9s; }
+.category-icon[data-category="concert"]::after { content: '🎵'; animation: icon-float 3s ease-in-out infinite 1.2s; }
+.category-icon[data-category="exhibition"]::after { content: '🎨'; animation: icon-float 3s ease-in-out infinite 1.5s; }
+.category-icon[data-category="festival"]::after { content: '🎪'; animation: icon-float 3s ease-in-out infinite 1.8s; }
+.category-icon[data-category="sports"]::after { content: '⚽'; animation: icon-float 3s ease-in-out infinite 2.1s; }
+.category-icon[data-category="charity"]::after { content: '❤️'; animation: icon-float 3s ease-in-out infinite 2.4s; }
+.category-icon[data-category="graduation"]::after { content: '🎓'; animation: icon-float 3s ease-in-out infinite 2.7s; }
+.category-icon[data-category="hackathon"]::after { content: '💻'; animation: icon-float 3s ease-in-out infinite 3.0s; }
+.category-icon[data-category="community"]::after { content: '🤝'; animation: icon-float 3s ease-in-out infinite 3.3s; }
+.category-icon[data-category="celebration"]::after { content: '🎉'; animation: icon-float 3s ease-in-out infinite 3.6s; }
+.category-icon[data-category="workshop"]::after { content: '🔧'; animation: icon-float 3s ease-in-out infinite 3.9s; }
+.category-icon[data-category="ngo"]::after { content: '🌍'; animation: icon-float 3s ease-in-out infinite 4.2s; }
+.category-icon[data-category="product"]::after { content: '🚀'; animation: icon-float 3s ease-in-out infinite 4.5s; }
+.category-icon[data-category="other"]::after { content: '✨'; animation: icon-float 3s ease-in-out infinite 4.8s; }
 
 @keyframes gradient-rotate {
   to { --gradient-angle: 360deg; }
@@ -94,17 +124,18 @@
 }
 
 @keyframes icon-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(124,58,237,0); }
+  50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(124,58,237,0.15); }
 }
 
 @keyframes icon-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(-6px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .category-card::before,
+  .category-card::after,
   .category-icon,
-  .category-card { animation: none; transition: none; }
+  .category-card { animation: none !important; transition: none !important; }
 }

@@ -84,9 +84,9 @@
 
         <section class="categories">
           <h2 data-i18n="landing.categories_title">Popular Event Categories</h2>
-          <div class="grid" id="category-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-md); margin-top: var(--space-md);">
-          </div>
-          <div class="chip-row" id="category-chips" style="margin-top:var(--space-sm);">
+          <p class="section-sub" data-i18n="landing.occasion_sub">Browse events by category — click to explore.</p>
+          <div class="category-grid-animated" id="category-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-md);margin-top:var(--space-lg);"></div>
+          <div class="chip-row" id="category-chips" style="margin-top:var(--space-md);">
             <a class="chip" href="events.html">Browse All Events</a>
           </div>
         </section>
@@ -214,7 +214,7 @@
     });
   </script>
   <script>
-    // Typewriter effect — always typing & deleting (continuous)
+    // Typewriter — pure requestAnimationFrame, no setTimeout
     (function() {
       var phrases = {
         'event-typewriter': ['unforgettable events.', 'memorable gatherings.', 'perfect celebrations.'],
@@ -228,46 +228,58 @@
         var phraseIdx = 0;
         var charIdx = 0;
         var isDeleting = false;
-        var typeSpeed = 80;
-        var deleteSpeed = 40;
-        var pauseEnd = 1800;
-        var pauseStart = 400;
-        var lastTime = 0;
-        var accumulated = 0;
+        var typeSpeed = 75;
+        var deleteSpeed = 35;
+        var pauseAt = 0;
+        var pauseDuration = 0;
+        var lastTs = 0;
+        var accum = 0;
 
-        function tick(timestamp) {
-          if (!lastTime) lastTime = timestamp;
-          accumulated += timestamp - lastTime;
-          lastTime = timestamp;
+        function tick(ts) {
+          if (!lastTs) lastTs = ts;
+          var dt = ts - lastTs;
+          lastTs = ts;
 
-          var currentDelay = isDeleting ? deleteSpeed : typeSpeed;
-          if (accumulated < currentDelay) {
+          // Handle pause
+          if (pauseDuration > 0) {
+            pauseAt += dt;
+            if (pauseAt < pauseDuration) {
+              requestAnimationFrame(tick);
+              return;
+            }
+            pauseDuration = 0;
+            pauseAt = 0;
+            accum = 0;
+          }
+
+          accum += dt;
+          var delay = isDeleting ? deleteSpeed : typeSpeed;
+          if (accum < delay) {
             requestAnimationFrame(tick);
             return;
           }
-          accumulated = 0;
+          accum -= delay;
 
           var current = list[phraseIdx];
-
           if (!isDeleting) {
             charIdx++;
             el.textContent = current.slice(0, charIdx);
-            if (charIdx === current.length) {
+            if (charIdx >= current.length) {
               isDeleting = true;
-              lastTime = 0;
-              accumulated = 0;
-              setTimeout(function() { requestAnimationFrame(tick); }, pauseEnd);
+              pauseAt = 0;
+              pauseDuration = 1800;
+              requestAnimationFrame(tick);
               return;
             }
           } else {
             charIdx--;
             el.textContent = current.slice(0, charIdx);
-            if (charIdx === 0) {
+            if (charIdx <= 0) {
               isDeleting = false;
               phraseIdx = (phraseIdx + 1) % list.length;
-              lastTime = 0;
-              accumulated = 0;
-              setTimeout(function() { requestAnimationFrame(tick); }, pauseStart);
+              pauseAt = 0;
+              pauseDuration = 400;
+              requestAnimationFrame(tick);
               return;
             }
           }
@@ -276,15 +288,8 @@
         requestAnimationFrame(tick);
       }
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-          runTypewriter('event-typewriter');
-          runTypewriter('innovation-typewriter');
-        });
-      } else {
-        runTypewriter('event-typewriter');
-        runTypewriter('innovation-typewriter');
-      }
+      runTypewriter('event-typewriter');
+      runTypewriter('innovation-typewriter');
     })();
   </script>
   <script type="module">

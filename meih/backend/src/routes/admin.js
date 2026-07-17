@@ -9,7 +9,7 @@ const VALID_ROLES = ['client', 'planner', 'vendor', 'innovator', 'innovator_mana
 const PRIVILEGED_ROLES = ['admin', 'superadmin'];
 
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '../../uploads/payments'),
+    destination: path.join(__dirname, '../../../uploads/payments'),
   filename: (req, file, cb) => {
     const unique = crypto.randomBytes(16).toString('hex');
     const ext = path.extname(file.originalname) || '.png';
