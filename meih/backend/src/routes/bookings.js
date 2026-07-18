@@ -9,8 +9,8 @@ router.put('/:id', authenticate, ctrl.update);
 router.post('/:id/confirm', authenticate, authorize('planner', 'admin'), ctrl.confirm);
 router.post('/:id/cancel', authenticate, authorize('planner', 'admin'), ctrl.cancel);
 router.get('/:id/invoice', authenticate, ctrl.getInvoice);
-router.get('/:id/ticket', authenticate, ctrl.getTicket);
-router.get('/:id/ticket-pdf', authenticate, ctrl.getTicketPDF);
+router.get('/:id/ticket', ctrl.getTicket);
+router.get('/:id/ticket-pdf', ctrl.getTicketPDF);
 router.put('/:id/deposit', authenticate, ctrl.setDeposit);
 
 module.exports = router;

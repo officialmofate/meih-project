@@ -82,10 +82,43 @@
         </section>
 
         <section class="card wide">
-          <h2>Events Needing Your Service</h2>
-          <p class="text-muted">Published events that match your service category.</p>
+          <h2>Submit Quote for Events</h2>
+          <p class="text-muted">Published events that match your service. Submit a quote to win the job.</p>
           <p id="no-matching-events" class="empty-state">No matching events at the moment. Check back later.</p>
           <div id="matching-events-list"></div>
+        </section>
+
+        <section class="card wide" id="quote-form-wrapper" hidden>
+          <h2>Submit Your Quote</h2>
+          <p class="text-muted">Quote for: <strong id="quote-event-name"></strong></p>
+          <form id="quote-form" class="stacked-form">
+            <input type="hidden" name="eventId" id="quote-event-id" />
+
+            <label for="quote-amount">Quoted Amount (Tsh)</label>
+            <input id="quote-amount" name="quotedAmount" type="number" min="0" required placeholder="e.g. 500000" />
+
+            <label for="quote-services">Services Offered</label>
+            <input id="quote-services" name="services" type="text" required placeholder="e.g. Catering, Decoration, Photography" />
+
+            <label for="quote-timeline">Timeline</label>
+            <input id="quote-timeline" name="timeline" type="text" placeholder="e.g. 2 weeks before event" />
+
+            <label for="quote-message">Message to Client</label>
+            <textarea id="quote-message" name="message" rows="3" placeholder="Describe your approach, experience, why you're the best fit..."></textarea>
+
+            <div style="display:flex;gap:var(--space-sm);">
+              <button type="submit" class="btn btn-primary">Submit Quote</button>
+              <button type="button" class="btn btn-ghost" id="cancel-quote-form">Cancel</button>
+            </div>
+          </form>
+          <p id="quote-success" class="form-success" hidden>Quote submitted successfully!</p>
+        </section>
+
+        <section class="card wide">
+          <h2>My Quotes</h2>
+          <p class="text-muted">Quotes you've submitted for events.</p>
+          <p id="no-my-quotes" class="empty-state">You haven't submitted any quotes yet.</p>
+          <div id="my-quotes-list"></div>
         </section>
 
         <section class="card wide">
@@ -146,7 +179,7 @@
       }
     }).catch(() => {});
 
-    // Load matching events (events requiring this vendor's service)
+    // Load matching events with quote buttons
     api.get('/vendors/me/matching-events').then((events) => {
       if (!Array.isArray(events) || !events.length) {
         document.getElementById('no-matching-events').hidden = false;
@@ -163,12 +196,76 @@
             <span class="badge badge-muted" style="margin-left:var(--space-xs);">${ev.category_name || ''}</span>
             <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${ev.location || '—'} &middot; ${dateStr}${services ? ' &middot; Services: ' + services : ''}</p>
           </div>
-          <a href="event-detail.html?id=${ev.id}" class="btn btn-sm btn-primary">View Details</a>
+          <button class="btn btn-sm btn-primary quote-btn" data-id="${ev.id}" data-name="${ev.name || 'Untitled Event'}">Submit Quote</button>
         </div>`;
       }).join('');
+
+      list.querySelectorAll('.quote-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('quote-event-id').value = btn.dataset.id;
+          document.getElementById('quote-event-name').textContent = btn.dataset.name;
+          document.getElementById('quote-form-wrapper').hidden = false;
+          document.getElementById('quote-success').hidden = true;
+          document.getElementById('quote-form').reset();
+          document.getElementById('quote-form-wrapper').scrollIntoView({ behavior: 'smooth' });
+        });
+      });
     }).catch(() => {
       document.getElementById('no-matching-events').hidden = false;
     });
+
+    // Cancel quote form
+    document.getElementById('cancel-quote-form').addEventListener('click', () => {
+      document.getElementById('quote-form-wrapper').hidden = true;
+    });
+
+    // Submit quote form
+    document.getElementById('quote-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      data.quotedAmount = Number(data.quotedAmount);
+      try {
+        await api.post('/vendor-quotes/events/' + data.eventId + '/quotes', data);
+        document.getElementById('quote-success').hidden = false;
+        e.target.reset();
+        setTimeout(() => {
+          document.getElementById('quote-form-wrapper').hidden = true;
+          loadMyQuotes();
+        }, 1500);
+      } catch (err) {
+        alert(err.message || 'Failed to submit quote.');
+      }
+    });
+
+    // Load my quotes
+    function loadMyQuotes() {
+      api.get('/vendor-quotes/my-quotes').then((quotes) => {
+        if (!Array.isArray(quotes) || !quotes.length) {
+          document.getElementById('no-my-quotes').hidden = false;
+          return;
+        }
+        document.getElementById('no-my-quotes').hidden = true;
+        document.getElementById('my-quotes-list').innerHTML = quotes.map(q => {
+          const statusClass = q.status === 'accepted' ? 'badge-success' : q.status === 'rejected' ? 'badge-danger' : 'badge-warning';
+          const dateStr = q.event_date ? new Date(q.event_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : 'TBD';
+          return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
+              <div>
+                <strong>${q.event_name || 'Untitled Event'}</strong>
+                <span class="badge ${statusClass}" style="margin-left:var(--space-xs);">${q.status}</span>
+                <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${q.event_location || '—'} &middot; ${dateStr}</p>
+                <p class="text-muted" style="margin:2px 0 0;font-size:13px;">Services: ${q.services || '—'} &middot; Timeline: ${q.timeline || '—'}</p>
+              </div>
+              <div style="text-align:right;">
+                <strong style="font-size:1.1em;color:var(--color-primary);">Tsh ${Number(q.quoted_amount || 0).toLocaleString()}</strong>
+              </div>
+            </div>
+            ${q.message ? '<p style="margin:var(--space-sm) 0 0;font-size:13px;color:var(--color-text-secondary);">' + q.message + '</p>' : ''}
+          </div>`;
+        }).join('');
+      }).catch(() => {});
+    }
+    loadMyQuotes();
 
     // Load bookings
     const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
@@ -184,7 +281,7 @@
       body.innerHTML = bookings.map(b => {
         const statusClass = b.status === 'confirmed' ? 'badge-success' : 'badge-muted';
         const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket?token=${encodeURIComponent(authToken)}" target="_blank">View</a>`
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">View</a>`
           : '<span class="text-muted">—</span>';
         return `<tr>
           <td>${b.event_name || '—'}</td>

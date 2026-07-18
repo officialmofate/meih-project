@@ -339,7 +339,7 @@
       tbody.innerHTML = active.map(b => {
         const statusClass = b.status === 'completed' ? 'badge-success' : b.status === 'confirmed' ? 'badge' : 'badge-muted';
         const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank" style="margin-left:var(--space-xs);">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket?token=${encodeURIComponent(authToken)}" target="_blank">View</a>`
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank" style="margin-left:var(--space-xs);">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">View</a>`
           : '';
         return `<tr>
           <td>${b.event_name || '—'}</td>
@@ -489,20 +489,53 @@
     api.get('/events/events').then((events) => {
       if (!Array.isArray(events) || !events.length) return;
       const myEventIds = events.map(e => e.id);
-      return Promise.all(myEventIds.map(id => api.get('/events/events/' + id + '/bookings').catch(() => [])));
-    }).then((allBookings) => {
-      if (!allBookings || !allBookings.length) return;
-      const flat = allBookings.flat();
+      return Promise.all(myEventIds.map(id => api.get('/vendor-quotes/events/' + id + '/quotes').catch(() => [])));
+    }).then((allQuotes) => {
+      if (!allQuotes || !allQuotes.length) return;
+      const flat = allQuotes.flat();
       if (!flat.length) return;
       document.getElementById('no-vendor-quotes').hidden = true;
-      document.getElementById('vendor-quotes-list').innerHTML = flat.map(b => {
-        const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : 'badge-muted';
+      document.getElementById('vendor-quotes-list').innerHTML = flat.map(q => {
+        const statusClass = q.status === 'accepted' ? 'badge-success' : q.status === 'rejected' ? 'badge-danger' : 'badge-warning';
         return '<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);">' +
-          '<strong>' + (b.client_name || '—') + '</strong>' +
-          ' <span class="badge ' + statusClass + '" style="margin-left:var(--space-xs);">' + b.status + '</span>' +
-          '<p class="text-muted" style="margin:4px 0 0;font-size:13px;">' + (b.event_name || '') + ' &middot; ' + (b.event_location || '') + '</p>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">' +
+          '<div>' +
+          '<strong>' + (q.vendor_name || '—') + '</strong>' +
+          ' <span class="badge badge-muted" style="margin-left:var(--space-xs);">' + (q.vendor_category || '') + '</span>' +
+          ' <span class="badge ' + statusClass + '" style="margin-left:var(--space-xs);">' + q.status + '</span>' +
+          '<p class="text-muted" style="margin:4px 0 0;font-size:13px;">' + (q.event_name || '') + ' · ' + (q.event_location || '') + '</p>' +
+          '<p class="text-muted" style="margin:2px 0 0;font-size:13px;">Services: ' + (q.services || '—') + (q.timeline ? ' · Timeline: ' + q.timeline : '') + '</p>' +
+          '</div>' +
+          '<div style="text-align:right;">' +
+          '<strong style="font-size:1.1em;color:var(--color-primary);">Tsh ' + Number(q.quoted_amount || 0).toLocaleString() + '</strong>' +
+          '<div style="margin-top:var(--space-xs);">' +
+          (q.status === 'pending'
+            ? '<button class="btn btn-sm btn-success accept-quote-btn" data-id="' + q.id + '">Accept</button> <button class="btn btn-sm btn-danger reject-quote-btn" data-id="' + q.id + '">Reject</button>'
+            : '') +
+          '</div></div></div>' +
+          (q.message ? '<p style="margin:var(--space-sm) 0 0;font-size:13px;color:var(--color-text-secondary);">' + q.message + '</p>' : '') +
           '</div>';
       }).join('');
+
+      document.querySelectorAll('.accept-quote-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await api.put('/vendor-quotes/quotes/' + btn.dataset.id + '/status', { status: 'accepted' });
+            alert('Quote accepted!');
+            window.location.reload();
+          } catch (err) { alert(err.message); }
+        });
+      });
+      document.querySelectorAll('.reject-quote-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Reject this quote?')) return;
+          try {
+            await api.put('/vendor-quotes/quotes/' + btn.dataset.id + '/status', { status: 'rejected' });
+            alert('Quote rejected.');
+            window.location.reload();
+          } catch (err) { alert(err.message); }
+        });
+      });
     }).catch(() => {});
   </script>
 </body>

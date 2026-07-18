@@ -108,8 +108,8 @@
           const sc = s.status === 'approved' ? 'badge-success' : s.status === 'rejected' ? 'badge-danger' : 'badge-warning';
           const authToken = localStorage.getItem('meih_token') || '';
           const actions = s.status === 'approved'
-            ? '<a class="btn btn-sm btn-primary" href="/api/v1/innovation/submissions/' + s.id + '/ticket-pdf?token=' + encodeURIComponent(authToken) + '" target="_blank" style="margin-right:4px;">&#128196; Ticket</a>' +
-              '<a class="btn btn-sm btn-ghost" href="/api/v1/innovation/submissions/' + s.id + '/certificate-pdf?token=' + encodeURIComponent(authToken) + '" target="_blank">&#127942; Certificate</a>'
+            ? '<a class="btn btn-sm btn-primary" href="/api/v1/innovation/submissions/' + s.id + '/ticket-pdf" target="_blank" style="margin-right:4px;">&#128196; Ticket</a>' +
+              '<a class="btn btn-sm btn-ghost" href="/api/v1/innovation/submissions/' + s.id + '/certificate-pdf" target="_blank">&#127942; Certificate</a>'
             : '<a href="innovation-detail.html?id=' + s.id + '">View</a>';
           return `<tr>
             <td>${s.title || 'Untitled'}</td>

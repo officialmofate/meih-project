@@ -22,6 +22,7 @@ const notificationRoutes = require('./routes/notifications');
 const adminRoutes = require('./routes/admin');
 const aiRoutes = require('./routes/ai');
 const certificateRoutes = require('./routes/certificates');
+const vendorQuoteRoutes = require('./routes/vendorQuotes');
 
 async function autoMigrate() {
   try {
@@ -42,6 +43,23 @@ async function autoMigrate() {
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_confirmed_at TIMESTAMPTZ`);
     await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_name VARCHAR(200)`);
     await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_phone VARCHAR(50)`);
+    await db.query(`CREATE TABLE IF NOT EXISTS vendor_quotes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      vendor_id UUID NOT NULL REFERENCES vendors(id),
+      quoted_amount NUMERIC(12,2) NOT NULL,
+      currency VARCHAR(10) NOT NULL DEFAULT 'TZS',
+      services TEXT NOT NULL,
+      message TEXT,
+      timeline VARCHAR(100),
+      status VARCHAR(20) NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending','accepted','rejected','withdrawn')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_vendor_quotes_event ON vendor_quotes(event_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_vendor_quotes_vendor ON vendor_quotes(vendor_id)`);
+    await db.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_vendor_quotes_unique_per_event') THEN CREATE UNIQUE INDEX idx_vendor_quotes_unique_per_event ON vendor_quotes(event_id, vendor_id); END IF; END $$`);
     console.log('[MIGRATION] 014 auto-applied successfully');
   } catch (err) {
     console.error('[MIGRATION] 014 auto-migration error:', err.message);
@@ -172,6 +190,7 @@ function createApp() {
   app.use('/api/v1/admin', apiLimiter, adminRoutes);
   app.use('/api/v1/ai', requestTimeout(60000), aiLimiter, aiRoutes);
   app.use('/api/v1/certificates', apiLimiter, certificateRoutes);
+  app.use('/api/v1/vendor-quotes', apiLimiter, vendorQuoteRoutes);
 
   app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 

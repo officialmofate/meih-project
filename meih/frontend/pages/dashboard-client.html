@@ -159,7 +159,7 @@
         const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
         const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
         const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket?token=${encodeURIComponent(authToken)}" target="_blank">&#128065; View</a>`
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">&#128065; View</a>`
           : '<span class="text-muted">—</span>';
         return `<tr>
           <td>${b.event_name || '—'}</td>
@@ -182,8 +182,8 @@
               <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${b.event_location || ''} &middot; ${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD'}</p>
             </div>
             <div>
-              <a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128196; Download PDF</a>
-              <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket?token=${encodeURIComponent(authToken)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128065; View Ticket</a>
+              <a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128196; Download PDF</a>
+              <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128065; View Ticket</a>
             </div>
           </div>`;
         }).join('');

@@ -48,9 +48,33 @@
         </section>
 
         <section class="card">
-          <h2>Vendors & Planners Quoting</h2>
-          <div id="vendor-list" class="grid vendor-list"></div>
-          <p id="no-vendors" class="empty-state" hidden>No quotes submitted yet.</p>
+          <h2>Vendor Quotes</h2>
+          <div id="event-quotes-list"></div>
+          <p id="no-event-quotes" class="empty-state" hidden>No quotes submitted yet.</p>
+        </section>
+
+        <section class="card" id="vendor-quote-section" hidden>
+          <h2>Submit a Quote</h2>
+          <p class="text-muted">Offer your services for this event.</p>
+          <form id="vendor-quote-form" class="stacked-form">
+            <input type="hidden" name="eventId" id="vq-event-id" />
+
+            <label for="vq-amount">Quoted Amount (Tsh)</label>
+            <input id="vq-amount" name="quotedAmount" type="number" min="0" required placeholder="e.g. 500000" />
+
+            <label for="vq-services">Services Offered</label>
+            <input id="vq-services" name="services" type="text" required placeholder="e.g. Catering, Decoration" />
+
+            <label for="vq-timeline">Timeline</label>
+            <input id="vq-timeline" name="timeline" type="text" placeholder="e.g. 2 weeks before event" />
+
+            <label for="vq-message">Message</label>
+            <textarea id="vq-message" name="message" rows="3" placeholder="Why you're the best fit..."></textarea>
+
+            <button type="submit" class="btn btn-primary btn-block">Submit Quote</button>
+          </form>
+          <p id="vq-success" class="form-success" hidden>Quote submitted!</p>
+          <p id="vq-existing" class="form-success" hidden>You've already submitted a quote for this event.</p>
         </section>
 
         <section class="card">
@@ -99,7 +123,6 @@
   <script type="module" src="../js/app.js"></script>
   <script type="module">
     import { api } from '../js/api.js';
-    import { vendorCard } from '../js/components/vendor-card.js';
     import { formatCurrency, formatDate } from '../js/utils/formatters.js';
     import { initChat } from '../js/components/chat.js';
 
@@ -161,17 +184,34 @@
       }
     }
 
-    function paintVendors(vendors) {
-      const list = document.getElementById('vendor-list');
-      const noVendors = document.getElementById('no-vendors');
-      if (!Array.isArray(vendors) || !vendors.length) {
-        list.innerHTML = '';
-        noVendors.hidden = false;
-        return;
-      }
-      noVendors.hidden = true;
-      list.innerHTML = vendors.map(vendorCard).join('');
+    // Load vendor quotes for this event
+    function loadEventQuotes() {
+      api.get('/vendor-quotes/events/' + eventId + '/quotes').then((quotes) => {
+        if (!Array.isArray(quotes) || !quotes.length) {
+          document.getElementById('no-event-quotes').hidden = false;
+          return;
+        }
+        document.getElementById('no-event-quotes').hidden = true;
+        document.getElementById('event-quotes-list').innerHTML = quotes.map(q => {
+          const statusClass = q.status === 'accepted' ? 'badge-success' : q.status === 'rejected' ? 'badge-danger' : 'badge-warning';
+          return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
+              <div>
+                <strong>${q.vendor_name || 'Vendor'}</strong>
+                <span class="badge badge-muted" style="margin-left:var(--space-xs);">${q.vendor_category || ''}</span>
+                <span class="badge ${statusClass}" style="margin-left:var(--space-xs);">${q.status}</span>
+                <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${q.services || ''}${q.timeline ? ' · Timeline: ' + q.timeline : ''}</p>
+              </div>
+              <div style="text-align:right;">
+                <strong style="font-size:1.1em;color:var(--color-primary);">Tsh ${Number(q.quoted_amount || 0).toLocaleString()}</strong>
+              </div>
+            </div>
+            ${q.message ? '<p style="margin:var(--space-sm) 0 0;font-size:13px;color:var(--color-text-secondary);">' + q.message + '</p>' : ''}
+          </div>`;
+        }).join('');
+      }).catch(() => {});
     }
+    loadEventQuotes();
 
     let currentEvent = null;
     api.get(`/events/events/${eventId}`).then(ev => {
@@ -180,7 +220,6 @@
     }).catch(() => {
       document.querySelector('.detail-main').innerHTML = '<p class="empty-state">Event not found.</p>';
     });
-    api.get(`/events/events/${eventId}/bookings`).then(paintVendors).catch(() => paintVendors([]));
 
     // Check if current user has a booking for this event
     const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
@@ -192,8 +231,8 @@
         document.getElementById('booking-form').hidden = true;
         document.getElementById('booking-confirmation').hidden = false;
         document.getElementById('booking-confirmation').textContent = 'Your booking is confirmed!';
-        document.getElementById('ticket-pdf-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket-pdf?token=' + encodeURIComponent(authToken);
-        document.getElementById('ticket-html-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket?token=' + encodeURIComponent(authToken);
+        document.getElementById('ticket-pdf-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket-pdf';
+        document.getElementById('ticket-html-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket';
       } else {
         const pendingBooking = bookings.find(b => b.event_id === eventId && b.status === 'pending');
         if (pendingBooking) {
@@ -216,6 +255,33 @@
         document.getElementById('booking-confirmation').hidden = false;
         document.getElementById('booking-confirmation').textContent = err.message || 'Booking failed.';
         document.getElementById('booking-confirmation').classList.add('form-error');
+      }
+    });
+
+    // Show vendor quote form if current user is a vendor
+    if (currentUser && userRole === 'vendor') {
+      document.getElementById('vendor-quote-section').hidden = false;
+      document.getElementById('vq-event-id').value = eventId;
+
+      api.get('/vendor-quotes/events/' + eventId + '/quote-status').then((status) => {
+        if (status && status.id) {
+          document.getElementById('vendor-quote-form').hidden = true;
+          document.getElementById('vq-existing').hidden = false;
+        }
+      }).catch(() => {});
+    }
+
+    document.getElementById('vendor-quote-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      data.quotedAmount = Number(data.quotedAmount);
+      try {
+        await api.post('/vendor-quotes/events/' + eventId + '/quotes', data);
+        document.getElementById('vendor-quote-form').hidden = true;
+        document.getElementById('vq-success').hidden = false;
+        loadEventQuotes();
+      } catch (err) {
+        alert(err.message || 'Failed to submit quote.');
       }
     });
 
