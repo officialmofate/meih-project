@@ -20,7 +20,7 @@
         </div>
         <a href="submit-innovation.html" class="btn btn-primary" style="padding:12px 28px;font-size:15px;font-weight:700;display:inline-flex;align-items:center;gap:8px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Submit Innovation
+          Register Innovation
         </a>
       </header>
 
@@ -37,10 +37,10 @@
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-md);">
             <div>
               <h2 style="color:#fff;margin-bottom:4px;">Ready to Innovate?</h2>
-              <p style="opacity:0.85;margin:0;">Submit your innovation to an open competition and compete for recognition.</p>
+              <p style="opacity:0.85;margin:0;">Register your innovation to an open competition and compete for recognition.</p>
             </div>
             <a href="submit-innovation.html" class="btn" style="background:#fff;color:#6c5ce7;font-weight:700;padding:12px 24px;font-size:15px;">
-              Submit Innovation
+              Register Innovation
             </a>
           </div>
         </section>
@@ -53,7 +53,7 @@
 
         <section class="card wide">
           <h2>My Submissions</h2>
-          <p id="no-submissions" class="empty-state" hidden>You haven't submitted any innovations yet. <a href="submit-innovation.html">Submit your first</a>.</p>
+          <p id="no-submissions" class="empty-state" hidden>You haven't registered any innovations yet. <a href="submit-innovation.html">Register your first</a>.</p>
           <table class="data-table" id="submissions-table" hidden>
             <thead>
               <tr><th>Title</th><th>Competition</th><th>Category</th><th>Status</th><th>Votes</th><th></th></tr>
@@ -106,13 +106,18 @@
         document.getElementById('submissions-table').hidden = false;
         document.getElementById('submissions-body').innerHTML = mySubs.map(s => {
           const sc = s.status === 'approved' ? 'badge-success' : s.status === 'rejected' ? 'badge-danger' : 'badge-warning';
+          const authToken = localStorage.getItem('meih_token') || '';
+          const actions = s.status === 'approved'
+            ? '<a class="btn btn-sm btn-primary" href="/api/v1/innovation/submissions/' + s.id + '/ticket-pdf?token=' + encodeURIComponent(authToken) + '" target="_blank" style="margin-right:4px;">&#128196; Ticket</a>' +
+              '<a class="btn btn-sm btn-ghost" href="/api/v1/innovation/submissions/' + s.id + '/certificate-pdf?token=' + encodeURIComponent(authToken) + '" target="_blank">&#127942; Certificate</a>'
+            : '<a href="innovation-detail.html?id=' + s.id + '">View</a>';
           return `<tr>
             <td>${s.title || 'Untitled'}</td>
             <td>${s.competition_title || '—'}</td>
             <td>${s.category || '—'}</td>
             <td><span class="badge ${sc}">${s.status.replace('_', ' ')}</span></td>
             <td>${s.vote_count || 0}</td>
-            <td><a href="innovation-detail.html?id=${s.id}">View</a></td>
+            <td>${actions}</td>
           </tr>`;
         }).join('');
       } else {
@@ -129,7 +134,7 @@
           return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
             <div><strong>${c.title}</strong> <span class="badge ${badge}" style="margin-left:var(--space-xs);">${c.status}</span>
             <p class="text-muted" style="margin:4px 0 0;font-size:13px;">Closes: ${closes} &middot; ${c.submission_count || 0} submissions</p></div>
-            <a href="submit-innovation.html?competition=${c.id}" class="btn btn-sm btn-primary">Submit to this Competition</a>
+            <a href="submit-innovation.html?competition=${c.id}" class="btn btn-sm btn-primary">Register to this Competition</a>
           </div>`;
         }).join('');
       } else {

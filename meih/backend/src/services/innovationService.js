@@ -420,3 +420,34 @@ exports.listCompetitionJudges = async (competitionId) => {
   );
   return rows;
 };
+
+exports.getTicketData = async (id) => {
+  const { rows } = await db.query(
+    `SELECT s.*, u.full_name AS author_name, u.email AS author_email,
+            c.title AS competition_title, c.opens_at AS competition_opens, c.closes_at AS competition_closes
+     FROM innovation_submissions s
+     LEFT JOIN users u ON u.id = s.user_id
+     LEFT JOIN innovation_competitions c ON c.id = s.competition_id
+     WHERE s.id = $1`,
+    [id]
+  );
+  return rows[0];
+};
+
+exports.getCertificateData = async (id) => {
+  const { rows } = await db.query(
+    `SELECT s.*, u.full_name AS author_name, u.email AS author_email,
+            c.title AS competition_title, c.closes_at AS competition_closes,
+            js.innovation_score, js.impact_score, js.feasibility_score,
+            js.scalability_score, js.sustainability_score, js.technology_score,
+            js.business_model_score, js.social_impact_score, js.market_readiness_score,
+            js.presentation_score, js.comments AS judge_comments
+     FROM innovation_submissions s
+     LEFT JOIN users u ON u.id = s.user_id
+     LEFT JOIN innovation_competitions c ON c.id = s.competition_id
+     LEFT JOIN judge_scores js ON js.submission_id = s.id
+     WHERE s.id = $1`,
+    [id]
+  );
+  return rows[0];
+};

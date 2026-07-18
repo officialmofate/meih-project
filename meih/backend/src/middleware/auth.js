@@ -41,8 +41,8 @@ function authenticate(req, res, next) {
   try {
     const payload = jwt.verify(token, jwtSecret || 'dev-secret');
 
-    // Token expiration check with buffer
-    if (payload.exp) {
+    // Token expiration check with buffer — skip for query-param tokens (ticket links)
+    if (payload.exp && !req.query.token) {
       const nowSecs = Math.floor(Date.now() / 1000);
       if (payload.exp - nowSecs < TOKEN_EXPIRY_BUFFER_SECONDS) {
         return res.status(401).json({ message: 'Token is about to expire, please refresh' });

@@ -33,4 +33,9 @@ router.get('/manager/submissions', authenticate, authorize('admin', 'innovator_m
 router.put('/submissions/:id/approve', authenticate, authorize('admin', 'innovator_manager'), ctrl.approveSubmission);
 router.put('/submissions/:id/reject', authenticate, authorize('admin', 'innovator_manager'), ctrl.rejectSubmission);
 
+router.get('/submissions/:id/ticket', authenticate, ctrl.getTicket);
+router.get('/submissions/:id/ticket-pdf', authenticate, ctrl.getTicketPDF);
+router.get('/submissions/:id/certificate', authenticate, ctrl.getCertificate);
+router.get('/submissions/:id/certificate-pdf', authenticate, ctrl.getCertificatePDF);
+
 module.exports = router;
