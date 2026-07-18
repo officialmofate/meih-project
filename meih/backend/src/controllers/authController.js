@@ -6,7 +6,7 @@ const db = require('../config/database');
 const { validateEmail } = require('../utils/emailValidator');
 const emailVerification = require('../services/emailVerificationService');
 
-const PUBLIC_ROLES = ['client', 'planner', 'vendor', 'innovator', 'public_voter'];
+const PUBLIC_ROLES = ['client', 'planner', 'vendor', 'innovator', 'judge', 'public_voter'];
 
 // In-memory store for when database is not available
 const memoryUsers = new Map();
