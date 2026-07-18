@@ -106,3 +106,10 @@ exports.getAvailability = async (req, res, next) => {
     res.json(availability);
   } catch (err) { next(err); }
 };
+
+exports.getMatchingEvents = async (req, res, next) => {
+  try {
+    const events = await vendorService.getMatchingEvents(req.user.id);
+    res.json(events);
+  } catch (err) { next(err); }
+};

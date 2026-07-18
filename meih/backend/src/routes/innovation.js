@@ -25,4 +25,8 @@ router.get('/leaderboard/:competitionId', ctrl.getCompetitionLeaderboard);
 router.post('/judge/score', authenticate, authorize('judge'), ctrl.submitScore);
 router.get('/judge/assignments', authenticate, authorize('judge'), ctrl.getJudgeAssignments);
 
+router.get('/manager/submissions', authenticate, authorize('admin', 'innovator_manager'), ctrl.listManagerSubmissions);
+router.put('/submissions/:id/approve', authenticate, authorize('admin', 'innovator_manager'), ctrl.approveSubmission);
+router.put('/submissions/:id/reject', authenticate, authorize('admin', 'innovator_manager'), ctrl.rejectSubmission);
+
 module.exports = router;

@@ -2,7 +2,7 @@ import { store } from '../state.js';
 
 const HUB_PAGES = {
   event: ['events.html', 'create-event.html', 'event-detail.html', 'dashboard-planner.html', 'dashboard-vendor.html', 'dashboard-client.html', 'planners.html', 'planner-detail.html'],
-  innovation: ['innovation.html', 'submit-innovation.html', 'innovation-detail.html', 'leaderboard.html', 'dashboard-judge.html', 'dashboard-admin.html'],
+  innovation: ['innovation.html', 'submit-innovation.html', 'innovation-detail.html', 'leaderboard.html', 'dashboard-judge.html', 'dashboard-admin.html', 'dashboard-innovator-manager.html'],
 };
 
 function detectHub() {
@@ -45,12 +45,12 @@ export function renderNavbar() {
       client: 'dashboard-client.html',
       planner: 'dashboard-planner.html',
       vendor: 'dashboard-vendor.html',
-      innovator: 'dashboard-client.html',
+      innovator: 'innovation.html',
       judge: 'dashboard-judge.html',
       admin: 'dashboard-admin.html',
       superadmin: 'dashboard-admin.html',
       public_voter: 'innovation.html',
-      innovator_manager: 'dashboard-admin.html',
+      innovator_manager: 'dashboard-innovator-manager.html',
     };
     dashboardLink = `<a href="${p(dashMap[user.role] || 'dashboard-client.html')}" data-i18n="nav.dashboard">Dashboard</a>`;
   }

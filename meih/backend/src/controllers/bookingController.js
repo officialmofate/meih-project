@@ -168,12 +168,20 @@ exports.getTicket = async (req, res, next) => {
 
 exports.getTicketPDF = async (req, res, next) => {
   try {
-    const pdfBuf = await bookingService.generateTicketPDF(req.params.id);
+    const pdfBuf = await Promise.race([
+      bookingService.generateTicketPDF(req.params.id),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('PDF generation timed out')), 15000))
+    ]);
     if (!pdfBuf) {
       return res.status(404).send('Ticket not found or not confirmed');
     }
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="ticket-' + req.params.id.substring(0, 8) + '.pdf"');
     res.send(pdfBuf);
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (err.message === 'PDF generation timed out') {
+      return res.redirect('/api/v1/bookings/' + req.params.id + '/ticket?token=' + (req.query.token || ''));
+    }
+    next(err);
+  }
 };

@@ -126,7 +126,9 @@
           <td>${p.event_name || '—'}</td>
           <td>Tsh ${Number(p.amount).toLocaleString()}</td>
           <td><span class="badge ${statusClass}">${p.status}</span></td>
-          <td>${hasScreenshot ? `<a href="${p.screenshot_url}" target="_blank">View</a>` : '—'}</td>
+          <td>${hasScreenshot
+            ? `<a href="${p.screenshot_url}" target="_blank"><img src="${p.screenshot_url}" alt="Payment Screenshot" style="max-width:80px;max-height:60px;border-radius:4px;border:1px solid var(--color-border);cursor:pointer;" onerror="this.style.display='none'" /></a>`
+            : '—'}</td>
           <td>${new Date(p.created_at).toLocaleDateString()}</td>
           <td>${p.status === 'pending' && !hasScreenshot
             ? `<button class="btn btn-sm btn-secondary upload-screenshot-btn" data-payment-id="${p.id}">Upload Screenshot</button>`
@@ -151,7 +153,7 @@
         const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
         const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
         const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank">PDF Ticket</a>`
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket?token=${encodeURIComponent(authToken)}" target="_blank">View</a>`
           : '<span class="text-muted">—</span>';
         return `<tr>
           <td>${b.event_name || '—'}</td>

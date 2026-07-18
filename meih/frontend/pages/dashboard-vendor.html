@@ -82,6 +82,13 @@
         </section>
 
         <section class="card wide">
+          <h2>Events Needing Your Service</h2>
+          <p class="text-muted">Published events that match your service category.</p>
+          <p id="no-matching-events" class="empty-state">No matching events at the moment. Check back later.</p>
+          <div id="matching-events-list"></div>
+        </section>
+
+        <section class="card wide">
           <h2>Upcoming Bookings</h2>
           <p id="no-bookings" class="empty-state">No bookings yet.</p>
           <table class="data-table" id="bookings-table" hidden>
@@ -139,6 +146,30 @@
       }
     }).catch(() => {});
 
+    // Load matching events (events requiring this vendor's service)
+    api.get('/vendors/me/matching-events').then((events) => {
+      if (!Array.isArray(events) || !events.length) {
+        document.getElementById('no-matching-events').hidden = false;
+        return;
+      }
+      document.getElementById('no-matching-events').hidden = true;
+      const list = document.getElementById('matching-events-list');
+      list.innerHTML = events.map(ev => {
+        const dateStr = ev.event_date ? new Date(ev.event_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : 'TBD';
+        const services = Array.isArray(ev.services) ? ev.services.join(', ') : (ev.services || '');
+        return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
+          <div>
+            <strong>${ev.name || 'Untitled Event'}</strong>
+            <span class="badge badge-muted" style="margin-left:var(--space-xs);">${ev.category_name || ''}</span>
+            <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${ev.location || '—'} &middot; ${dateStr}${services ? ' &middot; Services: ' + services : ''}</p>
+          </div>
+          <a href="event-detail.html?id=${ev.id}" class="btn btn-sm btn-primary">View Details</a>
+        </div>`;
+      }).join('');
+    }).catch(() => {
+      document.getElementById('no-matching-events').hidden = false;
+    });
+
     // Load bookings
     const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
     api.get('/vendors/me/bookings').then((bookings) => {
@@ -153,7 +184,7 @@
       body.innerHTML = bookings.map(b => {
         const statusClass = b.status === 'confirmed' ? 'badge-success' : 'badge-muted';
         const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank">PDF Ticket</a>`
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket?token=${encodeURIComponent(authToken)}" target="_blank">View</a>`
           : '<span class="text-muted">—</span>';
         return `<tr>
           <td>${b.event_name || '—'}</td>

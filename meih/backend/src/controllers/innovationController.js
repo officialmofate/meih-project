@@ -132,6 +132,29 @@ exports.getJudgeAssignments = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.approveSubmission = async (req, res, next) => {
+  try {
+    const submission = await innovationService.approveSubmission(req.params.id, req.user.id);
+    if (!submission) return res.status(404).json({ message: 'Submission not found or not pending review' });
+    res.json(submission);
+  } catch (err) { next(err); }
+};
+
+exports.rejectSubmission = async (req, res, next) => {
+  try {
+    const submission = await innovationService.rejectSubmission(req.params.id, req.user.id);
+    if (!submission) return res.status(404).json({ message: 'Submission not found or not pending review' });
+    res.json(submission);
+  } catch (err) { next(err); }
+};
+
+exports.listManagerSubmissions = async (req, res, next) => {
+  try {
+    const submissions = await innovationService.listManagerSubmissions(req.user.id);
+    res.json(submissions);
+  } catch (err) { next(err); }
+};
+
 exports.listCategories = async (req, res, next) => {
   try {
     const categories = await innovationService.listCategories();

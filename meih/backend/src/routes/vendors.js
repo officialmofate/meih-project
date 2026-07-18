@@ -8,6 +8,7 @@ router.get('/me', authenticate, ctrl.getMe);
 router.put('/me', authenticate, ctrl.updateMe);
 router.get('/me/bookings', authenticate, ctrl.getMeBookings);
 router.get('/me/reviews', authenticate, ctrl.getMeReviews);
+router.get('/me/matching-events', authenticate, ctrl.getMatchingEvents);
 router.get('/:id', ctrl.getById);
 router.post('/', authenticate, ctrl.create);
 router.put('/:id', authenticate, ctrl.update);

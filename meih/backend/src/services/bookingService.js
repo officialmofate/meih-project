@@ -77,9 +77,11 @@ exports.list = async (userId, role, { page = 1, limit = 50 } = {}) => {
              ORDER BY b.created_at DESC
              LIMIT $1 OFFSET $2`;
   } else if (role === 'vendor') {
-    query = `SELECT b.*, e.name AS event_name
+    query = `SELECT b.*, e.name AS event_name, e.event_date, e.location AS event_location,
+                    u.full_name AS client_name
              FROM bookings b
              LEFT JOIN events e ON e.id = b.event_id
+             LEFT JOIN users u ON u.id = b.client_id
              LEFT JOIN vendors v ON v.id = b.vendor_id
              WHERE v.user_id = $3
              ORDER BY b.created_at DESC
@@ -98,7 +100,8 @@ exports.list = async (userId, role, { page = 1, limit = 50 } = {}) => {
              LIMIT $1 OFFSET $2`;
     params.splice(2, 0, userId);
   } else {
-    query = `SELECT b.*, e.name AS event_name, v.business_name AS vendor_name,
+    query = `SELECT b.*, e.name AS event_name, e.event_date, e.location AS event_location,
+                    v.business_name AS vendor_name,
                     p.company_name AS planner_name
              FROM bookings b
              LEFT JOIN events e ON e.id = b.event_id
@@ -241,9 +244,20 @@ exports.generateTicketPDF = async (id) => {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
+    let resolved = false;
     doc.on('data', chunk => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
+    doc.on('end', () => {
+      if (!resolved) {
+        resolved = true;
+        resolve(Buffer.concat(chunks));
+      }
+    });
+    doc.on('error', (err) => {
+      if (!resolved) {
+        resolved = true;
+        reject(err);
+      }
+    });
 
     const purple = '#6c5ce7';
     const dark = '#1a1a2e';
@@ -281,34 +295,39 @@ exports.generateTicketPDF = async (id) => {
     doc.fontSize(9).font('Helvetica').fillColor(gray)
       .text('SCAN TO VERIFY TICKET', 50, startY + 195, { align: 'center', width: doc.page.width - 100 });
 
+    function finalizeDoc() {
+      doc.fontSize(8).font('Helvetica').fillColor(gray)
+        .text('TICKET #' + ticket.id.substring(0, 8).toUpperCase(), 50, doc.page.height - 100, { align: 'center', width: doc.page.width - 100 });
+      doc.fontSize(7).fillColor('#b2bec3')
+        .text('This ticket is issued by MEIH — MOFATE Event & Innovation Hub. Present at event entrance. Non-transferable.', 50, doc.page.height - 85, { align: 'center', width: doc.page.width - 100 });
+      doc.end();
+    }
+
     const fetchQR = (url) => {
       return new Promise((res, rej) => {
         const client = url.startsWith('https') ? https : http;
-        client.get(url, { timeout: 10000 }, (resp) => {
+        const req = client.get(url, { timeout: 5000 }, (resp) => {
           if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location) {
             return fetchQR(resp.headers.location).then(res).catch(rej);
+          }
+          if (resp.statusCode !== 200) {
+            return rej(new Error('QR code API returned ' + resp.statusCode));
           }
           const chunks = [];
           resp.on('data', c => chunks.push(c));
           resp.on('end', () => res(Buffer.concat(chunks)));
           resp.on('error', rej);
-        }).on('error', rej);
+        });
+        req.on('timeout', () => { req.destroy(); rej(new Error('QR code fetch timed out')); });
+        req.on('error', rej);
       });
     };
 
     fetchQR(qrUrl).then(qrBuf => {
       doc.image(qrBuf, (doc.page.width - 150) / 2, startY + 210, { width: 150, height: 150 });
-
-      doc.fontSize(8).font('Helvetica').fillColor(gray)
-        .text('TICKET #' + ticket.id.substring(0, 8).toUpperCase(), 50, doc.page.height - 100, { align: 'center', width: doc.page.width - 100 });
-      doc.fontSize(7).fillColor('#b2bec3')
-        .text('This ticket is issued by MEIH — MOFATE Event & Innovation Hub. Present at event entrance. Non-transferable.', 50, doc.page.height - 85, { align: 'center', width: doc.page.width - 100 });
-
-      doc.end();
+      finalizeDoc();
     }).catch(() => {
-      doc.fontSize(8).font('Helvetica').fillColor(gray)
-        .text('TICKET #' + ticket.id.substring(0, 8).toUpperCase(), 50, doc.page.height - 100, { align: 'center', width: doc.page.width - 100 });
-      doc.end();
+      finalizeDoc();
     });
   });
 };

@@ -327,6 +327,48 @@ exports.rejectInnovationPayment = async (id) => {
   return rows[0];
 };
 
+exports.approveSubmission = async (id, managerId) => {
+  const { rows } = await db.query(
+    `UPDATE innovation_submissions SET
+       status = 'approved',
+       reviewed_by = $2,
+       reviewed_at = now(),
+       updated_at = now()
+     WHERE id = $1 AND status = 'pending_review'
+     RETURNING *`,
+    [id, managerId]
+  );
+  return rows[0];
+};
+
+exports.rejectSubmission = async (id, managerId) => {
+  const { rows } = await db.query(
+    `UPDATE innovation_submissions SET
+       status = 'rejected',
+       reviewed_by = $2,
+       reviewed_at = now(),
+       updated_at = now()
+     WHERE id = $1 AND status = 'pending_review'
+     RETURNING *`,
+    [id, managerId]
+  );
+  return rows[0];
+};
+
+exports.listManagerSubmissions = async (managerId) => {
+  const { rows } = await db.query(
+    `SELECT s.*, u.full_name AS author_name,
+            (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
+            c.title AS competition_title
+     FROM innovation_submissions s
+     LEFT JOIN users u ON u.id = s.user_id
+     LEFT JOIN innovation_competitions c ON c.id = s.competition_id
+     WHERE s.status = 'pending_review'
+     ORDER BY s.created_at DESC`
+  );
+  return rows;
+};
+
 exports.listPendingPayment = async ({ page = 1, limit = 50 } = {}) => {
   const offset = (page - 1) * limit;
   const { rows } = await db.query(

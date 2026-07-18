@@ -144,6 +144,27 @@ exports.getReviews = async (vendorId) => {
   return rows;
 };
 
+exports.getMatchingEvents = async (userId) => {
+  const { rows: vendorRows } = await db.query(
+    `SELECT id, category FROM vendors WHERE user_id = $1`, [userId]
+  );
+  if (!vendorRows[0]) return [];
+  const vendorCategory = vendorRows[0].category;
+
+  const { rows } = await db.query(
+    `SELECT e.*, c.name AS category_name, u.full_name AS client_name,
+            (SELECT count(*) FROM bookings b WHERE b.event_id = e.id) AS booking_count
+     FROM events e
+     LEFT JOIN event_categories c ON c.id = e.category_id
+     LEFT JOIN users u ON u.id = e.client_id
+     WHERE e.status = 'published'
+       AND ($1 = ANY(e.services) OR c.name = $1)
+     ORDER BY e.created_at DESC`,
+    [vendorCategory]
+  );
+  return rows;
+};
+
 exports.getAvailability = async (vendorId) => {
   const { rows } = await db.query(
     `SELECT * FROM vendor_availability WHERE vendor_id = $1 ORDER BY date`,

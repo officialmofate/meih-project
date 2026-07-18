@@ -38,6 +38,15 @@
           </dl>
         </section>
 
+        <section class="card" id="screenshot-section" hidden>
+          <h2>Payment Confirmation Screenshot</h2>
+          <div id="screenshot-container" style="text-align:center;padding:var(--space-md) 0;">
+            <a id="screenshot-link" href="#" target="_blank">
+              <img id="screenshot-img" src="" alt="Payment Confirmation Screenshot" style="max-width:100%;max-height:400px;border-radius:var(--radius-md);border:1px solid var(--color-border);" />
+            </a>
+          </div>
+        </section>
+
         <section class="card">
           <h2>Vendors & Planners Quoting</h2>
           <div id="vendor-list" class="grid vendor-list"></div>
@@ -125,6 +134,13 @@
       document.getElementById('event-budget').textContent = formatCurrency(ev.budget || 0, 'TZS');
       document.getElementById('event-date').textContent = ev.event_date ? formatDate(ev.event_date) : 'TBD';
       document.getElementById('event-client').textContent = ev.client_name || '—';
+
+      if (ev.confirmation_screenshot_url) {
+        const section = document.getElementById('screenshot-section');
+        section.hidden = false;
+        document.getElementById('screenshot-img').src = ev.confirmation_screenshot_url;
+        document.getElementById('screenshot-link').href = ev.confirmation_screenshot_url;
+      }
 
       const confirmBadge = document.getElementById('event-confirmation-status');
       if (ev.confirmation_status && ev.confirmation_status !== 'unconfirmed') {

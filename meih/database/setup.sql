@@ -139,6 +139,8 @@ CREATE TABLE IF NOT EXISTS innovation_submissions (
   technology VARCHAR(255),
   status VARCHAR(20) NOT NULL DEFAULT 'pending_review'
     CHECK (status IN ('pending_review','approved','rejected')),
+  reviewed_by UUID REFERENCES users(id),
+  reviewed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -314,3 +316,13 @@ VALUES (
   'superadmin',
   'active'
 ) ON CONFLICT (email, role) DO NOTHING;
+
+-- ── Migration: add reviewed_by / reviewed_at to innovation_submissions ──
+DO $$ BEGIN
+  ALTER TABLE innovation_submissions ADD COLUMN reviewed_by UUID REFERENCES users(id);
+EXCEPTION WHEN duplicate_column THEN null;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE innovation_submissions ADD COLUMN reviewed_at TIMESTAMPTZ;
+EXCEPTION WHEN duplicate_column THEN null;
+END $$;
