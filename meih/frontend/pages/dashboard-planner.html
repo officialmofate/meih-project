@@ -338,9 +338,7 @@
       table.hidden = false;
       tbody.innerHTML = active.map(b => {
         const statusClass = b.status === 'completed' ? 'badge-success' : b.status === 'confirmed' ? 'badge' : 'badge-muted';
-        const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank" style="margin-left:var(--space-xs);">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">View</a>`
-          : '';
+        const ticketBtn = `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank" style="margin-left:var(--space-xs);">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">View</a>`;
         return `<tr>
           <td>${b.event_name || '—'}</td>
           <td>${b.client_name || '—'}</td>

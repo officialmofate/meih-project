@@ -280,9 +280,7 @@
       const body = document.getElementById('bookings-table-body');
       body.innerHTML = bookings.map(b => {
         const statusClass = b.status === 'confirmed' ? 'badge-success' : 'badge-muted';
-        const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">View</a>`
-          : '<span class="text-muted">—</span>';
+        const ticketBtn = `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">View</a>`;
         return `<tr>
           <td>${b.event_name || '—'}</td>
           <td>${b.client_name || '—'}</td>

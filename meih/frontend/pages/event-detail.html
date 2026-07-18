@@ -225,21 +225,14 @@
     const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
     api.get('/bookings').then((bookings) => {
       if (!Array.isArray(bookings)) return;
-      const myBooking = bookings.find(b => b.event_id === eventId && b.status === 'confirmed');
+      const myBooking = bookings.find(b => b.event_id === eventId);
       if (myBooking) {
         document.getElementById('ticket-section').hidden = false;
         document.getElementById('booking-form').hidden = true;
         document.getElementById('booking-confirmation').hidden = false;
-        document.getElementById('booking-confirmation').textContent = 'Your booking is confirmed!';
+        document.getElementById('booking-confirmation').textContent = myBooking.status === 'confirmed' ? 'Your booking is confirmed!' : 'Booking submitted — awaiting planner confirmation.';
         document.getElementById('ticket-pdf-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket-pdf';
         document.getElementById('ticket-html-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket';
-      } else {
-        const pendingBooking = bookings.find(b => b.event_id === eventId && b.status === 'pending');
-        if (pendingBooking) {
-          document.getElementById('booking-form').hidden = true;
-          document.getElementById('booking-confirmation').hidden = false;
-          document.getElementById('booking-confirmation').textContent = 'Booking submitted — awaiting planner confirmation.';
-        }
       }
     }).catch(() => {});
 

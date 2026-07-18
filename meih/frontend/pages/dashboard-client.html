@@ -158,9 +158,7 @@
       tbody.innerHTML = bookings.map(b => {
         const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
         const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
-        const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">&#128065; View</a>`
-          : '<span class="text-muted">—</span>';
+        const ticketBtn = `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">&#128065; View</a>`;
         return `<tr>
           <td>${b.event_name || '—'}</td>
           <td>${b.event_location || '—'}</td>
@@ -171,14 +169,15 @@
       }).join('');
 
       // My Tickets section
-      const confirmed = bookings.filter(b => b.status === 'confirmed');
       const ticketsList = document.getElementById('tickets-list');
-      if (confirmed.length > 0) {
+      if (bookings.length > 0) {
         document.getElementById('no-tickets').hidden = true;
-        ticketsList.innerHTML = confirmed.map(b => {
+        ticketsList.innerHTML = bookings.map(b => {
+          const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : 'badge-muted';
           return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
             <div>
               <strong>${b.event_name || '—'}</strong>
+              <span class="badge ${statusClass}" style="margin-left:var(--space-xs);">${b.status}</span>
               <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${b.event_location || ''} &middot; ${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD'}</p>
             </div>
             <div>

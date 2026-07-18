@@ -225,7 +225,6 @@ exports.generateTicketPDF = async (id) => {
 
   const ticket = await exports.getTicketData(id);
   if (!ticket) return null;
-  if (ticket.status !== 'confirmed') return null;
 
   const eventDate = ticket.event_date
     ? new Date(ticket.event_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
@@ -290,7 +289,7 @@ exports.generateTicketPDF = async (id) => {
     drawField(leftCol, startY + 60, 'Location', ticket.event_location || 'TBD');
     drawField(rightCol, startY + 60, 'Guests', ticket.guest_count ? String(ticket.guest_count) : '—');
     drawField(leftCol, startY + 120, 'Planner', ticket.planner_name || '—');
-    drawField(rightCol, startY + 120, 'Status', 'CONFIRMED');
+    drawField(rightCol, startY + 120, 'Status', (ticket.status || 'pending').toUpperCase());
 
     doc.moveTo(50, startY + 180).lineTo(doc.page.width - 50, startY + 180).lineWidth(1).dash(5, { space: 5 }).strokeColor(lightGray).stroke();
 

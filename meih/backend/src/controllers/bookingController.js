@@ -66,9 +66,6 @@ exports.getTicket = async (req, res, next) => {
   try {
     const ticket = await bookingService.getTicketData(req.params.id);
     if (!ticket) return res.status(404).send('<h1>Ticket not found</h1>');
-    if (ticket.status !== 'confirmed') {
-      return res.status(400).send('<h1>Ticket only available for confirmed bookings</h1>');
-    }
 
     const qrData = JSON.stringify({
       ticketId: ticket.id,
@@ -130,7 +127,7 @@ exports.getTicket = async (req, res, next) => {
       <div class="ticket-field"><label>Location</label><div class="value">${ticket.event_location || 'TBD'}</div></div>
       <div class="ticket-field"><label>Guests</label><div class="value">${ticket.guest_count || '—'}</div></div>
       <div class="ticket-field"><label>Planner</label><div class="value">${ticket.planner_name || '—'}</div></div>
-      <div class="ticket-field"><label>Status</label><div class="value" style="color:#00b894;">CONFIRMED</div></div>
+      <div class="ticket-field"><label>Status</label><div class="value" style="color:${ticket.status === 'confirmed' ? '#00b894' : '#fdcb6e'};">${(ticket.status || 'pending').toUpperCase()}</div></div>
     </div>
     <hr class="divider"/>
     <div class="qr-section">
@@ -175,7 +172,7 @@ exports.getTicketPDF = async (req, res, next) => {
       new Promise((_, reject) => setTimeout(() => reject(new Error('PDF generation timed out')), 30000))
     ]);
     if (!pdfBuf) {
-      return res.status(404).send('Ticket not found or not confirmed');
+      return res.status(404).send('Ticket not found');
     }
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="ticket-' + req.params.id.substring(0, 8) + '.pdf"');
