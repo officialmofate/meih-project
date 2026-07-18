@@ -28,6 +28,7 @@ exports.create = async (userId, role, payload) => {
       `SELECT id FROM vendors WHERE user_id = $1`, [userId]
     );
     if (vendorRows[0]) vendorId = vendorRows[0].id;
+    clientId = events[0].client_id;
   }
 
   const { rows: plannerRows } = await db.query(
@@ -206,7 +207,7 @@ exports.getTicketData = async (id) => {
     `SELECT b.*, e.name AS event_name, e.location AS event_location,
             e.event_date, e.category_id, e.budget, e.guest_count,
             v.business_name AS vendor_name, p.company_name AS planner_name,
-            u.full_name AS client_name, u.email AS client_email
+            COALESCE(v.business_name, u.full_name) AS client_name, u.email AS client_email
      FROM bookings b
      LEFT JOIN events e ON e.id = b.event_id
      LEFT JOIN vendors v ON v.id = b.vendor_id

@@ -277,10 +277,11 @@
       document.getElementById('no-bookings').hidden = true;
       document.getElementById('bookings-table').hidden = false;
       document.getElementById('stat-bookings').textContent = bookings.length;
+      const API_BASE = window.MEIH_API_URL || '/api/v1';
       const body = document.getElementById('bookings-table-body');
       body.innerHTML = bookings.map(b => {
-        const statusClass = b.status === 'confirmed' ? 'badge-success' : 'badge-muted';
-        const ticketBtn = `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">View</a>`;
+        const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : 'badge-muted';
+        const ticketBtn = `<a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank">PDF</a> <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank">View</a>`;
         return `<tr>
           <td>${b.event_name || '—'}</td>
           <td>${b.client_name || '—'}</td>

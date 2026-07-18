@@ -285,7 +285,7 @@
           <td>${ev.confirmation_payment_number || '—'}</td>
           <td>${ev.confirmation_payment_name || '—'}</td>
           <td>${ev.confirmation_screenshot_url 
-            ? `<a href="${ev.confirmation_screenshot_url}" target="_blank" class="btn btn-sm btn-secondary">View</a>`
+            ? `<a href="${window.resolveUrl(ev.confirmation_screenshot_url)}" target="_blank" class="btn btn-sm btn-secondary">View</a>`
             : '<span class="text-muted">None</span>'}</td>
           <td>${new Date(ev.created_at).toLocaleDateString()}</td>
           <td>
@@ -354,7 +354,7 @@
           <td>Tsh ${Number(s.payment_amount || 0).toLocaleString()}</td>
           <td>${s.payment_number || '—'}</td>
           <td>${s.payment_screenshot_url
-            ? `<a href="${s.payment_screenshot_url}" target="_blank" class="btn btn-sm btn-secondary">View</a>`
+            ? `<a href="${window.resolveUrl(s.payment_screenshot_url)}" target="_blank" class="btn btn-sm btn-secondary">View</a>`
             : '<span class="text-muted">None</span>'}</td>
           <td>${new Date(s.created_at).toLocaleDateString()}</td>
           <td>

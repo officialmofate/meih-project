@@ -251,7 +251,7 @@
           <td>Tsh ${Number(p.amount).toLocaleString()}</td>
           <td>${p.method || 'mobile_money'}</td>
           <td>${p.screenshot_url
-            ? `<a href="${p.screenshot_url}" target="_blank"><img src="${p.screenshot_url}" alt="Payment Screenshot" style="max-width:80px;max-height:60px;border-radius:4px;border:1px solid var(--color-border);cursor:pointer;" onerror="this.parentElement.textContent='View'" /></a>`
+            ? `<a href="${window.resolveUrl(p.screenshot_url)}" target="_blank"><img src="${window.resolveUrl(p.screenshot_url)}" alt="Payment Screenshot" style="max-width:80px;max-height:60px;border-radius:4px;border:1px solid var(--color-border);cursor:pointer;" onerror="this.parentElement.textContent='View'" /></a>`
             : '<span class="text-muted">No screenshot</span>'}</td>
           <td>${new Date(p.created_at).toLocaleDateString()}</td>
           <td>
@@ -336,9 +336,10 @@
       const tbody = document.getElementById('projects-body');
       document.getElementById('no-projects').hidden = true;
       table.hidden = false;
+      const API_BASE = window.MEIH_API_URL || '/api/v1';
       tbody.innerHTML = active.map(b => {
         const statusClass = b.status === 'completed' ? 'badge-success' : b.status === 'confirmed' ? 'badge' : 'badge-muted';
-        const ticketBtn = `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank" style="margin-left:var(--space-xs);">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">View</a>`;
+        const ticketBtn = `<a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank" style="margin-left:var(--space-xs);">PDF</a> <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank">View</a>`;
         return `<tr>
           <td>${b.event_name || '—'}</td>
           <td>${b.client_name || '—'}</td>
@@ -402,7 +403,7 @@
       // Pending events - can submit to admin
       pendingEvents.forEach(ev => {
         const screenshotLink = ev.confirmation_screenshot_url
-          ? `<a href="${ev.confirmation_screenshot_url}" target="_blank" style="margin-left:var(--space-xs);"><img src="${ev.confirmation_screenshot_url}" alt="Confirmation Screenshot" style="max-width:60px;max-height:45px;border-radius:4px;border:1px solid var(--color-border);vertical-align:middle;" onerror="this.parentElement.textContent='View'" /></a>`
+          ? `<a href="${window.resolveUrl(ev.confirmation_screenshot_url)}" target="_blank" style="margin-left:var(--space-xs);"><img src="${window.resolveUrl(ev.confirmation_screenshot_url)}" alt="Confirmation Screenshot" style="max-width:60px;max-height:45px;border-radius:4px;border:1px solid var(--color-border);vertical-align:middle;" onerror="this.parentElement.textContent='View'" /></a>`
           : '';
         allItems.push(`
           <div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
@@ -421,7 +422,7 @@
       confirmedEvents.forEach(ev => {
         const confBadge = ev.confirmation_status === 'confirmed' ? 'badge-success' : 'badge-warning';
         const screenshotLink = ev.confirmation_screenshot_url
-          ? `<a href="${ev.confirmation_screenshot_url}" target="_blank" style="margin-left:var(--space-xs);"><img src="${ev.confirmation_screenshot_url}" alt="Confirmation Screenshot" style="max-width:60px;max-height:45px;border-radius:4px;border:1px solid var(--color-border);vertical-align:middle;" onerror="this.parentElement.textContent='View'" /></a>`
+          ? `<a href="${window.resolveUrl(ev.confirmation_screenshot_url)}" target="_blank" style="margin-left:var(--space-xs);"><img src="${window.resolveUrl(ev.confirmation_screenshot_url)}" alt="Confirmation Screenshot" style="max-width:60px;max-height:45px;border-radius:4px;border:1px solid var(--color-border);vertical-align:middle;" onerror="this.parentElement.textContent='View'" /></a>`
           : '';
         allItems.push(`
           <div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">

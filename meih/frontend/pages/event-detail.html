@@ -170,8 +170,8 @@
       if (ev.confirmation_screenshot_url) {
         const section = document.getElementById('screenshot-section');
         section.hidden = false;
-        document.getElementById('screenshot-img').src = ev.confirmation_screenshot_url;
-        document.getElementById('screenshot-link').href = ev.confirmation_screenshot_url;
+        document.getElementById('screenshot-img').src = window.resolveUrl(ev.confirmation_screenshot_url);
+        document.getElementById('screenshot-link').href = window.resolveUrl(ev.confirmation_screenshot_url);
       }
 
       const confirmBadge = document.getElementById('event-confirmation-status');
@@ -231,8 +231,8 @@
         document.getElementById('booking-form').hidden = true;
         document.getElementById('booking-confirmation').hidden = false;
         document.getElementById('booking-confirmation').textContent = myBooking.status === 'confirmed' ? 'Your booking is confirmed!' : 'Booking submitted — awaiting planner confirmation.';
-        document.getElementById('ticket-pdf-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket-pdf';
-        document.getElementById('ticket-html-link').href = '/api/v1/bookings/' + myBooking.id + '/ticket';
+        document.getElementById('ticket-pdf-link').href = (window.MEIH_API_URL || '/api/v1') + '/bookings/' + myBooking.id + '/ticket-pdf';
+        document.getElementById('ticket-html-link').href = (window.MEIH_API_URL || '/api/v1') + '/bookings/' + myBooking.id + '/ticket';
       }
     }).catch(() => {});
 

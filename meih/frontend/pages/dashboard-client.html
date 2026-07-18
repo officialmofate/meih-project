@@ -133,7 +133,7 @@
           <td>Tsh ${Number(p.amount).toLocaleString()}</td>
           <td><span class="badge ${statusClass}">${p.status}</span></td>
           <td>${hasScreenshot
-            ? `<a href="${p.screenshot_url}" target="_blank"><img src="${p.screenshot_url}" alt="Payment Screenshot" style="max-width:80px;max-height:60px;border-radius:4px;border:1px solid var(--color-border);cursor:pointer;" onerror="this.style.display='none'" /></a>`
+            ? `<a href="${window.resolveUrl(p.screenshot_url)}" target="_blank"><img src="${window.resolveUrl(p.screenshot_url)}" alt="Payment Screenshot" style="max-width:80px;max-height:60px;border-radius:4px;border:1px solid var(--color-border);cursor:pointer;" onerror="this.style.display='none'" /></a>`
             : '—'}</td>
           <td>${new Date(p.created_at).toLocaleDateString()}</td>
           <td>${p.status === 'pending' && !hasScreenshot
@@ -155,10 +155,11 @@
       const table = document.getElementById('bookings-table');
       const tbody = document.getElementById('bookings-body');
       table.hidden = false;
+      const API_BASE = window.MEIH_API_URL || '/api/v1';
       tbody.innerHTML = bookings.map(b => {
         const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
         const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
-        const ticketBtn = `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank">&#128065; View</a>`;
+        const ticketBtn = `<a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank">&#128065; View</a>`;
         return `<tr>
           <td>${b.event_name || '—'}</td>
           <td>${b.event_location || '—'}</td>
@@ -181,8 +182,8 @@
               <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${b.event_location || ''} &middot; ${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD'}</p>
             </div>
             <div>
-              <a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128196; Download PDF</a>
-              <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128065; View Ticket</a>
+              <a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128196; Download PDF</a>
+              <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128065; View Ticket</a>
             </div>
           </div>`;
         }).join('');
@@ -199,6 +200,38 @@
       document.getElementById('notification-list').innerHTML =
         items.map((n) => `<li>${n.body ?? n.title}</li>`).join('');
     }).catch(() => {});
+
+    // Payment screenshot upload
+    const screenshotInput = document.createElement('input');
+    screenshotInput.type = 'file';
+    screenshotInput.accept = 'image/*';
+    screenshotInput.style.display = 'none';
+    document.body.appendChild(screenshotInput);
+    let activePaymentId = null;
+
+    screenshotInput.addEventListener('change', async () => {
+      const file = screenshotInput.files[0];
+      if (!file || !activePaymentId) return;
+      const API_BASE = window.MEIH_API_URL || '/api/v1';
+      const formData = new FormData();
+      formData.append('screenshot', file);
+      try {
+        await api.putUpload('/payments/' + activePaymentId + '/screenshot', formData);
+        alert('Screenshot uploaded successfully!');
+        window.location.reload();
+      } catch (err) {
+        alert(err.message || 'Failed to upload screenshot.');
+      }
+      screenshotInput.value = '';
+      activePaymentId = null;
+    });
+
+    document.getElementById('payments-body').addEventListener('click', (e) => {
+      const btn = e.target.closest('.upload-screenshot-btn');
+      if (!btn) return;
+      activePaymentId = btn.dataset.paymentId;
+      screenshotInput.click();
+    });
   </script>
 </body>
 </html>
