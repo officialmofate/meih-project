@@ -259,16 +259,18 @@ exports.generateTicketPDF = async (id) => {
       }
     });
 
-    const purple = '#6c5ce7';
+    const blue = '#0984e3';
     const dark = '#1a1a2e';
     const gray = '#636e72';
     const lightGray = '#dfe6e9';
 
-    doc.rect(0, 0, doc.page.width, 160).fill(purple);
+    doc.rect(0, 0, doc.page.width, 160).fill(blue);
     doc.fillColor('#ffffff').fontSize(12).font('Helvetica')
-      .text('MOFATE EVENT & INNOVATION HUB', 50, 40, { align: 'center' });
+      .text('MOFATE', 50, 30, { align: 'center' });
+    doc.fontSize(10).font('Helvetica')
+      .text('EVENT HUB TICKET', 50, 48, { align: 'center', letterSpacing: 3 });
     doc.fontSize(26).font('Helvetica-Bold')
-      .text(ticket.event_name || 'Event', 50, 65, { align: 'center', width: doc.page.width - 100 });
+      .text(ticket.event_name || 'Event', 50, 70, { align: 'center', width: doc.page.width - 100 });
     doc.fontSize(11).font('Helvetica')
       .text('YOUR EVENT TICKET', 50, 120, { align: 'center', letterSpacing: 3 });
 
@@ -288,7 +290,7 @@ exports.generateTicketPDF = async (id) => {
     drawField(leftCol, startY + 60, 'Location', ticket.event_location || 'TBD');
     drawField(rightCol, startY + 60, 'Guests', ticket.guest_count ? String(ticket.guest_count) : '—');
     drawField(leftCol, startY + 120, 'Planner', ticket.planner_name || '—');
-    drawField(rightCol, startY + 120, 'Budget', ticket.budget ? 'Tsh ' + Number(ticket.budget).toLocaleString() : '—');
+    drawField(rightCol, startY + 120, 'Status', 'CONFIRMED');
 
     doc.moveTo(50, startY + 180).lineTo(doc.page.width - 50, startY + 180).lineWidth(1).dash(5, { space: 5 }).strokeColor(lightGray).stroke();
 
@@ -299,14 +301,14 @@ exports.generateTicketPDF = async (id) => {
       doc.fontSize(8).font('Helvetica').fillColor(gray)
         .text('TICKET #' + ticket.id.substring(0, 8).toUpperCase(), 50, doc.page.height - 100, { align: 'center', width: doc.page.width - 100 });
       doc.fontSize(7).fillColor('#b2bec3')
-        .text('This ticket is issued by MEIH — MOFATE Event & Innovation Hub. Present at event entrance. Non-transferable.', 50, doc.page.height - 85, { align: 'center', width: doc.page.width - 100 });
+        .text('This ticket is issued by MOFATE — Mobile Facilitation Team. Present at event entrance. Non-transferable.', 50, doc.page.height - 85, { align: 'center', width: doc.page.width - 100 });
       doc.end();
     }
 
     const fetchQR = (url) => {
       return new Promise((res, rej) => {
         const client = url.startsWith('https') ? https : http;
-        const req = client.get(url, { timeout: 5000 }, (resp) => {
+        const req = client.get(url, { timeout: 10000 }, (resp) => {
           if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location) {
             return fetchQR(resp.headers.location).then(res).catch(rej);
           }

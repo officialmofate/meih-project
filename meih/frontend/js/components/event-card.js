@@ -5,6 +5,8 @@ export function eventCard(ev) {
   const status = ev.status || '';
   const date = ev.event_date || ev.eventDate || '';
   const statusClass = status === 'completed' ? 'badge-success' : status === 'published' ? 'badge' : 'badge-muted';
+  const suggestedFee = ev.suggested_fee_usd || ev.suggestedFeeUsd || 0;
+  const ticketPrice = suggestedFee ? Math.round(Number(suggestedFee) * 2550) : 0;
 
   let userRole = '';
   try {
@@ -21,6 +23,7 @@ export function eventCard(ev) {
       </div>
       <p class="event-card-meta">${category}${location ? ' &middot; ' + location : ''}</p>
       ${date ? `<p class="event-card-date">${new Date(date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })}</p>` : ''}
+      ${ticketPrice ? `<p class="event-card-price" style="font-weight:700;color:var(--color-primary,#0984e3);margin:4px 0 0;">Ticket: Tsh ${ticketPrice.toLocaleString()}</p>` : ''}
       ${showBudget ? `<div class="event-card-footer"><span class="event-card-budget">Tsh ${Number(ev.budget || 0).toLocaleString()}</span></div>` : ''}
     </div>
   `;

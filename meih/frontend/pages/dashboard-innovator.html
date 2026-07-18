@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Innovator Dashboard — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/dashboard.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page dashboard" data-page="dashboard-innovator">
+    <div class="container">
+
+      <header class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-md);">
+        <div>
+          <h1 id="innovator-welcome">Innovator Dashboard</h1>
+          <p class="text-muted">Manage your innovation submissions and competitions</p>
+        </div>
+        <a href="submit-innovation.html" class="btn btn-primary" style="padding:12px 28px;font-size:15px;font-weight:700;display:inline-flex;align-items:center;gap:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Submit Innovation
+        </a>
+      </header>
+
+      <section class="stats-row">
+        <div class="card stat-card"><span class="stat-number" id="stat-submissions">—</span><span class="stat-label">My Submissions</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-pending">—</span><span class="stat-label">Pending Review</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-approved">—</span><span class="stat-label">Approved</span></div>
+        <div class="card stat-card"><span class="stat-number" id="stat-votes">—</span><span class="stat-label">Total Votes</span></div>
+      </section>
+
+      <div class="dashboard-grid">
+
+        <section class="card wide" style="background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;border:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-md);">
+            <div>
+              <h2 style="color:#fff;margin-bottom:4px;">Ready to Innovate?</h2>
+              <p style="opacity:0.85;margin:0;">Submit your innovation to an open competition and compete for recognition.</p>
+            </div>
+            <a href="submit-innovation.html" class="btn" style="background:#fff;color:#6c5ce7;font-weight:700;padding:12px 24px;font-size:15px;">
+              Submit Innovation
+            </a>
+          </div>
+        </section>
+
+        <section class="card wide">
+          <h2>Open Competitions</h2>
+          <p id="no-competitions" class="empty-state" hidden>No open competitions at the moment.</p>
+          <div id="competitions-list"></div>
+        </section>
+
+        <section class="card wide">
+          <h2>My Submissions</h2>
+          <p id="no-submissions" class="empty-state" hidden>You haven't submitted any innovations yet. <a href="submit-innovation.html">Submit your first</a>.</p>
+          <table class="data-table" id="submissions-table" hidden>
+            <thead>
+              <tr><th>Title</th><th>Competition</th><th>Category</th><th>Status</th><th>Votes</th><th></th></tr>
+            </thead>
+            <tbody id="submissions-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card">
+          <h2>Recent Notifications</h2>
+          <ul class="notification-list" id="notification-list">
+            <li class="results-count">No notifications yet.</li>
+          </ul>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script src="../js/config.js"></script>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+
+    try {
+      const raw = localStorage.getItem('meih_user');
+      if (raw) {
+        const user = JSON.parse(raw);
+        document.getElementById('innovator-welcome').textContent = (user.full_name || user.name || user.email || 'Innovator') + "'s Dashboard";
+      }
+    } catch {}
+
+    api.get('/innovation/submissions').then((submissions) => {
+      const list = Array.isArray(submissions) ? submissions : [];
+      let mySubs = list;
+      try {
+        const raw = localStorage.getItem('meih_user');
+        const user = raw ? JSON.parse(raw) : null;
+        if (user) mySubs = list.filter(s => s.user_id === user.id);
+      } catch {}
+
+      document.getElementById('stat-submissions').textContent = mySubs.length;
+      document.getElementById('stat-pending').textContent = mySubs.filter(s => s.status === 'pending_review').length;
+      document.getElementById('stat-approved').textContent = mySubs.filter(s => s.status === 'approved').length;
+      document.getElementById('stat-votes').textContent = mySubs.reduce((sum, s) => sum + (s.vote_count || 0), 0);
+
+      if (mySubs.length > 0) {
+        document.getElementById('submissions-table').hidden = false;
+        document.getElementById('submissions-body').innerHTML = mySubs.map(s => {
+          const sc = s.status === 'approved' ? 'badge-success' : s.status === 'rejected' ? 'badge-danger' : 'badge-warning';
+          return `<tr>
+            <td>${s.title || 'Untitled'}</td>
+            <td>${s.competition_title || '—'}</td>
+            <td>${s.category || '—'}</td>
+            <td><span class="badge ${sc}">${s.status.replace('_', ' ')}</span></td>
+            <td>${s.vote_count || 0}</td>
+            <td><a href="innovation-detail.html?id=${s.id}">View</a></td>
+          </tr>`;
+        }).join('');
+      } else {
+        document.getElementById('no-submissions').hidden = false;
+      }
+    }).catch(() => { document.getElementById('no-submissions').hidden = false; });
+
+    api.get('/innovation/competitions').then((competitions) => {
+      const open = (Array.isArray(competitions) ? competitions : []).filter(c => c.status === 'open' || c.status === 'voting');
+      if (open.length > 0) {
+        document.getElementById('competitions-list').innerHTML = open.map(c => {
+          const closes = c.closes_at ? new Date(c.closes_at).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : 'TBD';
+          const badge = c.status === 'open' ? 'badge-success' : 'badge-warning';
+          return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
+            <div><strong>${c.title}</strong> <span class="badge ${badge}" style="margin-left:var(--space-xs);">${c.status}</span>
+            <p class="text-muted" style="margin:4px 0 0;font-size:13px;">Closes: ${closes} &middot; ${c.submission_count || 0} submissions</p></div>
+            <a href="submit-innovation.html?competition=${c.id}" class="btn btn-sm btn-primary">Submit to this Competition</a>
+          </div>`;
+        }).join('');
+      } else {
+        document.getElementById('no-competitions').hidden = false;
+      }
+    }).catch(() => { document.getElementById('no-competitions').hidden = false; });
+
+    api.get('/notifications').then((items) => {
+      if (Array.isArray(items) && items.length) {
+        document.getElementById('notification-list').innerHTML = items.map(n => `<li>${n.body ?? n.title}</li>`).join('');
+      }
+    }).catch(() => {});
+  </script>
+</body>
+</html>

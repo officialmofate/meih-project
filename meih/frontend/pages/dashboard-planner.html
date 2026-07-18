@@ -79,16 +79,20 @@
             </div>
             <div class="payment-info-grid">
               <div class="payment-info-item">
+                <span class="payment-info-label">Bank</span>
+                <span class="payment-info-value">NMB Bank</span>
+              </div>
+              <div class="payment-info-item">
                 <span class="payment-info-label">Account Number</span>
-                <span class="payment-info-value">123456</span>
+                <span class="payment-info-value">61810109927</span>
               </div>
               <div class="payment-info-item">
                 <span class="payment-info-label">Account Name</span>
-                <span class="payment-info-value">MOFATE</span>
+                <span class="payment-info-value">MOBILE FACILITATION TEAM</span>
               </div>
               <div class="payment-info-item">
                 <span class="payment-info-label">Payment Method</span>
-                <span class="payment-info-value">Mobile Money</span>
+                <span class="payment-info-value">Bank Transfer</span>
               </div>
               <div class="payment-info-item">
                 <span class="payment-info-label">Amount</span>
@@ -120,8 +124,8 @@
             <h3 id="confirm-event-name"></h3>
             <form id="confirm-event-form" class="stacked-form">
               <input type="hidden" name="eventId" id="confirm-event-id" />
-              <input type="hidden" name="paymentNumber" value="123456" />
-              <input type="hidden" name="paymentName" value="MOFATE" />
+              <input type="hidden" name="paymentNumber" value="61810109927" />
+              <input type="hidden" name="paymentName" value="MOBILE FACILITATION TEAM" />
 
               <label for="confirm-screenshot">Upload Payment Screenshot</label>
               <input id="confirm-screenshot" name="screenshot" type="file" accept="image/*" required />
@@ -186,6 +190,13 @@
             <thead><tr><th>Client</th><th>Events Booked</th><th>Total Spend</th></tr></thead>
             <tbody id="clients-body"></tbody>
           </table>
+        </section>
+
+        <section class="card wide">
+          <h2>Vendor Quotes &amp; Orders</h2>
+          <p class="text-muted">View vendor submissions for your events.</p>
+          <p class="empty-state" id="no-vendor-quotes">No vendor quotes yet.</p>
+          <div id="vendor-quotes-list"></div>
         </section>
 
       </div>
@@ -473,6 +484,26 @@
         alert(err.message);
       }
     });
+
+    // Load vendor quotes for planner's events
+    api.get('/events/events').then((events) => {
+      if (!Array.isArray(events) || !events.length) return;
+      const myEventIds = events.map(e => e.id);
+      return Promise.all(myEventIds.map(id => api.get('/events/events/' + id + '/bookings').catch(() => [])));
+    }).then((allBookings) => {
+      if (!allBookings || !allBookings.length) return;
+      const flat = allBookings.flat();
+      if (!flat.length) return;
+      document.getElementById('no-vendor-quotes').hidden = true;
+      document.getElementById('vendor-quotes-list').innerHTML = flat.map(b => {
+        const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : 'badge-muted';
+        return '<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);">' +
+          '<strong>' + (b.client_name || '—') + '</strong>' +
+          ' <span class="badge ' + statusClass + '" style="margin-left:var(--space-xs);">' + b.status + '</span>' +
+          '<p class="text-muted" style="margin:4px 0 0;font-size:13px;">' + (b.event_name || '') + ' &middot; ' + (b.event_location || '') + '</p>' +
+          '</div>';
+      }).join('');
+    }).catch(() => {});
   </script>
 </body>
 </html>

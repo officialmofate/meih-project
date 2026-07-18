@@ -80,6 +80,30 @@
           </table>
         </section>
 
+        <section class="card wide" id="judge-assignments-section">
+          <h2>Assign Judges to Competitions</h2>
+          <p class="text-muted">Assign judges to evaluate innovation submissions.</p>
+          <form id="judge-assign-form" class="stacked-form">
+            <label for="judge-select">Select Judge</label>
+            <select id="judge-select" name="judgeId" required>
+              <option value="">Loading judges...</option>
+            </select>
+            <label for="competition-select">Select Competition</label>
+            <select id="competition-select" name="competitionId" required>
+              <option value="">Loading competitions...</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Assign Judge</button>
+          </form>
+          <p id="judge-assign-success" class="form-success" hidden>Judge assigned successfully.</p>
+          <p id="judge-assign-error" class="form-error" hidden></p>
+          <h3 style="margin-top:var(--space-md);">Current Assignments</h3>
+          <p id="no-judge-assignments" class="empty-state">No assignments yet.</p>
+          <table class="data-table" id="judge-assignments-table" hidden>
+            <thead><tr><th>Judge</th><th>Competition</th><th>Assigned</th><th></th></tr></thead>
+            <tbody id="judge-assignments-body"></tbody>
+          </table>
+        </section>
+
         <section class="card wide" id="innovation-payments-section">
           <h2>Innovation Payments</h2>
           <p class="text-muted">Innovation submissions with pending payment confirmation.</p>
@@ -344,6 +368,76 @@
         });
       });
     }).catch(() => {});
+
+    // Load judges and competitions for assignment form
+    Promise.all([
+      api.get('/admin/users').catch(() => []),
+      api.get('/innovation/competitions').catch(() => []),
+      api.get('/innovation/judges').catch(() => []),
+    ]).then(([users, competitions, judgeAssignments]) => {
+      const judges = Array.isArray(users) ? users.filter(u => u.role === 'judge') : [];
+      const judgeSelect = document.getElementById('judge-select');
+      const compSelect = document.getElementById('competition-select');
+      if (judges.length) {
+        judgeSelect.innerHTML = '<option value="">Select a judge</option>' + judges.map(j => '<option value="' + j.id + '">' + (j.full_name || j.name || j.email) + '</option>').join('');
+      } else {
+        judgeSelect.innerHTML = '<option value="">No judges found — assign judge role to users first</option>';
+      }
+      if (Array.isArray(competitions) && competitions.length) {
+        compSelect.innerHTML = '<option value="">Select a competition</option>' + competitions.map(c => '<option value="' + c.id + '">' + c.title + '</option>').join('');
+      } else {
+        compSelect.innerHTML = '<option value="">No competitions found</option>';
+      }
+
+      // Show existing assignments
+      if (Array.isArray(judgeAssignments) && judgeAssignments.length) {
+        document.getElementById('no-judge-assignments').hidden = true;
+        document.getElementById('judge-assignments-table').hidden = false;
+        document.getElementById('judge-assignments-body').innerHTML = judgeAssignments.map(a => {
+          const judgeName = judges.find(j => j.id === a.judge_id);
+          const compName = competitions ? competitions.find(c => c.id === a.competition_id) : null;
+          return '<tr>' +
+            '<td>' + (judgeName ? (judgeName.full_name || judgeName.name || judgeName.email) : a.judge_id) + '</td>' +
+            '<td>' + (compName ? compName.title : a.competition_id) + '</td>' +
+            '<td>' + new Date(a.created_at || Date.now()).toLocaleDateString() + '</td>' +
+            '<td><button class="btn btn-sm btn-danger remove-judge-btn" data-judge="' + a.judge_id + '" data-comp="' + a.competition_id + '">Remove</button></td>' +
+            '</tr>';
+        }).join('');
+        document.querySelectorAll('.remove-judge-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Remove this judge assignment?')) return;
+            try {
+              await api.del('/innovation/judge/assign/' + btn.dataset.judge + '/' + btn.dataset.comp);
+              window.location.reload();
+            } catch (err) { alert(err.message); }
+          });
+        });
+      }
+    }).catch(() => {});
+
+    // Judge assignment form
+    document.getElementById('judge-assign-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      const errEl = document.getElementById('judge-assign-error');
+      const successEl = document.getElementById('judge-assign-success');
+      errEl.hidden = true;
+      successEl.hidden = true;
+      if (!data.judgeId || !data.competitionId) {
+        errEl.textContent = 'Please select both a judge and a competition.';
+        errEl.hidden = false;
+        return;
+      }
+      try {
+        await api.post('/innovation/judge/assign', { judgeId: data.judgeId, competitionId: data.competitionId });
+        successEl.hidden = false;
+        e.target.reset();
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        errEl.textContent = err.message || 'Failed to assign judge.';
+        errEl.hidden = false;
+      }
+    });
   </script>
 </body>
 </html>

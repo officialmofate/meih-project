@@ -95,8 +95,9 @@ exports.getTicket = async (req, res, next) => {
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Inter',sans-serif; background:#1a1a2e; color:#fff; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
   .ticket { width:100%; max-width:640px; background:linear-gradient(145deg,#16213e,#0f3460); border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.4); }
-  .ticket-header { background:linear-gradient(135deg,#6c5ce7,#a855f7); padding:28px 32px; text-align:center; }
-  .ticket-header h1 { font-size:14px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; opacity:0.85; }
+  .ticket-header { background:linear-gradient(135deg,#0984e3,#74b9ff); padding:28px 32px; text-align:center; }
+  .ticket-header h1 { font-size:13px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; opacity:0.85; }
+  .ticket-header h2 { font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; opacity:0.7; margin-top:4px; }
   .ticket-header .event-name { font-size:26px; font-weight:900; margin-top:6px; line-height:1.2; }
   .ticket-body { padding:28px 32px; }
   .ticket-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
@@ -111,14 +112,15 @@ exports.getTicket = async (req, res, next) => {
   .ticket-id { font-family:monospace; font-size:13px; color:rgba(255,255,255,0.5); letter-spacing:0.05em; margin-top:6px; }
   .ticket-barcode { margin-top:16px; display:flex; justify-content:center; gap:2px; }
   .ticket-barcode span { display:inline-block; width:2px; background:rgba(255,255,255,0.3); border-radius:1px; }
-  .print-btn { display:inline-block; margin:24px auto 0; padding:10px 28px; background:linear-gradient(135deg,#6c5ce7,#a855f7); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
-  @media print { body { background:#fff; padding:0; } .ticket { box-shadow:none; border:2px solid #6c5ce7; } .print-btn { display:none; } .ticket-header, .ticket-footer { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+  .print-btn { display:inline-block; margin:24px auto 0; padding:10px 28px; background:linear-gradient(135deg,#0984e3,#74b9ff); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
+  @media print { body { background:#fff; padding:0; margin:0; } .ticket { box-shadow:none; border:2px solid #0984e3; max-width:100%; } .print-btn { display:none !important; } .ticket-header, .ticket-footer, .ticket { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; } .qr-section img { border:1px solid #ccc; } }
 </style>
 </head>
 <body>
 <div class="ticket">
   <div class="ticket-header">
-    <h1>MOFATE Event &amp; Innovation Hub</h1>
+    <h1>MOFATE</h1>
+    <h2>Event Hub Ticket</h2>
     <div class="event-name">${ticket.event_name || 'Event'}</div>
   </div>
   <div class="ticket-body">
@@ -139,7 +141,7 @@ exports.getTicket = async (req, res, next) => {
   <div class="ticket-footer">
     <div class="ticket-barcode" id="barcode"></div>
     <div class="ticket-id">TICKET #${ticket.id.substring(0, 8).toUpperCase()}</div>
-    <p>This ticket is issued by MEIH — MOFATE Event &amp; Innovation Hub.<br/>Present this ticket at the event entrance. Non-transferable.</p>
+    <p>This ticket is issued by MOFATE — Mobile Facilitation Team.<br/>Present this ticket at the event entrance. Non-transferable.</p>
     <button class="print-btn" onclick="window.print()">Print Ticket</button>
   </div>
 </div>
@@ -170,7 +172,7 @@ exports.getTicketPDF = async (req, res, next) => {
   try {
     const pdfBuf = await Promise.race([
       bookingService.generateTicketPDF(req.params.id),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('PDF generation timed out')), 15000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('PDF generation timed out')), 30000))
     ]);
     if (!pdfBuf) {
       return res.status(404).send('Ticket not found or not confirmed');

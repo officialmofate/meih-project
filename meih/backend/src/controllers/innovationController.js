@@ -161,3 +161,32 @@ exports.listCategories = async (req, res, next) => {
     res.json(categories);
   } catch (err) { next(err); }
 };
+
+exports.listAllJudges = async (req, res, next) => {
+  try {
+    const judges = await innovationService.listAllJudges();
+    res.json(judges);
+  } catch (err) { next(err); }
+};
+
+exports.assignJudge = async (req, res, next) => {
+  try {
+    const result = await innovationService.assignJudge(req.body.judgeId, req.body.competitionId);
+    res.status(201).json(result);
+  } catch (err) { next(err); }
+};
+
+exports.removeJudgeAssignment = async (req, res, next) => {
+  try {
+    const removed = await innovationService.removeJudgeAssignment(req.params.judgeId, req.params.competitionId);
+    if (!removed) return res.status(404).json({ message: 'Assignment not found' });
+    res.status(204).end();
+  } catch (err) { next(err); }
+};
+
+exports.listCompetitionJudges = async (req, res, next) => {
+  try {
+    const judges = await innovationService.listCompetitionJudges(req.params.competitionId);
+    res.json(judges);
+  } catch (err) { next(err); }
+};

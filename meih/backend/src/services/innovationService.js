@@ -383,3 +383,40 @@ exports.listPendingPayment = async ({ page = 1, limit = 50 } = {}) => {
   );
   return rows;
 };
+
+exports.listAllJudges = async () => {
+  const { rows } = await db.query(
+    `SELECT id, full_name, name, email, role FROM users WHERE role = 'judge' ORDER BY full_name`
+  );
+  return rows;
+};
+
+exports.assignJudge = async (judgeId, competitionId) => {
+  const { rows } = await db.query(
+    `INSERT INTO judge_assignments (judge_id, competition_id)
+     VALUES ($1, $2)
+     ON CONFLICT (judge_id, competition_id) DO NOTHING
+     RETURNING *`,
+    [judgeId, competitionId]
+  );
+  return rows[0] || { judge_id: judgeId, competition_id: competitionId };
+};
+
+exports.removeJudgeAssignment = async (judgeId, competitionId) => {
+  const { rowCount } = await db.query(
+    'DELETE FROM judge_assignments WHERE judge_id = $1 AND competition_id = $2',
+    [judgeId, competitionId]
+  );
+  return rowCount > 0;
+};
+
+exports.listCompetitionJudges = async (competitionId) => {
+  const { rows } = await db.query(
+    `SELECT ja.*, u.full_name AS judge_name
+     FROM judge_assignments ja
+     LEFT JOIN users u ON u.id = ja.judge_id
+     WHERE ja.competition_id = $1`,
+    [competitionId]
+  );
+  return rows;
+};

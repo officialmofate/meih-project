@@ -92,6 +92,13 @@
       <section class="card" id="innovation-payment-section" hidden style="margin-top:var(--space-md);">
         <h2>Innovation Payment</h2>
         <p class="text-muted">Submit your payment to confirm your innovation submission.</p>
+        <div style="background:var(--color-surface,#f8f9fa);border:1px solid var(--color-border,#e2e8f0);border-radius:var(--radius-md);padding:var(--space-md);margin-bottom:var(--space-md);">
+          <p style="font-weight:700;margin-bottom:var(--space-sm);">Payment Details</p>
+          <p style="margin:2px 0;"><strong>Bank:</strong> NMB Bank</p>
+          <p style="margin:2px 0;"><strong>Account Number:</strong> 61810109927</p>
+          <p style="margin:2px 0;"><strong>Account Name:</strong> MOBILE FACILITATION TEAM</p>
+          <p style="margin:2px 0;" id="inno-amount-display"><strong>Amount:</strong> Tsh —</p>
+        </div>
         <form id="innovation-payment-form" class="stacked-form">
           <input type="hidden" name="submissionId" id="inno-pay-submission-id" />
 
@@ -107,7 +114,7 @@
           <label for="inno-pay-method">Payment Method</label>
           <select id="inno-pay-method" name="method">
             <option value="mobile_money">Mobile Money</option>
-            <option value="bank_transfer">Bank Transfer</option>
+            <option value="bank_transfer" selected>Bank Transfer</option>
           </select>
 
           <label for="inno-pay-screenshot">Payment Screenshot</label>
@@ -217,6 +224,19 @@
         }
       } catch {}
     })();
+
+    // Show category-based amount when category is selected
+    document.getElementById('inno-category').addEventListener('change', function() {
+      var amtEl = document.getElementById('inno-amount-display');
+      var amtInput = document.getElementById('inno-pay-amount');
+      var selected = this.options[this.selectedIndex];
+      if (selected && selected.value) {
+        // Categories use a default of 100000 Tsh (planners/managers set custom amounts)
+        var amount = 100000;
+        amtEl.innerHTML = '<strong>Amount:</strong> Tsh ' + amount.toLocaleString();
+        if (amtInput) amtInput.value = amount;
+      }
+    });
 
     // Form submission — isolated from stepper
     try {

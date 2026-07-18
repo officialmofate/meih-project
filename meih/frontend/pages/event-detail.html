@@ -66,7 +66,8 @@
       <aside class="detail-sidebar">
         <div class="card sticky-card">
           <h2>Book This Event</h2>
-          <p class="text-muted">Confirm your attendance. The planner will set the deposit amount.</p>
+          <p class="text-muted" id="ticket-price-display" hidden></p>
+          <p class="text-muted">Confirm your attendance and get your ticket.</p>
           <form id="booking-form" class="stacked-form">
             <input type="hidden" name="eventId" id="booking-event-id" />
 
@@ -84,8 +85,8 @@
         <div class="card sticky-card" style="margin-top: var(--space-md);" id="ticket-section" hidden>
           <h2>Your Ticket</h2>
           <p class="text-muted">Your booking is confirmed! Download your ticket.</p>
-          <a id="ticket-pdf-link" class="btn btn-primary btn-block" href="#" target="_blank">Download PDF Ticket</a>
-          <a id="ticket-html-link" class="btn btn-ghost btn-block" href="#" target="_blank" style="margin-top:8px;">View Printable Ticket</a>
+          <a id="ticket-pdf-link" class="btn btn-primary btn-block" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;">&#128196; Download PDF Ticket</a>
+          <a id="ticket-html-link" class="btn btn-ghost btn-block" href="#" target="_blank" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;">&#128065; View Printable Ticket</a>
         </div>
       </aside>
 
@@ -134,6 +135,14 @@
       document.getElementById('event-budget').textContent = formatCurrency(ev.budget || 0, 'TZS');
       document.getElementById('event-date').textContent = ev.event_date ? formatDate(ev.event_date) : 'TBD';
       document.getElementById('event-client').textContent = ev.client_name || '—';
+
+      const suggestedFee = ev.suggested_fee_usd || ev.suggestedFeeUsd || 0;
+      if (suggestedFee) {
+        const ticketPrice = Math.round(Number(suggestedFee) * 2550);
+        const priceEl = document.getElementById('ticket-price-display');
+        priceEl.textContent = 'Ticket Price: Tsh ' + ticketPrice.toLocaleString();
+        priceEl.hidden = false;
+      }
 
       if (ev.confirmation_screenshot_url) {
         const section = document.getElementById('screenshot-section');

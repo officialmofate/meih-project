@@ -60,6 +60,12 @@
           </ul>
         </section>
 
+        <section class="card wide">
+          <h2>My Tickets</h2>
+          <p class="empty-state" id="no-tickets" hidden>No confirmed bookings yet — browse events and book to get your ticket.</p>
+          <div id="tickets-list"></div>
+        </section>
+
       </div>
     </div>
   </main>
@@ -153,7 +159,7 @@
         const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
         const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
         const ticketBtn = b.status === 'confirmed'
-          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank">PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket?token=${encodeURIComponent(authToken)}" target="_blank">View</a>`
+          ? `<a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket?token=${encodeURIComponent(authToken)}" target="_blank">&#128065; View</a>`
           : '<span class="text-muted">—</span>';
         return `<tr>
           <td>${b.event_name || '—'}</td>
@@ -163,6 +169,27 @@
           <td>${ticketBtn}</td>
         </tr>`;
       }).join('');
+
+      // My Tickets section
+      const confirmed = bookings.filter(b => b.status === 'confirmed');
+      const ticketsList = document.getElementById('tickets-list');
+      if (confirmed.length > 0) {
+        document.getElementById('no-tickets').hidden = true;
+        ticketsList.innerHTML = confirmed.map(b => {
+          return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
+            <div>
+              <strong>${b.event_name || '—'}</strong>
+              <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${b.event_location || ''} &middot; ${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD'}</p>
+            </div>
+            <div>
+              <a class="btn btn-sm btn-primary" href="/api/v1/bookings/${b.id}/ticket-pdf?token=${encodeURIComponent(authToken)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128196; Download PDF</a>
+              <a class="btn btn-sm btn-ghost" href="/api/v1/bookings/${b.id}/ticket?token=${encodeURIComponent(authToken)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128065; View Ticket</a>
+            </div>
+          </div>`;
+        }).join('');
+      } else {
+        document.getElementById('no-tickets').hidden = false;
+      }
     }).catch(() => {
       document.getElementById('no-bookings').hidden = false;
     });
