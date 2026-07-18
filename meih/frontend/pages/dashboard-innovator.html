@@ -56,10 +56,19 @@
           <p id="no-submissions" class="empty-state" hidden>You haven't registered any innovations yet. <a href="submit-innovation.html">Register your first</a>.</p>
           <table class="data-table" id="submissions-table" hidden>
             <thead>
-              <tr><th>Title</th><th>Competition</th><th>Category</th><th>Status</th><th>Votes</th><th></th></tr>
+              <tr><th>Title</th><th>Competition</th><th>Category</th><th>Status</th><th>Payment</th><th>Votes</th><th></th></tr>
             </thead>
             <tbody id="submissions-body"></tbody>
           </table>
+        </section>
+
+        <section class="card wide" id="requirements-section" hidden>
+          <h2>Requirement Tracker — <span id="req-sub-title"></span></h2>
+          <p class="text-muted" style="margin-bottom:var(--space-md);">Track your progress from submission to certificate.</p>
+          <div id="requirements-tracker"></div>
+          <div style="margin-top:var(--space-md);text-align:right;">
+            <button class="btn btn-secondary btn-sm" id="close-req-btn">Close Tracker</button>
+          </div>
         </section>
 
         <section class="card">
@@ -88,6 +97,13 @@
       }
     } catch {}
 
+    function paymentBadge(status) {
+      if (status === 'confirmed') return '<span class="badge badge-success">Paid</span>';
+      if (status === 'pending') return '<span class="badge badge-warning">Pending</span>';
+      if (status === 'rejected') return '<span class="badge badge-danger">Rejected</span>';
+      return '<span class="badge">Unpaid</span>';
+    }
+
     api.get('/innovation/submissions').then((submissions) => {
       const list = Array.isArray(submissions) ? submissions : [];
       let mySubs = list;
@@ -107,23 +123,77 @@
         document.getElementById('submissions-body').innerHTML = mySubs.map(s => {
           const sc = s.status === 'approved' ? 'badge-success' : s.status === 'rejected' ? 'badge-danger' : 'badge-warning';
           const INNO_API = (window.MEIH_API_URL || '/api/v1') + '/innovation';
-          const actions = s.status === 'approved'
-            ? '<a class="btn btn-sm btn-primary" href="' + INNO_API + '/submissions/' + s.id + '/ticket-pdf" target="_blank" style="margin-right:4px;">&#128196; Ticket</a>' +
-              '<a class="btn btn-sm btn-ghost" href="' + INNO_API + '/submissions/' + s.id + '/certificate-pdf" target="_blank">&#127942; Certificate</a>'
-            : '<a href="innovation-detail.html?id=' + s.id + '">View</a>';
+          const actions = [];
+          actions.push('<button class="btn btn-sm btn-ghost track-req-btn" data-id="' + s.id + '" data-title="' + (s.title || 'Untitled') + '" style="margin-right:4px;">&#128203; Track</button>');
+          if (s.status === 'approved') {
+            actions.push('<a class="btn btn-sm btn-primary" href="' + INNO_API + '/submissions/' + s.id + '/ticket-pdf" target="_blank" style="margin-right:4px;">&#128196; Ticket</a>');
+            actions.push('<a class="btn btn-sm btn-ghost" href="' + INNO_API + '/submissions/' + s.id + '/certificate-pdf" target="_blank">&#127942; Certificate</a>');
+          } else {
+            actions.push('<a href="innovation-detail.html?id=' + s.id + '">View</a>');
+          }
           return `<tr>
             <td>${s.title || 'Untitled'}</td>
             <td>${s.competition_title || '—'}</td>
             <td>${s.category || '—'}</td>
             <td><span class="badge ${sc}">${s.status.replace('_', ' ')}</span></td>
+            <td>${paymentBadge(s.payment_status)}</td>
             <td>${s.vote_count || 0}</td>
-            <td>${actions}</td>
+            <td>${actions.join('')}</td>
           </tr>`;
         }).join('');
+
+        document.querySelectorAll('.track-req-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const section = document.getElementById('requirements-section');
+            section.hidden = false;
+            document.getElementById('req-sub-title').textContent = btn.dataset.title;
+            document.getElementById('requirements-tracker').innerHTML = '<p class="text-muted">Loading requirements...</p>';
+            section.scrollIntoView({ behavior: 'smooth' });
+            try {
+              const data = await api.get('/innovation/submissions/' + btn.dataset.id + '/requirements');
+              renderRequirements(data);
+            } catch (err) {
+              document.getElementById('requirements-tracker').innerHTML = '<p class="form-error">Failed to load requirements: ' + (err.message || 'Unknown error') + '</p>';
+            }
+          });
+        });
       } else {
         document.getElementById('no-submissions').hidden = false;
       }
     }).catch(() => { document.getElementById('no-submissions').hidden = false; });
+
+    document.getElementById('close-req-btn').addEventListener('click', () => {
+      document.getElementById('requirements-section').hidden = true;
+    });
+
+    function renderRequirements(data) {
+      const steps = data.steps || [];
+      const tracker = document.getElementById('requirements-tracker');
+      tracker.innerHTML = steps.map((step, i) => {
+        let icon, color, bg;
+        if (step.status === 'completed') { icon = '&#10003;'; color = '#00b894'; bg = 'rgba(0,184,148,0.12)'; }
+        else if (step.status === 'in_progress') { icon = '&#9679;'; color = '#6c5ce7'; bg = 'rgba(108,92,231,0.12)'; }
+        else if (step.status === 'failed') { icon = '&#10007;'; color = '#d63031'; bg = 'rgba(214,48,49,0.12)'; }
+        else { icon = '&#9675;'; color = '#636e72'; bg = 'rgba(99,110,114,0.08)'; }
+
+        let extra = '';
+        if (step.voteCount !== undefined) extra = '<br><span style="font-size:12px;color:' + color + ';">' + step.voteCount + ' votes</span>';
+        if (step.score) extra = '<br><span style="font-size:12px;color:' + color + ';">Score: ' + step.score + '/10 (' + step.ratedCount + ' judge' + (step.ratedCount !== 1 ? 's' : '') + ')</span>';
+        if (step.rating) extra = '<br><span style="font-size:12px;color:' + color + ';">Rating: ' + step.rating + '</span>';
+        if (step.completedAt) extra += '<br><span style="font-size:11px;color:rgba(255,255,255,0.4);">' + new Date(step.completedAt).toLocaleDateString() + '</span>';
+
+        const isLast = i === steps.length - 1;
+        const connector = !isLast ? '<div style="width:2px;height:16px;background:' + color + ';opacity:0.3;margin-left:16px;"></div>' : '';
+
+        return `<div style="display:flex;align-items:flex-start;gap:12px;background:${bg};border-radius:8px;padding:12px 16px;border-left:3px solid ${color};">
+          <div style="font-size:18px;color:${color};line-height:1;min-width:20px;text-align:center;">${icon}</div>
+          <div>
+            <div style="font-weight:600;color:#fff;font-size:14px;">${step.label}</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-top:2px;">${step.description}${extra}</div>
+          </div>
+        </div>${connector}`;
+      }).join('');
+    }
 
     api.get('/innovation/competitions').then((competitions) => {
       const open = (Array.isArray(competitions) ? competitions : []).filter(c => c.status === 'open' || c.status === 'voting');

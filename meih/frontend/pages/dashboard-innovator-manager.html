@@ -69,6 +69,15 @@
         </section>
 
         <section class="card wide">
+          <h2>Pending Payment Confirmations</h2>
+          <p id="no-pending-payments" class="empty-state">No payments awaiting confirmation.</p>
+          <table class="data-table" id="pending-payments-table" hidden>
+            <thead><tr><th>Title</th><th>Author</th><th>Competition</th><th>Amount</th><th>Method</th><th>Submitted</th><th>Actions</th></tr></thead>
+            <tbody id="pending-payments-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide">
           <h2 data-i18n="all_submissions">All Submissions Overview</h2>
           <div class="filter-bar">
             <select id="sub-status-filter">
@@ -224,6 +233,58 @@
             alert('Submission rejected.');
             window.location.reload();
           } catch (err) { alert(err.message || 'Failed to reject.'); }
+        });
+      });
+    }).catch(() => {});
+
+    // Load pending payments
+    api.get('/innovation/manager/pending-payments').then((payments) => {
+      if (!Array.isArray(payments) || !payments.length) {
+        document.getElementById('no-pending-payments').hidden = false;
+        return;
+      }
+      document.getElementById('no-pending-payments').hidden = true;
+      document.getElementById('pending-payments-table').hidden = false;
+      document.getElementById('pending-payments-body').innerHTML = payments.map(s => {
+        const method = s.payment_method === 'bank_transfer' ? 'Bank Transfer' : s.payment_method === 'mobile_money' ? 'Mobile Money' : (s.payment_method || '—');
+        const amount = s.payment_amount ? 'Tsh ' + Number(s.payment_amount).toLocaleString() : '—';
+        const screenshot = s.payment_screenshot_url
+          ? '<a href="' + s.payment_screenshot_url + '" target="_blank" class="btn btn-sm btn-ghost" style="margin-right:4px;">Screenshot</a>'
+          : '';
+        return `<tr data-pay-id="${s.id}">
+          <td>${s.title || '—'}</td>
+          <td>${s.author_name || '—'}</td>
+          <td>${s.competition_title || '—'}</td>
+          <td>${amount}</td>
+          <td>${method}</td>
+          <td>${new Date(s.updated_at || s.created_at).toLocaleDateString()}</td>
+          <td>
+            ${screenshot}
+            <button class="btn btn-sm btn-success confirm-pay-btn" data-id="${s.id}">Confirm</button>
+            <button class="btn btn-sm btn-danger reject-pay-btn" data-id="${s.id}">Reject</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      document.querySelectorAll('.confirm-pay-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Confirm this payment? This verifies the innovator has paid the registration fee.')) return;
+          try {
+            await api.put('/innovation/submissions/' + btn.dataset.id + '/confirm-payment');
+            alert('Payment confirmed!');
+            window.location.reload();
+          } catch (err) { alert(err.message || 'Failed to confirm payment.'); }
+        });
+      });
+
+      document.querySelectorAll('.reject-pay-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Reject this payment? The innovator will need to resubmit.')) return;
+          try {
+            await api.put('/innovation/submissions/' + btn.dataset.id + '/reject-payment');
+            alert('Payment rejected.');
+            window.location.reload();
+          } catch (err) { alert(err.message || 'Failed to reject payment.'); }
         });
       });
     }).catch(() => {});

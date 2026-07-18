@@ -284,7 +284,7 @@
           const fd = new FormData();
           fd.append('screenshot', screenshotFile);
           try {
-            const uploadResult = await api.upload('/payments', fd);
+            const uploadResult = await api.upload('/innovation/upload-screenshot', fd);
             screenshotUrl = uploadResult?.screenshot_url || uploadResult?.url || null;
           } catch {}
         }

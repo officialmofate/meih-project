@@ -421,6 +421,133 @@ exports.listCompetitionJudges = async (competitionId) => {
   return rows;
 };
 
+exports.getSubmissionRequirements = async (id, userId) => {
+  const { rows: sub } = await db.query(
+    `SELECT s.*, u.full_name AS author_name,
+            c.title AS competition_title, c.opens_at AS competition_opens, c.closes_at AS competition_closes,
+            (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
+            js.innovation_score, js.impact_score, js.feasibility_score,
+            js.scalability_score, js.sustainability_score, js.technology_score,
+            js.business_model_score, js.social_impact_score, js.market_readiness_score,
+            js.presentation_score, js.comments AS judge_comments
+     FROM innovation_submissions s
+     LEFT JOIN users u ON u.id = s.user_id
+     LEFT JOIN innovation_competitions c ON c.id = s.competition_id
+     LEFT JOIN judge_scores js ON js.submission_id = s.id
+     WHERE s.id = $1`,
+    [id]
+  );
+
+  const subData = sub[0];
+  if (!subData) return null;
+  if (subData.user_id !== userId) return { unauthorized: true };
+
+  const scores = [subData.innovation_score, subData.impact_score, subData.feasibility_score,
+    subData.scalability_score, subData.sustainability_score, subData.technology_score,
+    subData.business_model_score, subData.social_impact_score, subData.market_readiness_score,
+    subData.presentation_score].filter(s => s != null);
+  const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + Number(b), 0) / scores.length).toFixed(1) : null;
+
+  let rating = null;
+  if (avgScore !== null) {
+    const avgNum = parseFloat(avgScore);
+    if (avgNum >= 9) rating = 'PLATINUM';
+    else if (avgNum >= 7) rating = 'GOLD';
+    else if (avgNum >= 5) rating = 'SILVER';
+    else if (avgNum >= 3) rating = 'BRONZE';
+    else rating = 'PARTICIPANT';
+  }
+
+  const steps = [
+    {
+      id: 'submission',
+      label: 'Innovation Submitted',
+      description: 'Your innovation has been registered and submitted for review.',
+      status: 'completed',
+      completedAt: subData.created_at,
+    },
+    {
+      id: 'manager_review',
+      label: 'Manager Review',
+      description: 'The innovation manager reviews your submission for eligibility.',
+      status: subData.status === 'pending_review' ? 'in_progress' : (subData.status === 'approved' || subData.status === 'rejected') ? 'completed' : 'pending',
+      completedAt: subData.reviewed_at,
+    },
+    {
+      id: 'approval',
+      label: 'Submission Approved',
+      description: 'Your innovation has been approved by the manager.',
+      status: subData.status === 'approved' ? 'completed' : subData.status === 'rejected' ? 'failed' : 'pending',
+      completedAt: subData.status === 'approved' ? subData.reviewed_at : null,
+    },
+    {
+      id: 'payment',
+      label: 'Innovation Fee Payment',
+      description: 'Submit your innovation registration fee via bank transfer or mobile money.',
+      status: subData.payment_status === 'confirmed' ? 'completed' : subData.payment_status === 'pending' ? 'in_progress' : subData.payment_status === 'rejected' ? 'failed' : 'pending',
+      completedAt: subData.payment_confirmed_at,
+    },
+    {
+      id: 'payment_confirmation',
+      label: 'Payment Confirmed',
+      description: 'The manager has verified and confirmed your payment.',
+      status: subData.payment_status === 'confirmed' ? 'completed' : subData.payment_status === 'pending' ? 'in_progress' : 'pending',
+      completedAt: subData.payment_confirmed_at,
+    },
+    {
+      id: 'voting',
+      label: 'Public Voting',
+      description: 'Your innovation is open for public votes.',
+      status: subData.status === 'approved' ? 'in_progress' : 'pending',
+      voteCount: subData.vote_count || 0,
+    },
+    {
+      id: 'judging',
+      label: 'Judge Evaluation',
+      description: 'Expert judges score your innovation across 10 dimensions.',
+      status: scores.length > 0 ? 'completed' : (subData.status === 'approved' && subData.payment_status === 'confirmed') ? 'in_progress' : 'pending',
+      score: avgScore,
+      ratedCount: scores.length,
+    },
+    {
+      id: 'certificate',
+      label: 'Certificate Issued',
+      description: 'Your Certificate of Achievement is ready for download.',
+      status: (subData.status === 'approved' && subData.payment_status === 'confirmed' && scores.length > 0) ? 'completed' : 'pending',
+      rating,
+      avgScore,
+    },
+  ];
+
+  return {
+    submissionId: subData.id,
+    title: subData.title,
+    category: subData.category,
+    status: subData.status,
+    paymentStatus: subData.payment_status,
+    competition: subData.competition_title,
+    author: subData.author_name,
+    steps,
+    currentStep: steps.findIndex(s => s.status === 'in_progress' || s.status === 'pending'),
+  };
+};
+
+exports.listManagerPendingPayments = async (managerId, { page = 1, limit = 50 } = {}) => {
+  const offset = (page - 1) * limit;
+  const { rows } = await db.query(
+    `SELECT s.*, u.full_name AS author_name, u.email AS author_email,
+            c.title AS competition_title
+     FROM innovation_submissions s
+     LEFT JOIN users u ON u.id = s.user_id
+     LEFT JOIN innovation_competitions c ON c.id = s.competition_id
+     WHERE s.payment_status = 'pending'
+     ORDER BY s.created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
+  return rows;
+};
+
 exports.getTicketData = async (id) => {
   const { rows } = await db.query(
     `SELECT s.*, u.full_name AS author_name, u.email AS author_email,

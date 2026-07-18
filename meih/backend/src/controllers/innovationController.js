@@ -169,6 +169,56 @@ exports.listAllJudges = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.submitPayment = async (req, res, next) => {
+  try {
+    const submission = await innovationService.submitPayment(req.params.id, req.user.id, req.body);
+    if (!submission) return res.status(404).json({ message: 'Submission not found' });
+    if (submission.unauthorized) return res.status(403).json({ message: 'Not authorized to pay for this submission' });
+    res.json(submission);
+  } catch (err) { next(err); }
+};
+
+exports.confirmPayment = async (req, res, next) => {
+  try {
+    const submission = await innovationService.confirmInnovationPayment(req.params.id, req.user.id);
+    if (!submission) return res.status(404).json({ message: 'Submission not found or not pending payment' });
+    res.json(submission);
+  } catch (err) { next(err); }
+};
+
+exports.rejectPayment = async (req, res, next) => {
+  try {
+    const submission = await innovationService.rejectInnovationPayment(req.params.id);
+    if (!submission) return res.status(404).json({ message: 'Submission not found or not pending payment' });
+    res.json(submission);
+  } catch (err) { next(err); }
+};
+
+exports.getRequirements = async (req, res, next) => {
+  try {
+    const requirements = await innovationService.getSubmissionRequirements(req.params.id, req.user.id);
+    if (!requirements) return res.status(404).json({ message: 'Submission not found' });
+    if (requirements.unauthorized) return res.status(403).json({ message: 'Not authorized to view requirements for this submission' });
+    res.json(requirements);
+  } catch (err) { next(err); }
+};
+
+exports.listManagerPendingPayments = async (req, res, next) => {
+  try {
+    const pagination = { page: parseInt(req.query.page, 10) || 1, limit: parseInt(req.query.limit, 10) || 50 };
+    const submissions = await innovationService.listManagerPendingPayments(req.user.id, pagination);
+    res.json(submissions);
+  } catch (err) { next(err); }
+};
+
+exports.uploadScreenshot = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No screenshot uploaded' });
+    const url = '/uploads/payments/' + req.file.filename;
+    res.json({ screenshot_url: url, url });
+  } catch (err) { next(err); }
+};
+
 exports.assignJudge = async (req, res, next) => {
   try {
     const result = await innovationService.assignJudge(req.body.judgeId, req.body.competitionId);
