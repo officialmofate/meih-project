@@ -80,6 +80,23 @@
           </table>
         </section>
 
+        <section class="card wide" id="innovation-managers-section">
+          <h2>Innovation Managers</h2>
+          <p class="text-muted">Assign innovation managers to oversee competitions and submissions.</p>
+          <form id="im-assign-form" class="stacked-form">
+            <label for="im-user-select">Select User</label>
+            <select id="im-user-select" name="userId" required>
+              <option value="">Loading users...</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Make Innovation Manager</button>
+          </form>
+          <p id="im-assign-success" class="form-success" hidden>User promoted to Innovation Manager.</p>
+          <p id="im-assign-error" class="form-error" hidden></p>
+          <h3 style="margin-top:var(--space-md);">Current Innovation Managers</h3>
+          <p id="no-innovation-managers" class="empty-state">No innovation managers yet.</p>
+          <div id="innovation-managers-list"></div>
+        </section>
+
         <section class="card wide" id="judge-assignments-section">
           <h2>Assign Judges to Competitions</h2>
           <p class="text-muted">Assign judges to evaluate innovation submissions.</p>
@@ -368,6 +385,52 @@
         });
       });
     }).catch(() => {});
+
+    // Load innovation managers and user dropdown
+    api.get('/admin/users').then((users) => {
+      if (!Array.isArray(users)) return;
+      const nonPrivileged = users.filter(u => !['admin', 'superadmin', 'innovator_manager'].includes(u.role));
+      const managers = users.filter(u => u.role === 'innovator_manager');
+
+      const imSelect = document.getElementById('im-user-select');
+      if (nonPrivileged.length) {
+        imSelect.innerHTML = '<option value="">Select a user</option>' + nonPrivileged.map(u => '<option value="' + u.id + '">' + (u.full_name || u.name || u.email) + ' (' + u.role + ')</option>').join('');
+      } else {
+        imSelect.innerHTML = '<option value="">No users available</option>';
+      }
+
+      if (managers.length) {
+        document.getElementById('no-innovation-managers').hidden = true;
+        document.getElementById('innovation-managers-list').innerHTML = managers.map(m =>
+          '<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;">' +
+          '<div><strong>' + (m.full_name || m.name || m.email) + '</strong><p class="text-muted" style="margin:2px 0 0;font-size:13px;">' + m.email + '</p></div>' +
+          '</div>'
+        ).join('');
+      }
+    }).catch(() => {});
+
+    document.getElementById('im-assign-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      const errEl = document.getElementById('im-assign-error');
+      const successEl = document.getElementById('im-assign-success');
+      errEl.hidden = true;
+      successEl.hidden = true;
+      if (!data.userId) {
+        errEl.textContent = 'Please select a user.';
+        errEl.hidden = false;
+        return;
+      }
+      try {
+        await api.put('/admin/users/' + data.userId + '/role', { role: 'innovator_manager' });
+        successEl.hidden = false;
+        e.target.reset();
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        errEl.textContent = err.message || 'Failed.';
+        errEl.hidden = false;
+      }
+    });
 
     // Load judges and competitions for assignment form
     Promise.all([
