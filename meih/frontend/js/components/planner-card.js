@@ -4,11 +4,12 @@ export function plannerCard(p) {
   const rating = p.rating || 0;
   const stars = '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
   const fullName = p.full_name || '';
+  const imageUrl = p.image_url || '';
 
   return `
     <div class="card planner-card">
       <div class="planner-card-avatar">
-        <span>${name.charAt(0).toUpperCase()}</span>
+        ${imageUrl ? `<img src="${window.resolveUrl ? window.resolveUrl(imageUrl) : imageUrl}" alt="${name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />` : `<span>${name.charAt(0).toUpperCase()}</span>`}
       </div>
       <div class="planner-card-body">
         <h3>${name}</h3>

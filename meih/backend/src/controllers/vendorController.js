@@ -86,6 +86,26 @@ exports.addPortfolioItem = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.uploadImages = async (req, res, next) => {
+  try {
+    if (!req.files || !req.files.length) return res.status(400).json({ message: 'No images uploaded' });
+    const urls = req.files.map(f => '/uploads/profiles/' + f.filename);
+    const db = require('../config/database');
+    const vendor = await vendorService.findByUserId(req.user.id);
+    if (!vendor) return res.status(404).json({ message: 'Vendor profile not found' });
+    const setClauses = [];
+    const params = [vendor.id];
+    let idx = 2;
+    if (urls[0]) { setClauses.push(`image_url_1 = $${idx++}`); params.push(urls[0]); }
+    if (urls[1]) { setClauses.push(`image_url_2 = $${idx++}`); params.push(urls[1]); }
+    if (urls[2]) { setClauses.push(`image_url_3 = $${idx++}`); params.push(urls[2]); }
+    if (setClauses.length) {
+      await db.query(`UPDATE vendors SET ${setClauses.join(', ')}, updated_at = now() WHERE id = $1`, params);
+    }
+    res.json({ urls, images: urls });
+  } catch (err) { next(err); }
+};
+
 exports.getBookings = async (req, res, next) => {
   try {
     const bookings = await vendorService.getBookings(req.params.id);

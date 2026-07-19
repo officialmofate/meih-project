@@ -36,7 +36,7 @@ exports.list = async ({ page = 1, limit = 50, category, search } = {}) => {
   params.push(limit, offset);
 
   const { rows } = await db.query(
-    `SELECT v.*, u.full_name, u.email
+    `SELECT v.*, u.full_name, u.email, u.image_url
      FROM vendors v
      LEFT JOIN users u ON u.id = v.user_id
      ${where}
@@ -49,7 +49,7 @@ exports.list = async ({ page = 1, limit = 50, category, search } = {}) => {
 
 exports.findById = async (id) => {
   const { rows } = await db.query(
-    `SELECT v.*, u.full_name, u.email, u.phone
+    `SELECT v.*, u.full_name, u.email, u.phone, u.image_url
      FROM vendors v
      LEFT JOIN users u ON u.id = v.user_id
      WHERE v.id = $1`,
@@ -73,7 +73,7 @@ exports.update = async (id, userId, payload) => {
 
 exports.findByUserId = async (userId) => {
   const { rows } = await db.query(
-    `SELECT v.*, u.full_name, u.email, u.phone
+    `SELECT v.*, u.full_name, u.email, u.phone, u.image_url
      FROM vendors v
      LEFT JOIN users u ON u.id = v.user_id
      WHERE v.user_id = $1`,

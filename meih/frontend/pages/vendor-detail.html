@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor Profile — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/events.css" />
+  <style>
+    .vendor-profile { padding-top: var(--space-lg); }
+    .profile-header {
+      display: flex;
+      gap: var(--space-xl);
+      align-items: flex-start;
+      margin-bottom: var(--space-xl);
+    }
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6c5ce7, #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-avatar span { font-size: 40px; font-weight: 800; color: #fff; }
+    .profile-info h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+    .profile-info .owner { font-size: 14px; color: var(--color-text-muted); margin-bottom: var(--space-sm); }
+    .profile-info .category-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(108, 92, 231, 0.1);
+      color: #6c5ce7;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
+    }
+    .profile-info .bio { font-size: 14px; color: var(--color-text-secondary); line-height: 1.6; margin-bottom: var(--space-md); }
+    .profile-info .rating { display: flex; align-items: center; gap: var(--space-xs); }
+    .profile-info .stars { color: #f9ca24; font-size: 16px; }
+    .profile-info .rating-num { font-size: 14px; color: var(--color-text-muted); }
+    .profile-info .price { font-size: 14px; color: var(--color-text-secondary); margin-top: var(--space-xs); }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-lg);
+    }
+    .profile-grid section { margin-bottom: var(--space-md); }
+    .profile-grid h2 { font-size: 16px; margin-bottom: var(--space-md); }
+
+    .portfolio-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-md);
+    }
+    .portfolio-item {
+      background: var(--color-surface-raised);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+    }
+    .portfolio-item img { width: 100%; aspect-ratio: 4/3; object-fit: cover; }
+    .portfolio-item-info { padding: var(--space-sm); }
+    .portfolio-item-info h4 { font-size: 13px; margin-bottom: 2px; }
+    .portfolio-item-info p { font-size: 12px; color: var(--color-text-muted); }
+
+    .portfolio-images {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+    .portfolio-images img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+
+    .review-item {
+      padding: var(--space-md);
+      background: var(--color-surface-raised);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-sm);
+      border: 1px solid var(--color-border);
+    }
+    .review-item .review-header { display: flex; justify-content: space-between; margin-bottom: var(--space-xs); }
+    .review-item .reviewer { font-weight: 600; font-size: 13px; }
+    .review-item .review-stars { color: #f9ca24; font-size: 13px; }
+    .review-item .review-text { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
+
+    @media (max-width: 768px) {
+      .profile-header { flex-direction: column; align-items: center; text-align: center; }
+      .profile-grid { grid-template-columns: 1fr; }
+      .portfolio-images { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page vendor-profile" data-page="vendor-detail">
+    <div class="container">
+
+      <nav class="breadcrumb"><a href="vendors.html">&larr; Back to Vendors</a></nav>
+
+      <div class="profile-header card" style="padding:var(--space-xl);">
+        <div class="profile-avatar" id="vendor-avatar">
+          <span id="vendor-initial">—</span>
+        </div>
+        <div class="profile-info">
+          <h1 id="vendor-name">Loading...</h1>
+          <span class="category-badge" id="vendor-category"></span>
+          <p class="owner" id="vendor-owner"></p>
+          <p class="bio" id="vendor-bio"></p>
+          <p class="price" id="vendor-price"></p>
+          <div class="rating">
+            <span class="stars" id="vendor-stars"></span>
+            <span class="rating-num" id="vendor-rating"></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="portfolio-images" class="portfolio-images" hidden></div>
+
+      <div class="profile-grid">
+        <section class="card">
+          <h2>Portfolio</h2>
+          <div id="portfolio-grid" class="portfolio-grid"></div>
+          <p id="no-portfolio" class="empty-state" hidden>No portfolio items yet.</p>
+        </section>
+
+        <section class="card">
+          <h2>Reviews</h2>
+          <div id="reviews-list"></div>
+          <p id="no-reviews" class="empty-state" hidden>No reviews yet.</p>
+        </section>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script src="../js/config.js"></script>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const vendorId = params.get('id');
+    if (!vendorId) {
+      document.querySelector('.profile-header').innerHTML = '<p class="empty-state">No vendor specified.</p>';
+      throw new Error('No vendor ID');
+    }
+
+    api.get('/vendors/' + vendorId).then(v => {
+      document.title = (v.business_name || v.full_name || 'Vendor') + ' — MEIH';
+      const name = v.business_name || v.full_name || 'Vendor';
+      document.getElementById('vendor-initial').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('vendor-name').textContent = name;
+      document.getElementById('vendor-category').textContent = v.category || '';
+      document.getElementById('vendor-owner').textContent = v.full_name || '';
+      document.getElementById('vendor-bio').textContent = v.bio || 'No bio provided.';
+
+      if (v.starting_price) {
+        document.getElementById('vendor-price').textContent = 'Starting from Tsh ' + Number(v.starting_price).toLocaleString();
+      }
+
+      const rating = v.rating || 0;
+      document.getElementById('vendor-stars').textContent = '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
+      document.getElementById('vendor-rating').textContent = rating > 0 ? rating.toFixed(1) + ' / 5' : 'No ratings yet';
+
+      const imageUrl = v.image_url || '';
+      if (imageUrl) {
+        const avatar = document.getElementById('vendor-avatar');
+        avatar.innerHTML = `<img src="${window.resolveUrl(imageUrl)}" alt="${name}" />`;
+      }
+    }).catch(() => {
+      document.getElementById('vendor-name').textContent = 'Vendor not found';
+    });
+
+    api.get('/vendors/' + vendorId + '/portfolio').then(items => {
+      if (!Array.isArray(items) || !items.length) {
+        document.getElementById('no-portfolio').hidden = false;
+        return;
+      }
+      document.getElementById('portfolio-grid').innerHTML = items.map(item => `
+        <div class="portfolio-item">
+          ${item.image_url ? `<img src="${window.resolveUrl(item.image_url)}" alt="${item.title || ''}" />` : ''}
+          <div class="portfolio-item-info">
+            <h4>${item.title || 'Untitled'}</h4>
+            <p>${item.description || ''}</p>
+          </div>
+        </div>
+      `).join('');
+    }).catch(() => {
+      document.getElementById('no-portfolio').hidden = false;
+    });
+
+    api.get('/vendors/' + vendorId + '/reviews').then(reviews => {
+      if (!Array.isArray(reviews) || !reviews.length) {
+        document.getElementById('no-reviews').hidden = false;
+        return;
+      }
+      document.getElementById('reviews-list').innerHTML = reviews.map(r => {
+        const stars = '★'.repeat(r.rating || 0) + '☆'.repeat(5 - (r.rating || 0));
+        return `
+          <div class="review-item">
+            <div class="review-header">
+              <span class="reviewer">${r.reviewer_name || 'Anonymous'}</span>
+              <span class="review-stars">${stars}</span>
+            </div>
+            <p class="review-text">${r.comment || r.text || ''}</p>
+          </div>
+        `;
+      }).join('');
+    }).catch(() => {
+      document.getElementById('no-reviews').hidden = false;
+    });
+  </script>
+</body>
+</html>

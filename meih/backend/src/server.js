@@ -43,6 +43,17 @@ async function autoMigrate() {
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_confirmed_at TIMESTAMPTZ`);
     await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_name VARCHAR(200)`);
     await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_phone VARCHAR(50)`);
+    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url TEXT`);
+    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_1 TEXT`);
+    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_2 TEXT`);
+    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_3 TEXT`);
+    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_1 TEXT`);
+    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_2 TEXT`);
+    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_3 TEXT`);
+    await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS points INT DEFAULT 1`);
+    await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS voter_role VARCHAR(50) DEFAULT 'public_voter'`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS admin_rating INT`);
+    await db.query(`ALTER TABLE judge_assignments ADD COLUMN IF NOT EXISTS submission_id UUID REFERENCES innovation_submissions(id) ON DELETE CASCADE`);
     await db.query(`CREATE TABLE IF NOT EXISTS vendor_quotes (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
@@ -60,6 +71,23 @@ async function autoMigrate() {
     await db.query(`CREATE INDEX IF NOT EXISTS idx_vendor_quotes_event ON vendor_quotes(event_id)`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_vendor_quotes_vendor ON vendor_quotes(vendor_id)`);
     await db.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_vendor_quotes_unique_per_event') THEN CREATE UNIQUE INDEX idx_vendor_quotes_unique_per_event ON vendor_quotes(event_id, vendor_id); END IF; END $$`);
+    await db.query(`CREATE TABLE IF NOT EXISTS event_categories (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(100) UNIQUE NOT NULL,
+      suggested_fee_usd NUMERIC(10,2)
+    )`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Wedding', 50 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Wedding')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Corporate Event', 100 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Corporate Event')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Birthday Party', 15 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Birthday Party')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Conference', 80 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Conference')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Concert', 150 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Concert')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Workshop', 30 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Workshop')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Exhibition', 120 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Exhibition')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Fundraiser', 50 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Fundraiser')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Community Event', 25 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Community Event')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Cultural Festival', 180 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Cultural Festival')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Sports Event', 150 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Sports Event')`);
+    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Other', 0 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Other')`);
     console.log('[MIGRATION] 014 auto-applied successfully');
   } catch (err) {
     console.error('[MIGRATION] 014 auto-migration error:', err.message);

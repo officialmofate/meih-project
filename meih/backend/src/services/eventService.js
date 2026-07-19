@@ -17,8 +17,12 @@ exports.getCategory = async (id) => {
 exports.create = async (clientId, payload) => {
   let categoryId = payload.categoryId;
   if (!categoryId && payload.category) {
-    const { rows } = await db.query('SELECT id FROM event_categories WHERE name = $1', [payload.category]);
-    if (rows[0]) categoryId = rows[0].id;
+    try {
+      const { rows } = await db.query('SELECT id FROM event_categories WHERE name = $1', [payload.category]);
+      if (rows[0]) categoryId = rows[0].id;
+    } catch (e) {
+      console.warn('[EVENT] Category lookup failed:', e.message);
+    }
   }
   const { rows } = await db.query(
     `INSERT INTO events (client_id, name, category_id, location, latitude, longitude, budget, event_date, guest_count, services, requirements, quote_deadline)

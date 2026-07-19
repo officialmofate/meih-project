@@ -66,14 +66,15 @@ exports.listSubmissions = async ({ page = 1, limit = 50, category, status, compe
   params.push(limit, offset);
 
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name,
+    `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
+            COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
             c.title AS competition_title
      FROM innovation_submissions s
      LEFT JOIN users u ON u.id = s.user_id
      LEFT JOIN innovation_competitions c ON c.id = s.competition_id
      ${where}
-     ORDER BY s.created_at DESC
+     ORDER BY total_points DESC, s.created_at DESC
      LIMIT $${idx++} OFFSET $${idx}`,
     params
   );
@@ -82,7 +83,8 @@ exports.listSubmissions = async ({ page = 1, limit = 50, category, status, compe
 
 exports.getSubmission = async (id) => {
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name,
+    `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
+            COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
             c.title AS competition_title
      FROM innovation_submissions s
@@ -137,58 +139,88 @@ exports.deleteSubmission = async (id, userId) => {
 
 exports.listCompetitionSubmissions = async (competitionId) => {
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name,
+    `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
+            COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count
      FROM innovation_submissions s
      LEFT JOIN users u ON u.id = s.user_id
      WHERE s.competition_id = $1
-     ORDER BY s.created_at DESC`,
+     ORDER BY total_points DESC, s.created_at DESC`,
     [competitionId]
   );
   return rows;
 };
 
-exports.vote = async (submissionId, voterFingerprint) => {
-  await db.query(
-    `INSERT INTO innovation_votes (submission_id, voter_fingerprint)
-     VALUES ($1, $2)
-     ON CONFLICT (submission_id, voter_fingerprint) DO NOTHING`,
-    [submissionId, voterFingerprint]
-  );
-  const { rows } = await db.query(
-    'SELECT COUNT(*)::int AS vote_count FROM innovation_votes WHERE submission_id = $1',
+exports.vote = async (submissionId, voterFingerprint, voterRole) => {
+  const points = voterRole === 'judge' ? 10 : 5;
+  const role = voterRole || 'public_voter';
+
+  const { rows: sub } = await db.query(
+    `SELECT s.competition_id, s.status,
+            c.opens_at, c.closes_at, c.status AS comp_status
+     FROM innovation_submissions s
+     LEFT JOIN innovation_competitions c ON c.id = s.competition_id
+     WHERE s.id = $1`,
     [submissionId]
   );
-  return rows[0].vote_count;
+  if (!sub[0]) throw Object.assign(new Error('Submission not found'), { status: 404 });
+  if (sub[0].status !== 'approved') throw Object.assign(new Error('Voting is only open for approved innovations'), { status: 400 });
+
+  const now = new Date();
+  if (sub[0].opens_at && now < new Date(sub[0].opens_at)) {
+    throw Object.assign(new Error('Voting has not opened yet'), { status: 400 });
+  }
+  if (sub[0].closes_at && now > new Date(sub[0].closes_at)) {
+    throw Object.assign(new Error('Voting period has ended'), { status: 400 });
+  }
+  if (sub[0].comp_status && !['open', 'voting'].includes(sub[0].comp_status)) {
+    throw Object.assign(new Error('Competition is not accepting votes'), { status: 400 });
+  }
+
+  await db.query(
+    `INSERT INTO innovation_votes (submission_id, voter_fingerprint, points, voter_role)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (submission_id, voter_fingerprint) DO NOTHING`,
+    [submissionId, voterFingerprint, points, role]
+  );
+  const { rows } = await db.query(
+    'SELECT COALESCE(SUM(points), 0)::int AS total_points, COUNT(*)::int AS vote_count FROM innovation_votes WHERE submission_id = $1',
+    [submissionId]
+  );
+  return { voteCount: rows[0].vote_count, totalPoints: rows[0].total_points };
 };
 
 exports.getVotes = async (submissionId) => {
   const { rows } = await db.query(
-    'SELECT COUNT(*)::int AS vote_count FROM innovation_votes WHERE submission_id = $1',
+    'SELECT COALESCE(SUM(points), 0)::int AS total_points, COUNT(*)::int AS vote_count FROM innovation_votes WHERE submission_id = $1',
     [submissionId]
   );
-  return rows[0].vote_count;
+  return { voteCount: rows[0].vote_count, totalPoints: rows[0].total_points };
 };
 
 exports.leaderboard = async (competitionId) => {
   const query = competitionId
-    ? `SELECT s.id, s.title, s.category, COUNT(v.id)::int AS vote_count,
-              u.full_name AS author_name
+    ? `SELECT s.id, s.title, s.category, s.admin_rating,
+              COALESCE(SUM(v.points), 0)::int AS total_points,
+              COUNT(v.id)::int AS vote_count,
+              u.full_name AS author_name, u.image_url AS author_image
        FROM innovation_submissions s
        LEFT JOIN innovation_votes v ON v.submission_id = s.id
        LEFT JOIN users u ON u.id = s.user_id
        WHERE s.competition_id = $1 AND s.status = 'approved'
-       GROUP BY s.id, u.full_name
-       ORDER BY vote_count DESC
+       GROUP BY s.id, s.admin_rating, u.full_name, u.image_url
+       ORDER BY total_points DESC
        LIMIT 100`
-    : `SELECT s.id, s.title, s.category, COUNT(v.id)::int AS vote_count,
-              u.full_name AS author_name
+    : `SELECT s.id, s.title, s.category, s.admin_rating,
+              COALESCE(SUM(v.points), 0)::int AS total_points,
+              COUNT(v.id)::int AS vote_count,
+              u.full_name AS author_name, u.image_url AS author_image
        FROM innovation_submissions s
        LEFT JOIN innovation_votes v ON v.submission_id = s.id
        LEFT JOIN users u ON u.id = s.user_id
        WHERE s.status = 'approved'
-       GROUP BY s.id, u.full_name
-       ORDER BY vote_count DESC
+       GROUP BY s.id, s.admin_rating, u.full_name, u.image_url
+       ORDER BY total_points DESC
        LIMIT 100`;
 
   const params = competitionId ? [competitionId] : [];
@@ -219,7 +251,7 @@ exports.getComments = async (submissionId) => {
 };
 
 exports.submitScore = async (judgeId, payload) => {
-  const { rows } = await db.query(
+  const { rows: scoreRows } = await db.query(
     `INSERT INTO judge_scores
        (submission_id, judge_id, innovation_score, impact_score, feasibility_score,
         scalability_score, sustainability_score, technology_score, business_model_score,
@@ -246,14 +278,39 @@ exports.submitScore = async (judgeId, payload) => {
       payload.presentationScore, payload.comments
     ]
   );
-  return rows[0];
+
+  if (payload.rating && payload.rating >= 1 && payload.rating <= 5) {
+    await db.query(
+      `UPDATE innovation_submissions SET admin_rating = $2, updated_at = now() WHERE id = $1`,
+      [payload.submissionId, payload.rating]
+    );
+  } else {
+    const scores = [payload.innovationScore, payload.impactScore, payload.feasibilityScore,
+      payload.scalabilityScore, payload.sustainabilityScore, payload.technologyScore,
+      payload.businessModelScore, payload.socialImpactScore, payload.marketReadinessScore,
+      payload.presentationScore].filter(s => s != null && s !== undefined);
+    if (scores.length > 0) {
+      const avg = scores.reduce((a, b) => a + Number(b), 0) / scores.length;
+      const starRating = Math.min(5, Math.max(1, Math.round(avg / 2)));
+      await db.query(
+        `UPDATE innovation_submissions SET admin_rating = $2, updated_at = now() WHERE id = $1`,
+        [payload.submissionId, starRating]
+      );
+    }
+  }
+
+  return scoreRows[0];
 };
 
 exports.getJudgeAssignments = async (judgeId) => {
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name,
+    `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
+            COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
-            js.innovation_score, js.impact_score, js.feasibility_score
+            js.innovation_score, js.impact_score, js.feasibility_score,
+            js.scalability_score, js.sustainability_score, js.technology_score,
+            js.business_model_score, js.social_impact_score, js.market_readiness_score,
+            js.presentation_score, js.comments AS judge_comments
      FROM innovation_submissions s
      LEFT JOIN users u ON u.id = s.user_id
      LEFT JOIN judge_scores js ON js.submission_id = s.id AND js.judge_id = $1
@@ -357,7 +414,8 @@ exports.rejectSubmission = async (id, managerId) => {
 
 exports.listManagerSubmissions = async (managerId) => {
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name,
+    `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
+            COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
             c.title AS competition_title
      FROM innovation_submissions s
@@ -391,7 +449,17 @@ exports.listAllJudges = async () => {
   return rows;
 };
 
-exports.assignJudge = async (judgeId, competitionId) => {
+exports.assignJudge = async (judgeId, competitionId, submissionId) => {
+  if (submissionId) {
+    const { rows } = await db.query(
+      `INSERT INTO judge_assignments (judge_id, competition_id, submission_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (judge_id, competition_id) DO UPDATE SET submission_id = $3
+       RETURNING *`,
+      [judgeId, competitionId, submissionId]
+    );
+    return rows[0] || { judge_id: judgeId, competition_id: competitionId, submission_id: submissionId };
+  }
   const { rows } = await db.query(
     `INSERT INTO judge_assignments (judge_id, competition_id)
      VALUES ($1, $2)
@@ -400,6 +468,21 @@ exports.assignJudge = async (judgeId, competitionId) => {
     [judgeId, competitionId]
   );
   return rows[0] || { judge_id: judgeId, competition_id: competitionId };
+};
+
+exports.adminRateSubmission = async (id, adminId, rating) => {
+  if (!rating || rating < 1 || rating > 5) {
+    throw Object.assign(new Error('Rating must be between 1 and 5'), { status: 400 });
+  }
+  const { rows } = await db.query(
+    `UPDATE innovation_submissions SET
+       admin_rating = $2,
+       updated_at = now()
+     WHERE id = $1
+     RETURNING *`,
+    [id, rating]
+  );
+  return rows[0];
 };
 
 exports.removeJudgeAssignment = async (judgeId, competitionId) => {
@@ -563,7 +646,7 @@ exports.getTicketData = async (id) => {
 
 exports.getCertificateData = async (id) => {
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name, u.email AS author_email,
+    `SELECT s.*, u.full_name AS author_name, u.email AS author_email, u.image_url AS author_image,
             c.title AS competition_title, c.closes_at AS competition_closes,
             js.innovation_score, js.impact_score, js.feasibility_score,
             js.scalability_score, js.sustainability_score, js.technology_score,

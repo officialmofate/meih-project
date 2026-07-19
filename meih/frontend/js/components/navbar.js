@@ -1,7 +1,7 @@
 import { store } from '../state.js';
 
 const HUB_PAGES = {
-  event: ['events.html', 'create-event.html', 'event-detail.html', 'dashboard-planner.html', 'dashboard-vendor.html', 'dashboard-client.html', 'planners.html', 'planner-detail.html'],
+  event: ['events.html', 'create-event.html', 'event-detail.html', 'dashboard-planner.html', 'dashboard-vendor.html', 'dashboard-client.html', 'planners.html', 'planner-detail.html', 'vendors.html', 'vendor-detail.html'],
   innovation: ['innovation.html', 'submit-innovation.html', 'innovation-detail.html', 'leaderboard.html', 'dashboard-judge.html', 'dashboard-admin.html', 'dashboard-innovator-manager.html', 'dashboard-innovator.html'],
 };
 
@@ -60,6 +60,7 @@ export function renderNavbar() {
     hubLinks = `
       <a href="${p('events.html')}" class="active" data-i18n="nav.browse_events">Browse Events</a>
       <a href="${p('planners.html')}">Planners</a>
+      <a href="${p('vendors.html')}">Vendors</a>
       ${dashboardLink}
     `;
   } else if (hub === 'innovation') {
@@ -72,6 +73,7 @@ export function renderNavbar() {
     hubLinks = `
       <a href="${p('events.html')}" data-i18n="nav.events">Event Hub</a>
       <a href="${p('planners.html')}">Planners</a>
+      <a href="${p('vendors.html')}">Vendors</a>
       <a href="${p('innovation.html')}" data-i18n="nav.innovation">Innovation Hub</a>
       ${dashboardLink}
     `;

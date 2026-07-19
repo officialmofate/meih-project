@@ -12,7 +12,7 @@ exports.create = async (userId, payload) => {
 exports.list = async ({ page = 1, limit = 50, search } = {}) => {
   const offset = (page - 1) * limit;
   let query = `
-    SELECT p.*, u.full_name, u.email
+    SELECT p.*, u.full_name, u.email, u.image_url
     FROM planners p
     LEFT JOIN users u ON u.id = p.user_id`;
   const params = [];
@@ -33,7 +33,7 @@ exports.list = async ({ page = 1, limit = 50, search } = {}) => {
 
 exports.findById = async (id) => {
   const { rows } = await db.query(
-    `SELECT p.*, u.full_name, u.email, u.phone
+    `SELECT p.*, u.full_name, u.email, u.phone, u.image_url
      FROM planners p
      LEFT JOIN users u ON u.id = p.user_id
      WHERE p.id = $1`,
@@ -57,7 +57,7 @@ exports.update = async (id, userId, payload) => {
 
 exports.findByUserId = async (userId) => {
   const { rows } = await db.query(
-    `SELECT p.*, u.full_name, u.email, u.phone
+    `SELECT p.*, u.full_name, u.email, u.phone, u.image_url
      FROM planners p
      LEFT JOIN users u ON u.id = p.user_id
      WHERE p.user_id = $1`,

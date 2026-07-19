@@ -23,12 +23,31 @@ const upload = multer({
   }
 });
 
+const profileStorage = multer.diskStorage({
+  destination: path.join(__dirname, '../../../uploads/profiles'),
+  filename: (req, file, cb) => {
+    const unique = crypto.randomBytes(16).toString('hex');
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, `innovator-${Date.now()}-${unique}${ext}`);
+  }
+});
+const profileUpload = multer({
+  storage: profileStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
+    if (allowed.test(path.extname(file.originalname))) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  }
+});
+
 router.get('/competitions', ctrl.listCompetitions);
 router.get('/competitions/:id', ctrl.getCompetition);
 router.post('/competitions', authenticate, authorize('admin', 'innovator_manager'), ctrl.createCompetition);
 router.put('/competitions/:id', authenticate, authorize('admin', 'innovator_manager'), ctrl.updateCompetition);
 router.get('/competitions/:id/submissions', ctrl.listCompetitionSubmissions);
 router.post('/upload-screenshot', authenticate, authorize('innovator'), upload.single('screenshot'), ctrl.uploadScreenshot);
+router.post('/upload-profile-image', authenticate, profileUpload.single('image'), ctrl.uploadInnovatorImage);
 
 router.post('/competitions/:id/submit', authenticate, authorize('innovator'), ctrl.submitInnovation);
 
@@ -41,6 +60,7 @@ router.post('/submissions/:id/vote', ctrl.voteSubmission);
 router.get('/submissions/:id/votes', ctrl.getVotes);
 router.post('/submissions/:id/comment', authenticate, ctrl.commentSubmission);
 router.get('/submissions/:id/comments', ctrl.getComments);
+router.put('/submissions/:id/rate', authenticate, authorize('admin', 'innovator_manager', 'judge'), ctrl.rateSubmission);
 
 router.get('/leaderboard', ctrl.getLeaderboard);
 router.get('/leaderboard/:competitionId', ctrl.getCompetitionLeaderboard);

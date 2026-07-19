@@ -1,18 +1,24 @@
 export function vendorCard(v) {
   const name = v.business_name || v.businessName || v.full_name || 'Unknown Vendor';
   const category = v.category || '';
-  const rating = v.rating ?? 'N/A';
-  const verified = v.verified;
+  const rating = v.rating || 0;
+  const stars = '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
+  const bio = v.bio || 'No description provided.';
+  const imageUrl = v.image_url || '';
 
   return `
-    <div class="card vendor-card">
-      <div class="vendor-card-header">
-        <h3>${name}</h3>
-        ${verified ? '<span class="badge badge-success">Verified</span>' : ''}
+    <div class="card planner-card vendor-card" data-id="${v.id}">
+      <div class="planner-card-avatar">
+        ${imageUrl ? `<img src="${window.resolveUrl ? window.resolveUrl(imageUrl) : imageUrl}" alt="${name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />` : `<span>${name.charAt(0).toUpperCase()}</span>`}
       </div>
-      <p class="vendor-card-category">${category}</p>
-      <div class="vendor-card-footer">
-        <span class="vendor-card-rating">${rating !== 'N/A' ? '&#9733; ' + Number(rating).toFixed(1) : 'No ratings yet'}</span>
+      <div class="planner-card-body">
+        <h3>${name}</h3>
+        ${category ? `<p class="planner-card-owner">${category}</p>` : ''}
+        <p class="planner-card-bio">${bio.length > 100 ? bio.substring(0, 100) + '...' : bio}</p>
+        <div class="planner-card-rating">
+          <span class="stars">${stars}</span>
+          <span class="rating-num">${rating > 0 ? rating.toFixed(1) : 'No ratings'}</span>
+        </div>
       </div>
     </div>
   `;

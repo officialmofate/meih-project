@@ -21,6 +21,17 @@
         <a href="create-event.html" class="btn btn-primary">Create Event</a>
       </header>
 
+      <section class="card wide" id="profile-images-section" style="margin-bottom:var(--space-lg);">
+        <h2>Portfolio Images</h2>
+        <p class="text-muted" style="margin-bottom:var(--space-md);font-size:13px;">Upload up to 3 portfolio images for your planner profile.</p>
+        <div id="current-images" style="display:flex;gap:var(--space-md);margin-bottom:var(--space-md);"></div>
+        <label class="btn btn-sm btn-primary" style="cursor:pointer;display:inline-block;">
+          Choose Images (up to 3)
+          <input type="file" id="portfolio-images-input" accept="image/*" multiple hidden />
+        </label>
+        <span id="images-upload-status" style="margin-left:var(--space-sm);font-size:13px;color:var(--color-text-muted);"></span>
+      </section>
+
       <section class="stats-row">
         <div class="card stat-card"><span class="stat-number" id="stat-active">0</span><span class="stat-label">Active Projects</span></div>
         <div class="card stat-card"><span class="stat-number" id="stat-revenue">Tsh 0</span><span class="stat-label">Revenue (this quarter)</span></div>
@@ -536,6 +547,42 @@
         });
       });
     }).catch(() => {});
+
+    // Portfolio images upload
+    const currentImagesEl = document.getElementById('current-images');
+    const imagesInput = document.getElementById('portfolio-images-input');
+    const imagesStatus = document.getElementById('images-upload-status');
+
+    api.get('/planners/me').then(p => {
+      const imgs = [p.image_url_1, p.image_url_2, p.image_url_3].filter(Boolean);
+      if (imgs.length) {
+        currentImagesEl.innerHTML = imgs.map(u => '<img src="' + window.resolveUrl(u) + '" style="width:120px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--color-border);" />').join('');
+      } else {
+        currentImagesEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No images uploaded yet.</p>';
+      }
+    }).catch(() => {});
+
+    imagesInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files).slice(0, 3);
+      if (!files.length) return;
+      imagesStatus.textContent = 'Uploading...';
+      const fd = new FormData();
+      files.forEach(f => fd.append('images', f));
+      try {
+        const BASE_URL = window.MEIH_API_URL || '/api/v1';
+        const token = localStorage.getItem('meih_token');
+        const res = await fetch(BASE_URL + '/planners/me/images', {
+          method: 'POST',
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+          body: fd
+        });
+        if (!res.ok) throw new Error('Upload failed');
+        imagesStatus.textContent = 'Uploaded!';
+        setTimeout(() => window.location.reload(), 1000);
+      } catch (err) {
+        imagesStatus.textContent = 'Failed: ' + (err.message || 'Unknown error');
+      }
+    });
   </script>
 </body>
 </html>

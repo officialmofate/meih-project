@@ -24,7 +24,7 @@
           <h2 data-i18n="assigned_innovations">Assigned Innovations</h2>
           <p id="no-assignments" class="empty-state" data-i18n="no_assignments">No innovations assigned yet.</p>
           <table class="data-table" id="assignments-table" hidden>
-            <thead><tr><th data-i18n="title">Title</th><th data-i18n="category">Category</th><th data-i18n="conflict_of_interest">Conflict of Interest</th><th data-i18n="status">Status</th><th></th></tr></thead>
+            <thead><tr><th data-i18n="title">Title</th><th data-i18n="category">Category</th><th data-i18n="votes">Votes/Points</th><th data-i18n="conflict_of_interest">Conflict of Interest</th><th data-i18n="status">Status</th><th></th></tr></thead>
             <tbody id="assignments-body"></tbody>
           </table>
         </section>
@@ -49,6 +49,18 @@
 
             <label for="score-comments" data-i18n="comments_for_innovator">Comments for the innovator</label>
             <textarea id="score-comments" name="comments" rows="3"></textarea>
+
+            <div style="margin:var(--space-md) 0;">
+              <label style="font-weight:600;display:block;margin-bottom:var(--space-xs);">Overall Rating (1-5 stars)</label>
+              <div id="star-rating" style="display:flex;gap:8px;font-size:28px;cursor:pointer;">
+                <span data-star="1" style="color:#636e72;">&#9734;</span>
+                <span data-star="2" style="color:#636e72;">&#9734;</span>
+                <span data-star="3" style="color:#636e72;">&#9734;</span>
+                <span data-star="4" style="color:#636e72;">&#9734;</span>
+                <span data-star="5" style="color:#636e72;">&#9734;</span>
+              </div>
+              <input type="hidden" id="rating-value" name="rating" value="0" />
+            </div>
 
             <button type="submit" class="btn btn-primary" data-i18n="submit_score">Submit Score</button>
           </form>
@@ -84,14 +96,15 @@
       document.getElementById('assignment-count').textContent = assignments.length;
       const tbody = document.getElementById('assignments-body');
       tbody.innerHTML = assignments.map(a => {
-        const statusClass = a.status === 'scored' ? 'badge-success' : 'badge-muted';
-        const action = a.status === 'scored' ? 'Edit Score' : 'Score';
+        const statusClass = a.innovation_score != null ? 'badge-success' : 'badge-muted';
+        const action = a.innovation_score != null ? 'Edit Score' : 'Score';
         return `<tr>
-          <td>${a.title || a.innovation_title || '—'}</td>
+          <td>${a.title || '—'}</td>
           <td>${a.category || '—'}</td>
+          <td>${a.total_points || 0} pts (${a.vote_count || 0} votes)</td>
           <td><label class="checkbox-label"><input type="checkbox" data-conflict /> Declare conflict</label></td>
-          <td><span class="badge ${statusClass}">${a.status || 'pending'}</span></td>
-          <td><a href="#score-section" data-open-score="${a.submission_id || a.id}">${action}</a></td>
+          <td><span class="badge ${statusClass}">${a.innovation_score != null ? 'Scored' : 'Pending'}</span></td>
+          <td><a href="#score-section" data-open-score="${a.id}">${action}</a></td>
         </tr>`;
       }).join('');
 
@@ -106,6 +119,19 @@
       });
     }).catch(() => {
       document.getElementById('no-assignments').hidden = false;
+    });
+
+    // Star rating interaction
+    document.getElementById('star-rating').addEventListener('click', (e) => {
+      const star = e.target.closest('[data-star]');
+      if (!star) return;
+      const val = parseInt(star.dataset.star);
+      document.getElementById('rating-value').value = val;
+      document.querySelectorAll('#star-rating [data-star]').forEach(s => {
+        const v = parseInt(s.dataset.star);
+        s.innerHTML = v <= val ? '&#9733;' : '&#9734;';
+        s.style.color = v <= val ? '#f9ca24' : '#636e72';
+      });
     });
 
     // Submit score

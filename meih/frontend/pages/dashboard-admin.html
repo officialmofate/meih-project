@@ -98,8 +98,8 @@
         </section>
 
         <section class="card wide" id="judge-assignments-section">
-          <h2>Assign Judges to Competitions</h2>
-          <p class="text-muted">Assign judges to evaluate innovation submissions.</p>
+          <h2>Assign Judges to Innovations</h2>
+          <p class="text-muted">Assign judges to evaluate specific innovation submissions.</p>
           <form id="judge-assign-form" class="stacked-form">
             <label for="judge-select">Select Judge</label>
             <select id="judge-select" name="judgeId" required>
@@ -108,6 +108,10 @@
             <label for="competition-select">Select Competition</label>
             <select id="competition-select" name="competitionId" required>
               <option value="">Loading competitions...</option>
+            </select>
+            <label for="submission-select">Select Submission (optional — assign to specific innovation)</label>
+            <select id="submission-select" name="submissionId">
+              <option value="">All submissions in competition</option>
             </select>
             <button type="submit" class="btn btn-primary">Assign Judge</button>
           </form>
@@ -441,6 +445,7 @@
       const judges = Array.isArray(users) ? users.filter(u => u.role === 'judge') : [];
       const judgeSelect = document.getElementById('judge-select');
       const compSelect = document.getElementById('competition-select');
+      const subSelect = document.getElementById('submission-select');
       if (judges.length) {
         judgeSelect.innerHTML = '<option value="">Select a judge</option>' + judges.map(j => '<option value="' + j.id + '">' + (j.full_name || j.name || j.email) + '</option>').join('');
       } else {
@@ -451,6 +456,23 @@
       } else {
         compSelect.innerHTML = '<option value="">No competitions found</option>';
       }
+
+      compSelect.addEventListener('change', async () => {
+        const compId = compSelect.value;
+        subSelect.innerHTML = '<option value="">Loading submissions...</option>';
+        if (!compId) {
+          subSelect.innerHTML = '<option value="">All submissions in competition</option>';
+          return;
+        }
+        try {
+          const subs = await api.get('/innovation/competitions/' + compId + '/submissions');
+          if (Array.isArray(subs) && subs.length) {
+            subSelect.innerHTML = '<option value="">All submissions in competition</option>' + subs.map(s => '<option value="' + s.id + '">' + (s.title || 'Untitled') + ' (' + (s.author_name || 'Unknown') + ')</option>').join('');
+          } else {
+            subSelect.innerHTML = '<option value="">No submissions in this competition</option>';
+          }
+        } catch { subSelect.innerHTML = '<option value="">Error loading submissions</option>'; }
+      });
 
       // Show existing assignments
       if (Array.isArray(judgeAssignments) && judgeAssignments.length) {
@@ -492,7 +514,9 @@
         return;
       }
       try {
-        await api.post('/innovation/judge/assign', { judgeId: data.judgeId, competitionId: data.competitionId });
+        const payload = { judgeId: data.judgeId, competitionId: data.competitionId };
+        if (data.submissionId) payload.submissionId = data.submissionId;
+        await api.post('/innovation/judge/assign', payload);
         successEl.hidden = false;
         e.target.reset();
         setTimeout(() => window.location.reload(), 1500);

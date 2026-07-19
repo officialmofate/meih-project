@@ -78,8 +78,9 @@ exports.listCompetitionSubmissions = async (req, res, next) => {
 exports.voteSubmission = async (req, res, next) => {
   try {
     const fingerprint = req.headers['x-voter-fingerprint'] || req.ip;
-    const voteCount = await innovationService.vote(req.params.id, fingerprint);
-    res.json({ voteCount });
+    const voterRole = req.user ? req.user.role : 'public_voter';
+    const result = await innovationService.vote(req.params.id, fingerprint, voterRole);
+    res.json(result);
   } catch (err) { next(err); }
 };
 
@@ -219,9 +220,35 @@ exports.uploadScreenshot = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.uploadInnovatorImage = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
+    const url = '/uploads/profiles/' + req.file.filename;
+    const db = require('../config/database');
+    await db.query('UPDATE users SET image_url = $1 WHERE id = $2', [url, req.user.id]);
+    res.json({ image_url: url, url });
+  } catch (err) { next(err); }
+};
+
+exports.rateSubmission = async (req, res, next) => {
+  try {
+    const db = require('../config/database');
+    const { rating } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+    const { rows } = await db.query(
+      `UPDATE innovation_submissions SET admin_rating = $2, updated_at = now() WHERE id = $1 RETURNING *`,
+      [req.params.id, rating]
+    );
+    if (!rows[0]) return res.status(404).json({ message: 'Submission not found' });
+    res.json(rows[0]);
+  } catch (err) { next(err); }
+};
+
 exports.assignJudge = async (req, res, next) => {
   try {
-    const result = await innovationService.assignJudge(req.body.judgeId, req.body.competitionId);
+    const result = await innovationService.assignJudge(req.body.judgeId, req.body.competitionId, req.body.submissionId || null);
     res.status(201).json(result);
   } catch (err) { next(err); }
 };
@@ -499,6 +526,8 @@ exports.getCertificate = async (req, res, next) => {
 exports.getCertificatePDF = async (req, res, next) => {
   try {
     const PDFDocument = require('pdfkit');
+    const https = require('https');
+    const http = require('http');
     const cert = await innovationService.getCertificateData(req.params.id);
     if (!cert) return res.status(404).send('Submission not found');
     if (cert.status !== 'approved') return res.status(400).send('Certificate only available for approved innovations');
@@ -518,6 +547,28 @@ exports.getCertificatePDF = async (req, res, next) => {
     const purple = '#6c5ce7';
     const dark = '#1a1a2e';
     const gray = '#636e72';
+
+    function fetchImage(url) {
+      return new Promise((resolve, reject) => {
+        if (!url) return resolve(null);
+        const fullUrl = url.startsWith('http') ? url : 'https://meih.onrender.com' + url;
+        const client = fullUrl.startsWith('https') ? https : http;
+        client.get(fullUrl, (response) => {
+          if (response.statusCode === 301 || response.statusCode === 302) {
+            return fetchImage(response.headers.location).then(resolve).catch(reject);
+          }
+          const chunks = [];
+          response.on('data', chunk => chunks.push(chunk));
+          response.on('end', () => resolve(Buffer.concat(chunks)));
+          response.on('error', reject);
+        }).on('error', reject);
+      });
+    }
+
+    let authorImage = null;
+    try {
+      authorImage = await fetchImage(cert.author_image);
+    } catch (e) { /* image not available */ }
 
     const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 60 });
     const chunks = [];
@@ -541,32 +592,43 @@ exports.getCertificatePDF = async (req, res, next) => {
     doc.fontSize(8).font('Helvetica')
       .text('MOBILE FACILITATION TEAM', 60, 65, { align: 'center', width: pageW - 120 });
 
+    if (authorImage) {
+      try {
+        doc.image(authorImage, pageW / 2 - 40, 80, { width: 80, height: 80, fit: [80, 80] });
+      } catch (e) { /* skip image */ }
+    }
+
     doc.fontSize(28).font('Helvetica-Bold')
-      .text('Certificate of Achievement', 60, 95, { align: 'center', width: pageW - 120 });
+      .text('Certificate of Achievement', 60, authorImage ? 170 : 95, { align: 'center', width: pageW - 120 });
 
     doc.fontSize(10).font('Helvetica').fillColor(gray)
-      .text('This is to certify that', 60, 145, { align: 'center', width: pageW - 120 });
+      .text('This is to certify that', 60, authorImage ? 210 : 145, { align: 'center', width: pageW - 120 });
 
     doc.fontSize(24).font('Helvetica-Bold').fillColor(ratingHex)
-      .text(cert.author_name || 'Innovator', 60, 165, { align: 'center', width: pageW - 120 });
+      .text(cert.author_name || 'Innovator', 60, authorImage ? 228 : 165, { align: 'center', width: pageW - 120 });
 
+    const afterNameY = authorImage ? 262 : 200;
     doc.fontSize(10).font('Helvetica').fillColor('#dfe6e9')
-      .text('has successfully showcased the innovation', 60, 200, { align: 'center', width: pageW - 120 });
+      .text('has successfully showcased the innovation', 60, afterNameY, { align: 'center', width: pageW - 120 });
 
     doc.fontSize(16).font('Helvetica-Bold').fillColor('#ffffff')
-      .text('"' + (cert.title || 'Untitled') + '"', 60, 218, { align: 'center', width: pageW - 120 });
+      .text('"' + (cert.title || 'Untitled') + '"', 60, afterNameY + 18, { align: 'center', width: pageW - 120 });
 
     doc.fontSize(10).font('Helvetica').fillColor(gray)
-      .text((cert.competition_title || '') + (cert.category ? ' \u2022 ' + cert.category : ''), 60, 245, { align: 'center', width: pageW - 120 });
+      .text((cert.competition_title || '') + (cert.category ? ' \u2022 ' + cert.category : ''), 60, afterNameY + 45, { align: 'center', width: pageW - 120 });
 
-    doc.rect(pageW / 2 - 60, 280, 120, 40).fill(purple);
+    const ratingBoxY = authorImage ? 330 : 270;
+    doc.rect(pageW / 2 - 60, ratingBoxY, 120, 40).fill(purple);
     doc.fontSize(14).font('Helvetica-Bold').fillColor('#ffffff')
-      .text(rating, pageW / 2 - 60, 290, { align: 'center', width: 120 });
+      .text(rating, pageW / 2 - 60, ratingBoxY + 12, { align: 'center', width: 120 });
 
     doc.fontSize(22).font('Helvetica-Bold').fillColor(ratingHex)
-      .text(avgScore + ' / 10', 60, 340, { align: 'center', width: pageW - 120 });
+      .text(avgScore + ' / 10', 60, ratingBoxY + 55, { align: 'center', width: pageW - 120 });
 
-    doc.fontSize(9).font('Helvetica').fillColor(gray)
+    doc.fontSize(10).font('Helvetica').fillColor('#dfe6e9')
+      .text('Judge Rating: ' + (cert.admin_rating || 'N/A') + ' / 5 stars', 60, ratingBoxY + 85, { align: 'center', width: pageW - 120 });
+
+    doc.fontSize(8).font('Helvetica').fillColor(gray)
       .text('Certificate #' + cert.id.substring(0, 8).toUpperCase() + ' \u2022 Issued ' + issueDate, 60, pageH - 80, { align: 'center', width: pageW - 120 });
     doc.fontSize(8).fillColor('#636e72')
       .text('Issued by MOFATE \u2014 Mobile Facilitation Team', 60, pageH - 60, { align: 'center', width: pageW - 120 });
