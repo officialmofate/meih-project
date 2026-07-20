@@ -437,14 +437,22 @@ exports.getCertificate = async (req, res, next) => {
     const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + Number(b), 0) / scores.length).toFixed(1) : 'N/A';
     const avgNum = scores.length > 0 ? parseFloat(avgScore) : 0;
 
-    let rating, ratingColor, ratingLabel;
-    if (avgNum >= 9) { rating = 'PLATINUM'; ratingColor = '#00b894'; ratingLabel = 'Exceptional Innovation'; }
-    else if (avgNum >= 7) { rating = 'GOLD'; ratingColor = '#fdcb6e'; ratingLabel = 'Outstanding Innovation'; }
-    else if (avgNum >= 5) { rating = 'SILVER'; ratingColor = '#b2bec3'; ratingLabel = 'Excellent Innovation'; }
-    else if (avgNum >= 3) { rating = 'BRONZE'; ratingColor = '#e17055'; ratingLabel = 'Notable Innovation'; }
-    else { rating = 'PARTICIPANT'; ratingColor = '#dfe6e9'; ratingLabel = 'Innovation Showcase Participant'; }
+    let rating, ratingColor, ratingLabel, ratingBg;
+    if (avgNum >= 9) { rating = 'PLATINUM'; ratingColor = '#1a7a5a'; ratingBg = '#e8f5e9'; ratingLabel = 'Exceptional Innovation'; }
+    else if (avgNum >= 7) { rating = 'GOLD'; ratingColor = '#b8860b'; ratingBg = '#fff8e1'; ratingLabel = 'Outstanding Innovation'; }
+    else if (avgNum >= 5) { rating = 'SILVER'; ratingColor = '#546e7a'; ratingBg = '#eceff1'; ratingLabel = 'Excellent Innovation'; }
+    else if (avgNum >= 3) { rating = 'BRONZE'; ratingColor = '#bf360c'; ratingBg = '#fbe9e7'; ratingLabel = 'Notable Innovation'; }
+    else { rating = 'PARTICIPANT'; ratingColor = '#37474f'; ratingBg = '#eceff1'; ratingLabel = 'Innovation Showcase Participant'; }
 
     const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const authorImg = cert.author_image
+      ? (cert.author_image.startsWith('http') ? cert.author_image : 'https://meih.onrender.com' + cert.author_image)
+      : '';
+    const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    const judgeStars = cert.admin_rating ? Math.round(Number(cert.admin_rating)) : 0;
+    const starsHtml = Array.from({ length: 5 }, (_, i) =>
+      `<span style="font-size:20px;color:${i < judgeStars ? '#f59e0b' : '#d1d5db'};">${i < judgeStars ? '&#9733;' : '&#9734;'}</span>`
+    ).join('');
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -453,67 +461,121 @@ exports.getCertificate = async (req, res, next) => {
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Certificate — ${cert.title || 'MEIH'}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Inter',sans-serif; background:#1a1a2e; color:#fff; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
-  .cert { width:100%; max-width:740px; background:linear-gradient(145deg,#16213e,#0f3460); border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.4); }
-  .cert-header { background:linear-gradient(135deg,#6c5ce7,#a855f7); padding:32px 32px 24px; text-align:center; }
-  .cert-header h1 { font-size:11px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; opacity:0.8; }
-  .cert-header h2 { font-size:10px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; opacity:0.6; margin-top:3px; }
-  .cert-header .org-name { font-size:32px; font-weight:900; margin-top:8px; line-height:1.1; }
-  .cert-body { padding:32px 40px; text-align:center; }
-  .cert-subtitle { font-size:13px; text-transform:uppercase; letter-spacing:0.15em; color:rgba(255,255,255,0.5); margin-bottom:8px; }
-  .cert-title { font-size:22px; font-weight:900; margin-bottom:4px; }
-  .cert-name { font-size:28px; font-weight:900; color:${ratingColor}; margin:12px 0; }
-  .cert-desc { font-size:13px; color:rgba(255,255,255,0.6); line-height:1.6; max-width:500px; margin:0 auto 20px; }
-  .cert-details { display:grid; grid-template-columns:1fr 1fr; gap:16px; text-align:left; margin:20px 0; padding:20px; background:rgba(0,0,0,0.2); border-radius:12px; }
-  .cert-field label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4); display:block; margin-bottom:2px; }
-  .cert-field .value { font-size:14px; font-weight:600; color:#fff; }
-  .cert-rating { display:inline-block; padding:8px 24px; background:${ratingColor}; color:#1a1a2e; border-radius:8px; font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin:16px 0; }
-  .cert-score { font-size:36px; font-weight:900; color:${ratingColor}; margin:8px 0; }
-  .cert-divider { border:none; border-top:1px dashed rgba(255,255,255,0.15); margin:20px 0; }
-  .cert-footer { background:rgba(0,0,0,0.2); padding:20px 32px; text-align:center; }
-  .cert-footer p { font-size:11px; color:rgba(255,255,255,0.4); line-height:1.6; }
-  .cert-id { font-family:monospace; font-size:12px; color:rgba(255,255,255,0.5); letter-spacing:0.05em; margin-top:6px; }
-  .print-btn { display:inline-block; margin:20px auto 0; padding:10px 28px; background:linear-gradient(135deg,#6c5ce7,#a855f7); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
-  @media print { body { background:#fff; padding:0; margin:0; } .cert { box-shadow:none; border:2px solid #6c5ce7; max-width:100%; } .print-btn { display:none !important; } .cert-header, .cert-footer, .cert { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; } }
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#e8e4df;color:#1a1a2e;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:30px}
+  .cert-wrapper{width:100%;max-width:820px}
+  .cert{width:100%;background:#ffffff;border-radius:4px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.12),0 1px 4px rgba(0,0,0,0.06);position:relative;padding:0}
+  .cert-border{position:relative;margin:12px;border:2px solid #1a3a5c;padding:6px}
+  .cert-border-inner{border:1px solid #c9a84c;padding:28px 40px;position:relative}
+  .cert-corner{position:absolute;width:40px;height:40px;border-color:#c9a84c}
+  .cert-corner.tl{top:-1px;left:-1px;border-top:3px solid #c9a84c;border-left:3px solid #c9a84c}
+  .cert-corner.tr{top:-1px;right:-1px;border-top:3px solid #c9a84c;border-right:3px solid #c9a84c}
+  .cert-corner.bl{bottom:-1px;left:-1px;border-bottom:3px solid #c9a84c;border-left:3px solid #c9a84c}
+  .cert-corner.br{bottom:-1px;right:-1px;border-bottom:3px solid #c9a84c;border-right:3px solid #c9a84c}
+  .cert-header{text-align:center;padding-bottom:24px;border-bottom:1px solid #e2e0dc;position:relative}
+  .cert-org{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;color:#1a3a5c;margin-bottom:4px}
+  .cert-dept{font-family:'Inter',sans-serif;font-size:9px;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:#8a8580;margin-bottom:20px}
+  .cert-title{font-family:'Playfair Display',serif;font-size:34px;font-weight:700;color:#1a3a5c;letter-spacing:0.01em;line-height:1.15;margin-bottom:6px}
+  .cert-ornament{display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0}
+  .cert-ornament .line{flex:1;max-width:80px;height:1px;background:linear-gradient(90deg,transparent,#c9a84c,transparent)}
+  .cert-ornament .diamond{width:8px;height:8px;background:#c9a84c;transform:rotate(45deg);flex-shrink:0}
+  .cert-body{text-align:center;padding:28px 0}
+  .cert-intro{font-family:'Cormorant Garamond',serif;font-size:14px;font-style:italic;color:#6b6560;margin-bottom:12px;letter-spacing:0.02em}
+  .cert-author{font-family:'Playfair Display',serif;font-size:30px;font-weight:700;color:#1a3a5c;margin:4px 0 16px;position:relative;display:inline-block}
+  .cert-author::after{content:'';display:block;width:60%;height:2px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);margin:6px auto 0}
+  .cert-desc{font-family:'Cormorant Garamond',serif;font-size:14px;color:#5a5550;line-height:1.7;max-width:520px;margin:0 auto 24px}
+  .cert-desc strong{color:#1a3a5c;font-weight:600}
+  .cert-details{display:grid;grid-template-columns:1fr 1fr;gap:14px 32px;text-align:left;margin:20px 0;padding:20px 24px;background:#fafaf8;border:1px solid #ece9e4;border-radius:4px}
+  .cert-field label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#8a8580;display:block;margin-bottom:3px;font-family:'Inter',sans-serif}
+  .cert-field .value{font-size:13px;font-weight:600;color:#1a1a2e;font-family:'Inter',sans-serif}
+  .cert-rating-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 28px;background:${ratingBg};border:1px solid ${ratingColor}33;border-radius:4px;margin:16px 0 8px}
+  .cert-rating-badge .label{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${ratingColor}}
+  .cert-score-row{display:flex;align-items:center;justify-content:center;gap:24px;margin:16px 0}
+  .cert-score-box{text-align:center}
+  .cert-score-num{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:#1a3a5c;line-height:1}
+  .cert-score-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#8a8580;margin-top:4px;font-family:'Inter',sans-serif}
+  .cert-judge{text-align:center;margin:12px 0 4px}
+  .cert-judge .stars{font-size:20px;line-height:1;letter-spacing:2px}
+  .cert-judge .judge-label{font-size:10px;color:#8a8580;margin-top:4px;font-family:'Inter',sans-serif;letter-spacing:0.05em}
+  .cert-footer{border-top:1px solid #e2e0dc;padding-top:24px;margin-top:8px}
+  .cert-sigs{display:flex;justify-content:space-between;align-items:flex-end;padding:0 20px;margin-bottom:16px}
+  .cert-sig{text-align:center;min-width:140px}
+  .cert-sig .line{width:140px;height:1px;background:#1a3a5c;margin:0 auto 6px}
+  .cert-sig .name{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;color:#1a1a2e}
+  .cert-sig .role{font-family:'Inter',sans-serif;font-size:9px;color:#8a8580;margin-top:1px}
+  .cert-id{font-family:'Inter',sans-serif;font-size:9px;font-weight:500;letter-spacing:0.08em;color:#b0aaa3;text-align:center;margin-top:16px}
+  .cert-seal{position:absolute;bottom:40px;right:40px;width:72px;height:72px;border:2px solid #c9a84c;border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0.25}
+  .cert-seal .inner{width:56px;height:56px;border:1px solid #c9a84c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:11px;font-weight:700;color:#c9a84c;text-transform:uppercase;letter-spacing:0.05em;text-align:center;line-height:1.2}
+  .print-btn{display:block;margin:20px auto 0;padding:11px 32px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:0.04em;transition:background 0.2s}
+  .print-btn:hover{background:#264a6c}
+  @media print{body{background:#fff;padding:0;margin:0}.cert-wrapper{max-width:100%}.cert{box-shadow:none}.print-btn{display:none!important}.cert,.cert-border,.cert-border-inner,.cert-header,.cert-body,.cert-footer,.cert-details,.cert-rating-badge,.cert-seal{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}}
 </style>
 </head>
 <body>
+<div class="cert-wrapper">
 <div class="cert">
-  <div class="cert-header">
-    <h1>MOFATE</h1>
-    <h2>Mobile Facilitation Team</h2>
-    <div class="org-name">Certificate of Achievement</div>
-  </div>
-  <div class="cert-body">
-    <div class="cert-subtitle">This is to certify that</div>
-    <div class="cert-name">${cert.author_name || 'Innovator'}</div>
-    <div class="cert-desc">
-      has successfully showcased the innovation <strong>"${cert.title || 'Untitled'}"</strong>
-      ${cert.competition_title ? ' in the <strong>' + cert.competition_title + '</strong> competition' : ''}
-      ${cert.category ? ' under the <strong>' + cert.category + '</strong> category' : ''}.
+  <div class="cert-border">
+    <div class="cert-border-inner">
+      <div class="cert-corner tl"></div><div class="cert-corner tr"></div>
+      <div class="cert-corner bl"></div><div class="cert-corner br"></div>
+      <div class="cert-header">
+        <div class="cert-org">MOFATE</div>
+        <div class="cert-dept">Mobile Facilitation Team &mdash; Innovation Hub</div>
+        <div class="cert-title">Certificate of Achievement</div>
+        <div class="cert-ornament"><div class="line"></div><div class="diamond"></div><div class="line"></div></div>
+      </div>
+      <div class="cert-body">
+        <div class="cert-intro">This is proudly presented to</div>
+        <div class="cert-author">${cert.author_name || 'Innovator'}</div>
+        <div class="cert-desc">
+          in recognition of successfully showcasing the innovation
+          <strong>&ldquo;${cert.title || 'Untitled'}&rdquo;</strong>
+          ${cert.competition_title ? ' in the <strong>' + cert.competition_title + '</strong> competition' : ''}
+          ${cert.category ? ' under the <strong>' + cert.category + '</strong> category' : ''}.
+        </div>
+        <div class="cert-details">
+          <div class="cert-field"><label>Innovation Title</label><div class="value">${cert.title || '—'}</div></div>
+          <div class="cert-field"><label>Category</label><div class="value">${cert.category || '—'}</div></div>
+          <div class="cert-field"><label>Competition</label><div class="value">${cert.competition_title || '—'}</div></div>
+          <div class="cert-field"><label>Date of Issue</label><div class="value">${issueDate}</div></div>
+        </div>
+        <div class="cert-rating-badge"><span class="label">${rating} Innovation</span></div>
+        <div class="cert-score-row">
+          <div class="cert-score-box">
+            <div class="cert-score-num">${avgScore}</div>
+            <div class="cert-score-label">Overall Score / 10</div>
+          </div>
+          <div style="width:1px;height:40px;background:#e2e0dc"></div>
+          <div class="cert-score-box">
+            <div class="cert-judge">
+              <div class="stars">${starsHtml}</div>
+              <div class="judge-label">Judge Rating: ${cert.admin_rating || 'N/A'} / 5</div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#8a8580;margin-top:4px;font-style:italic">${ratingLabel}</div>
+      </div>
+      <div class="cert-footer">
+        <div class="cert-sigs">
+          <div class="cert-sig">
+            <div class="line"></div>
+            <div class="name">Innovation Director</div>
+            <div class="role">MOFATE</div>
+          </div>
+          <div class="cert-sig">
+            <div class="line"></div>
+            <div class="name">Chief Judge</div>
+            <div class="role">Innovation Hub</div>
+          </div>
+        </div>
+        <div class="cert-seal"><div class="inner">MOFATE<br/>Seal</div></div>
+        <div class="cert-id">Certificate No. MEIH-${cert.id.substring(0, 8).toUpperCase()} &nbsp;&bull;&nbsp; Issued by MOFATE &mdash; Mobile Facilitation Team</div>
+      </div>
     </div>
-
-    <div class="cert-details">
-      <div class="cert-field"><label>Innovation Title</label><div class="value">${cert.title || '—'}</div></div>
-      <div class="cert-field"><label>Category</label><div class="value">${cert.category || '—'}</div></div>
-      <div class="cert-field"><label>Competition</label><div class="value">${cert.competition_title || '—'}</div></div>
-      <div class="cert-field"><label>Issue Date</label><div class="value">${issueDate}</div></div>
-    </div>
-
-    <hr class="cert-divider" />
-
-    <div class="cert-rating">${rating} Innovation</div>
-    <div class="cert-score">${avgScore}</div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:4px;">Overall Rating Score (out of 10)</div>
-    <div style="font-size:13px;color:${ratingColor};font-weight:600;">${ratingLabel}</div>
   </div>
-  <div class="cert-footer">
-    <div class="cert-id">CERTIFICATE #${cert.id.substring(0, 8).toUpperCase()}</div>
-    <p>This certificate is issued by MOFATE \u2014 Mobile Facilitation Team.<br/>Awarded at the Innovation Showcase ${cert.competition_title || ''}.</p>
-    <button class="print-btn" onclick="window.print()">Print Certificate</button>
-  </div>
+</div>
+<button class="print-btn" onclick="window.print()">&#128438; Print Certificate</button>
 </div>
 </body>
 </html>`;
@@ -536,41 +598,21 @@ exports.getCertificatePDF = async (req, res, next) => {
     const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + Number(b), 0) / scores.length).toFixed(1) : 'N/A';
     const avgNum = scores.length > 0 ? parseFloat(avgScore) : 0;
 
-    let rating, ratingHex;
-    if (avgNum >= 9) { rating = 'PLATINUM'; ratingHex = '#00b894'; }
-    else if (avgNum >= 7) { rating = 'GOLD'; ratingHex = '#fdcb6e'; }
-    else if (avgNum >= 5) { rating = 'SILVER'; ratingHex = '#b2bec3'; }
-    else if (avgNum >= 3) { rating = 'BRONZE'; ratingHex = '#e17055'; }
-    else { rating = 'PARTICIPANT'; ratingHex = '#dfe6e9'; }
+    let rating, ratingHex, ratingLabel;
+    if (avgNum >= 9) { rating = 'PLATINUM'; ratingHex = '#1a7a5a'; ratingLabel = 'Exceptional Innovation'; }
+    else if (avgNum >= 7) { rating = 'GOLD'; ratingHex = '#b8860b'; ratingLabel = 'Outstanding Innovation'; }
+    else if (avgNum >= 5) { rating = 'SILVER'; ratingHex = '#546e7a'; ratingLabel = 'Excellent Innovation'; }
+    else if (avgNum >= 3) { rating = 'BRONZE'; ratingHex = '#bf360c'; ratingLabel = 'Notable Innovation'; }
+    else { rating = 'PARTICIPANT'; ratingHex = '#37474f'; ratingLabel = 'Innovation Showcase Participant'; }
 
     const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const purple = '#6c5ce7';
-    const dark = '#1a1a2e';
-    const gray = '#636e72';
+    const navy = '#1a3a5c';
+    const gold = '#c9a84c';
+    const gray = '#6b6560';
+    const lightGray = '#b0aaa3';
+    const bg = '#ffffff';
 
-    function fetchImage(url) {
-      return new Promise((resolve, reject) => {
-        if (!url) return resolve(null);
-        const fullUrl = url.startsWith('http') ? url : 'https://meih.onrender.com' + url;
-        const client = fullUrl.startsWith('https') ? https : http;
-        client.get(fullUrl, (response) => {
-          if (response.statusCode === 301 || response.statusCode === 302) {
-            return fetchImage(response.headers.location).then(resolve).catch(reject);
-          }
-          const chunks = [];
-          response.on('data', chunk => chunks.push(chunk));
-          response.on('end', () => resolve(Buffer.concat(chunks)));
-          response.on('error', reject);
-        }).on('error', reject);
-      });
-    }
-
-    let authorImage = null;
-    try {
-      authorImage = await fetchImage(cert.author_image);
-    } catch (e) { /* image not available */ }
-
-    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 60 });
+    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 0 });
     const chunks = [];
     doc.on('data', chunk => chunks.push(chunk));
     doc.on('end', () => {
@@ -583,55 +625,129 @@ exports.getCertificatePDF = async (req, res, next) => {
     const pageW = doc.page.width;
     const pageH = doc.page.height;
 
-    doc.rect(0, 0, pageW, pageH).fill(dark);
-    doc.rect(20, 20, pageW - 40, pageH - 40).lineWidth(2).strokeColor(purple).stroke();
-    doc.rect(30, 30, pageW - 60, pageH - 60).lineWidth(1).strokeColor(purple).stroke();
+    doc.rect(0, 0, pageW, pageH).fill(bg);
 
-    doc.fillColor('#ffffff').fontSize(10).font('Helvetica')
-      .text('MOFATE', 60, 50, { align: 'center', width: pageW - 120 });
-    doc.fontSize(8).font('Helvetica')
-      .text('MOBILE FACILITATION TEAM', 60, 65, { align: 'center', width: pageW - 120 });
+    doc.rect(14, 14, pageW - 28, pageH - 28).lineWidth(2).strokeColor(navy).stroke();
+    doc.rect(20, 20, pageW - 40, pageH - 40).lineWidth(0.5).strokeColor(gold).stroke();
 
-    if (authorImage) {
-      try {
-        doc.image(authorImage, pageW / 2 - 40, 80, { width: 80, height: 80, fit: [80, 80] });
-      } catch (e) { /* skip image */ }
+    const cornerLen = 30;
+    [
+      [20, 20, cornerLen, 0, 0, cornerLen],
+      [pageW - 20, 20, -cornerLen, 0, 0, cornerLen],
+      [20, pageH - 20, cornerLen, 0, 0, -cornerLen],
+      [pageW - 20, pageH - 20, -cornerLen, 0, 0, -cornerLen],
+    ].forEach(([x, y, dx1, dy1, dx2, dy2]) => {
+      doc.moveTo(x, y).lineTo(x + dx1, y + dy1).lineWidth(2.5).strokeColor(gold).stroke();
+      doc.moveTo(x, y).lineTo(x + dx2, y + dy2).lineWidth(2.5).strokeColor(gold).stroke();
+    });
+
+    let topY = 40;
+
+    doc.fontSize(9).font('Helvetica').fillColor(navy)
+      .text('MOFATE', 0, topY, { align: 'center', width: pageW, letterSpacing: 4 });
+    topY += 14;
+    doc.fontSize(7).font('Helvetica').fillColor(lightGray)
+      .text('MOBILE FACILITATION TEAM  \u2014  INNOVATION HUB', 0, topY, { align: 'center', width: pageW, letterSpacing: 2 });
+    topY += 22;
+
+    doc.fontSize(26).font('Helvetica-Bold').fillColor(navy)
+      .text('Certificate of Achievement', 0, topY, { align: 'center', width: pageW });
+    topY += 36;
+
+    const lineW = 60;
+    doc.moveTo(pageW / 2 - lineW, topY).lineTo(pageW / 2 + lineW, topY).lineWidth(0.5).strokeColor(gold).stroke();
+    topY += 14;
+
+    doc.fontSize(10).font('Helvetica').fillColor(gray)
+      .text('This is proudly presented to', 0, topY, { align: 'center', width: pageW });
+    topY += 18;
+
+    const authorFontSize = Math.min(24, Math.max(16, 240 / (cert.author_name || 'A').length));
+    doc.fontSize(authorFontSize).font('Helvetica-Bold').fillColor(navy)
+      .text(cert.author_name || 'Innovator', 0, topY, { align: 'center', width: pageW });
+    topY += authorFontSize + 8;
+
+    doc.moveTo(pageW / 2 - 40, topY).lineTo(pageW / 2 + 40, topY).lineWidth(0.5).strokeColor(gold).stroke();
+    topY += 12;
+
+    const descText = 'in recognition of successfully showcasing the innovation "' +
+      (cert.title || 'Untitled') + '"' +
+      (cert.competition_title ? ' in the ' + cert.competition_title + ' competition' : '') +
+      (cert.category ? ' under the ' + cert.category + ' category' : '') + '.';
+    doc.fontSize(9).font('Helvetica').fillColor(gray)
+      .text(descText, pageW / 2 - 220, topY, { align: 'center', width: 440 });
+    topY += 38;
+
+    const detailY = topY;
+    const leftX = pageW / 2 - 180;
+    const rightX = pageW / 2 + 40;
+
+    function drawDetail(x, y, label, value) {
+      doc.fontSize(7).font('Helvetica').fillColor(lightGray).text(label.toUpperCase(), x, y, { width: 160 });
+      doc.fontSize(10).font('Helvetica-Bold').fillColor(navy).text(value || '\u2014', x, y + 11, { width: 160 });
     }
+    drawDetail(leftX, detailY, 'Innovation Title', cert.title);
+    drawDetail(rightX, detailY, 'Category', cert.category);
+    drawDetail(leftX, detailY + 32, 'Competition', cert.competition_title);
+    drawDetail(rightX, detailY + 32, 'Date of Issue', issueDate);
 
-    doc.fontSize(28).font('Helvetica-Bold')
-      .text('Certificate of Achievement', 60, authorImage ? 170 : 95, { align: 'center', width: pageW - 120 });
+    topY = detailY + 76;
 
-    doc.fontSize(10).font('Helvetica').fillColor(gray)
-      .text('This is to certify that', 60, authorImage ? 210 : 145, { align: 'center', width: pageW - 120 });
+    doc.moveTo(pageW / 2 - 160, topY).lineTo(pageW / 2 + 160, topY).lineWidth(0.5).strokeColor(gold).stroke();
+    topY += 12;
 
-    doc.fontSize(24).font('Helvetica-Bold').fillColor(ratingHex)
-      .text(cert.author_name || 'Innovator', 60, authorImage ? 228 : 165, { align: 'center', width: pageW - 120 });
+    doc.roundedRect(pageW / 2 - 55, topY, 110, 24, 3).fill(navy);
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#ffffff')
+      .text(rating.toUpperCase() + ' INNOVATION', pageW / 2 - 55, topY + 7, { align: 'center', width: 110 });
 
-    const afterNameY = authorImage ? 262 : 200;
-    doc.fontSize(10).font('Helvetica').fillColor('#dfe6e9')
-      .text('has successfully showcased the innovation', 60, afterNameY, { align: 'center', width: pageW - 120 });
+    topY += 34;
 
-    doc.fontSize(16).font('Helvetica-Bold').fillColor('#ffffff')
-      .text('"' + (cert.title || 'Untitled') + '"', 60, afterNameY + 18, { align: 'center', width: pageW - 120 });
-
-    doc.fontSize(10).font('Helvetica').fillColor(gray)
-      .text((cert.competition_title || '') + (cert.category ? ' \u2022 ' + cert.category : ''), 60, afterNameY + 45, { align: 'center', width: pageW - 120 });
-
-    const ratingBoxY = authorImage ? 330 : 270;
-    doc.rect(pageW / 2 - 60, ratingBoxY, 120, 40).fill(purple);
-    doc.fontSize(14).font('Helvetica-Bold').fillColor('#ffffff')
-      .text(rating, pageW / 2 - 60, ratingBoxY + 12, { align: 'center', width: 120 });
-
-    doc.fontSize(22).font('Helvetica-Bold').fillColor(ratingHex)
-      .text(avgScore + ' / 10', 60, ratingBoxY + 55, { align: 'center', width: pageW - 120 });
-
-    doc.fontSize(10).font('Helvetica').fillColor('#dfe6e9')
-      .text('Judge Rating: ' + (cert.admin_rating || 'N/A') + ' / 5 stars', 60, ratingBoxY + 85, { align: 'center', width: pageW - 120 });
-
+    doc.fontSize(26).font('Helvetica-Bold').fillColor(navy)
+      .text(avgScore, pageW / 2 - 30, topY, { align: 'left', width: 60 });
     doc.fontSize(8).font('Helvetica').fillColor(gray)
-      .text('Certificate #' + cert.id.substring(0, 8).toUpperCase() + ' \u2022 Issued ' + issueDate, 60, pageH - 80, { align: 'center', width: pageW - 120 });
-    doc.fontSize(8).fillColor('#636e72')
-      .text('Issued by MOFATE \u2014 Mobile Facilitation Team', 60, pageH - 60, { align: 'center', width: pageW - 120 });
+      .text('/ 10', pageW / 2 + 20, topY + 14, { align: 'left', width: 30 });
+
+    const judgeRating = cert.admin_rating || 'N/A';
+    const starCount = Math.round(Number(judgeRating)) || 0;
+    doc.fontSize(8).font('Helvetica').fillColor(gray)
+      .text('Judge Rating: ' + judgeRating + ' / 5', pageW / 2 - 140, topY + 18, { width: 280, align: 'center' });
+
+    let starStr = '';
+    for (let i = 0; i < 5; i++) starStr += i < starCount ? '\u2605 ' : '\u2606 ';
+    doc.fontSize(10).fillColor(gold)
+      .text(starStr.trim(), pageW / 2 - 140, topY + 30, { width: 280, align: 'center' });
+
+    topY += 52;
+
+    doc.fontSize(7).font('Helvetica-Oblique').fillColor(gray)
+      .text(ratingLabel, 0, topY, { align: 'center', width: pageW });
+
+    const footerY = pageH - 60;
+
+    const sigLeftX = pageW / 2 - 200;
+    const sigRightX = pageW / 2 + 80;
+    doc.moveTo(sigLeftX, footerY).lineTo(sigLeftX + 120, footerY).lineWidth(0.5).strokeColor(navy).stroke();
+    doc.moveTo(sigRightX, footerY).lineTo(sigRightX + 120, footerY).lineWidth(0.5).strokeColor(navy).stroke();
+
+    doc.fontSize(7).font('Helvetica-Bold').fillColor(navy)
+      .text('Innovation Director', sigLeftX, footerY + 4, { width: 120, align: 'center' });
+    doc.fontSize(6).font('Helvetica').fillColor(lightGray)
+      .text('MOFATE', sigLeftX, footerY + 14, { width: 120, align: 'center' });
+
+    doc.fontSize(7).font('Helvetica-Bold').fillColor(navy)
+      .text('Chief Judge', sigRightX, footerY + 4, { width: 120, align: 'center' });
+    doc.fontSize(6).font('Helvetica').fillColor(lightGray)
+      .text('Innovation Hub', sigRightX, footerY + 14, { width: 120, align: 'center' });
+
+    doc.circle(pageW - 60, footerY - 12, 26).lineWidth(0.8).strokeColor(gold).stroke();
+    doc.circle(pageW - 60, footerY - 12, 20).lineWidth(0.4).strokeColor(gold).stroke();
+    doc.fontSize(5).font('Helvetica-Bold').fillColor(gold)
+      .text('MOFATE', pageW - 60 - 14, footerY - 18, { width: 28, align: 'center' });
+    doc.fontSize(4).font('Helvetica').fillColor(gold)
+      .text('SEAL', pageW - 60 - 14, footerY - 8, { width: 28, align: 'center' });
+
+    doc.fontSize(6).font('Helvetica').fillColor(lightGray)
+      .text('Certificate No. MEIH-' + cert.id.substring(0, 8).toUpperCase() + '  \u2022  Issued by MOFATE \u2014 Mobile Facilitation Team  \u2022  ' + issueDate, 0, pageH - 28, { align: 'center', width: pageW });
 
     doc.end();
   } catch (err) { next(err); }

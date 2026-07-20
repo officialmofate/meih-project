@@ -199,3 +199,52 @@ exports.rejectInnovationPayment = async (req, res, next) => {
     res.json(submission);
   } catch (err) { next(err); }
 };
+
+exports.createAdmin = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Only superadmin can create admin accounts' });
+    }
+    const { email, password, fullName, phone } = req.body;
+    if (!email || !password || !fullName) {
+      return res.status(400).json({ message: 'Email, password, and full name are required' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return res.status(400).json({ message: 'Password must contain uppercase, lowercase, and a number' });
+    }
+    const sanitizedEmail = sanitizeString(email).toLowerCase();
+    const sanitizedFullName = sanitizeString(fullName);
+    const sanitizedPhone = phone ? sanitizeString(phone) : null;
+
+    const existing = await adminService.listUsers({ search: sanitizedEmail });
+    const emailTaken = Array.isArray(existing) && existing.some(u => u.email.toLowerCase() === sanitizedEmail && u.role === 'admin');
+    if (emailTaken) {
+      return res.status(409).json({ message: 'An admin with this email already exists' });
+    }
+
+    const admin = await adminService.createAdmin({
+      email: sanitizedEmail,
+      password,
+      fullName: sanitizedFullName,
+      phone: sanitizedPhone,
+    });
+    auditLog('ADMIN_CREATED', { targetId: admin.id, newValue: 'admin' }, req);
+    res.status(201).json(admin);
+  } catch (err) { next(err); }
+};
+
+exports.promoteToAdmin = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Only superadmin can promote users to admin' });
+    }
+    const targetId = sanitizeString(req.params.id);
+    const user = await adminService.promoteToAdmin(targetId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    auditLog('PROMOTED_TO_ADMIN', { targetId: targetId, newValue: 'admin' }, req);
+    res.json(user);
+  } catch (err) { next(err); }
+};

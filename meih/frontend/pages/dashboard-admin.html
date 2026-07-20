@@ -97,6 +97,47 @@
           <div id="innovation-managers-list"></div>
         </section>
 
+        <section class="card wide superadmin-only" id="admin-management-section" hidden>
+          <h2>Admin Management</h2>
+          <p class="text-muted">Create new admin accounts or promote existing users to admin. Only superadmin can perform these actions.</p>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg);margin-top:var(--space-md);">
+            <div>
+              <h3 style="margin-bottom:var(--space-sm);font-size:14px;">Create New Admin</h3>
+              <form id="create-admin-form" class="stacked-form">
+                <label for="admin-fullname">Full Name</label>
+                <input type="text" id="admin-fullname" name="fullName" required placeholder="John Doe" />
+                <label for="admin-email">Email</label>
+                <input type="email" id="admin-email" name="email" required placeholder="admin@example.com" />
+                <label for="admin-phone">Phone (optional)</label>
+                <input type="text" id="admin-phone" name="phone" placeholder="+255 700 000 000" />
+                <label for="admin-password">Password</label>
+                <input type="password" id="admin-password" name="password" required placeholder="Min 8 chars, upper, lower, number" minlength="8" />
+                <button type="submit" class="btn btn-primary" style="margin-top:var(--space-sm);">Create Admin Account</button>
+              </form>
+              <p id="create-admin-success" class="form-success" hidden>Admin account created successfully.</p>
+              <p id="create-admin-error" class="form-error" hidden></p>
+            </div>
+
+            <div>
+              <h3 style="margin-bottom:var(--space-sm);font-size:14px;">Promote Existing User to Admin</h3>
+              <form id="promote-admin-form" class="stacked-form">
+                <label for="promote-user-select">Select User</label>
+                <select id="promote-user-select" name="userId" required>
+                  <option value="">Loading users...</option>
+                </select>
+                <button type="submit" class="btn btn-primary" style="margin-top:var(--space-sm);">Promote to Admin</button>
+              </form>
+              <p id="promote-admin-success" class="form-success" hidden>User promoted to Admin.</p>
+              <p id="promote-admin-error" class="form-error" hidden></p>
+
+              <h3 style="margin:var(--space-lg) 0 var(--space-sm);font-size:14px;">Current Admins</h3>
+              <p id="no-admins" class="empty-state">No admin accounts yet.</p>
+              <div id="admins-list"></div>
+            </div>
+          </div>
+        </section>
+
         <section class="card wide" id="judge-assignments-section">
           <h2>Assign Judges to Innovations</h2>
           <p class="text-muted">Assign judges to evaluate specific innovation submissions.</p>
@@ -525,6 +566,88 @@
         errEl.hidden = false;
       }
     });
+
+    // Superadmin: Admin Management
+    if (currentUser && currentUser.role === 'superadmin') {
+      document.getElementById('admin-management-section').hidden = false;
+      document.querySelectorAll('.superadmin-only').forEach(el => el.hidden = false);
+
+      // Load non-admin users for promote dropdown
+      api.get('/admin/users').then((users) => {
+        if (!Array.isArray(users)) return;
+        const nonAdmins = users.filter(u => u.role !== 'admin' && u.role !== 'superadmin');
+        const promoteSelect = document.getElementById('promote-user-select');
+        if (nonAdmins.length) {
+          promoteSelect.innerHTML = '<option value="">Select a user to promote</option>' +
+            nonAdmins.map(u => '<option value="' + u.id + '">' + (u.full_name || u.email) + ' (' + u.role + ')</option>').join('');
+        } else {
+          promoteSelect.innerHTML = '<option value="">No users available to promote</option>';
+        }
+
+        // Show current admins
+        const admins = users.filter(u => u.role === 'admin');
+        const adminsList = document.getElementById('admins-list');
+        if (admins.length) {
+          document.getElementById('no-admins').hidden = true;
+          adminsList.innerHTML = admins.map(a =>
+            '<div style="padding:8px 12px;border:1px solid #e2e0dc;border-radius:4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">' +
+            '<div><strong style="font-size:13px;">' + (a.full_name || a.email) + '</strong>' +
+            '<span style="font-size:11px;color:#8a8580;margin-left:8px;">' + a.email + '</span></div>' +
+            '<span style="font-size:11px;color:#1a7a5a;font-weight:600;">admin</span>' +
+            '</div>'
+          ).join('');
+        }
+      }).catch(() => {});
+
+      // Create admin form
+      document.getElementById('create-admin-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const payload = {
+          fullName: formData.get('fullName'),
+          email: formData.get('email'),
+          phone: formData.get('phone') || undefined,
+          password: formData.get('password'),
+        };
+        const errEl = document.getElementById('create-admin-error');
+        const successEl = document.getElementById('create-admin-success');
+        errEl.hidden = true;
+        successEl.hidden = true;
+        try {
+          await api.post('/admin/create-admin', payload);
+          successEl.hidden = false;
+          e.target.reset();
+          setTimeout(() => window.location.reload(), 1500);
+        } catch (err) {
+          errEl.textContent = err.message || 'Failed to create admin.';
+          errEl.hidden = false;
+        }
+      });
+
+      // Promote user to admin form
+      document.getElementById('promote-admin-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target));
+        const errEl = document.getElementById('promote-admin-error');
+        const successEl = document.getElementById('promote-admin-success');
+        errEl.hidden = true;
+        successEl.hidden = true;
+        if (!data.userId) {
+          errEl.textContent = 'Please select a user.';
+          errEl.hidden = false;
+          return;
+        }
+        try {
+          await api.post('/admin/promote-to-admin/' + data.userId);
+          successEl.hidden = false;
+          e.target.reset();
+          setTimeout(() => window.location.reload(), 1500);
+        } catch (err) {
+          errEl.textContent = err.message || 'Failed to promote user.';
+          errEl.hidden = false;
+        }
+      });
+    }
   </script>
 </body>
 </html>

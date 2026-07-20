@@ -44,5 +44,7 @@ router.put('/events/:id/reject', ctrl.rejectEvent);
 router.get('/innovation/pending-payment', ctrl.listPendingInnovationPayments);
 router.put('/innovation/:id/confirm-payment', ctrl.confirmInnovationPayment);
 router.put('/innovation/:id/reject-payment', ctrl.rejectInnovationPayment);
+router.post('/create-admin', ctrl.createAdmin);
+router.post('/promote-to-admin/:id', ctrl.promoteToAdmin);
 
 module.exports = router;
