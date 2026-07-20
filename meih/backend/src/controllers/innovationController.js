@@ -449,10 +449,12 @@ exports.getCertificate = async (req, res, next) => {
       ? (cert.author_image.startsWith('http') ? cert.author_image : 'https://meih.onrender.com' + cert.author_image)
       : '';
     const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-    const judgeStars = cert.admin_rating ? Math.round(Number(cert.admin_rating)) : 0;
+    const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
+    const judgeStars = hasRating ? Math.round(Number(cert.admin_rating)) : 0;
     const starsHtml = Array.from({ length: 5 }, (_, i) =>
-      `<span style="font-size:20px;color:${i < judgeStars ? '#f59e0b' : '#d1d5db'};">${i < judgeStars ? '&#9733;' : '&#9734;'}</span>`
+      `<span style="font-size:22px;color:${hasRating ? (i < judgeStars ? '#f59e0b' : '#d1d5db') : '#e2e0dc'};">${hasRating ? (i < judgeStars ? '&#9733;' : '&#9734;') : '&#9734;'}</span>`
     ).join('');
+    const judgeText = hasRating ? 'Judge Rating: ' + cert.admin_rating + ' / 5' : 'Pending Evaluation';
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -480,6 +482,9 @@ exports.getCertificate = async (req, res, next) => {
   .cert-ornament{display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0}
   .cert-ornament .line{flex:1;max-width:80px;height:1px;background:linear-gradient(90deg,transparent,#c9a84c,transparent)}
   .cert-ornament .diamond{width:8px;height:8px;background:#c9a84c;transform:rotate(45deg);flex-shrink:0}
+  .cert-avatar{width:80px;height:80px;border-radius:50%;margin:0 auto 16px;border:3px solid #c9a84c;object-fit:cover;background:#f0ece6;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .cert-avatar img{width:100%;height:100%;object-fit:cover}
+  .cert-avatar .initials{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#1a3a5c;line-height:80px;text-align:center}
   .cert-body{text-align:center;padding:28px 0}
   .cert-intro{font-family:'Cormorant Garamond',serif;font-size:14px;font-style:italic;color:#6b6560;margin-bottom:12px;letter-spacing:0.02em}
   .cert-author{font-family:'Playfair Display',serif;font-size:30px;font-weight:700;color:#1a3a5c;margin:4px 0 16px;position:relative;display:inline-block}
@@ -491,13 +496,14 @@ exports.getCertificate = async (req, res, next) => {
   .cert-field .value{font-size:13px;font-weight:600;color:#1a1a2e;font-family:'Inter',sans-serif}
   .cert-rating-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 28px;background:${ratingBg};border:1px solid ${ratingColor}33;border-radius:4px;margin:16px 0 8px}
   .cert-rating-badge .label{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${ratingColor}}
-  .cert-score-row{display:flex;align-items:center;justify-content:center;gap:24px;margin:16px 0}
+  .cert-score-row{display:flex;align-items:center;justify-content:center;gap:28px;margin:16px 0}
   .cert-score-box{text-align:center}
   .cert-score-num{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:#1a3a5c;line-height:1}
   .cert-score-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#8a8580;margin-top:4px;font-family:'Inter',sans-serif}
-  .cert-judge{text-align:center;margin:12px 0 4px}
-  .cert-judge .stars{font-size:20px;line-height:1;letter-spacing:2px}
-  .cert-judge .judge-label{font-size:10px;color:#8a8580;margin-top:4px;font-family:'Inter',sans-serif;letter-spacing:0.05em}
+  .cert-judge{text-align:center}
+  .cert-judge .stars{font-size:22px;line-height:1;letter-spacing:2px;margin-bottom:4px}
+  .cert-judge .judge-label{font-size:10px;color:${hasRating ? '#8a8580' : '#b0aaa3'};font-family:'Inter',sans-serif;letter-spacing:0.05em;font-style:${hasRating ? 'normal' : 'italic'}}
+  .cert-divider-vert{width:1px;height:44px;background:#e2e0dc;flex-shrink:0}
   .cert-footer{border-top:1px solid #e2e0dc;padding-top:24px;margin-top:8px}
   .cert-sigs{display:flex;justify-content:space-between;align-items:flex-end;padding:0 20px;margin-bottom:16px}
   .cert-sig{text-align:center;min-width:140px}
@@ -526,6 +532,7 @@ exports.getCertificate = async (req, res, next) => {
         <div class="cert-ornament"><div class="line"></div><div class="diamond"></div><div class="line"></div></div>
       </div>
       <div class="cert-body">
+        ${authorImg ? `<div class="cert-avatar"><img src="${authorImg}" alt="${cert.author_name || ''}" onerror="this.parentElement.innerHTML='<div class=initials>${initials}</div>'" /></div>` : `<div class="cert-avatar"><div class="initials">${initials}</div></div>`}
         <div class="cert-intro">This is proudly presented to</div>
         <div class="cert-author">${cert.author_name || 'Innovator'}</div>
         <div class="cert-desc">
@@ -546,15 +553,15 @@ exports.getCertificate = async (req, res, next) => {
             <div class="cert-score-num">${avgScore}</div>
             <div class="cert-score-label">Overall Score / 10</div>
           </div>
-          <div style="width:1px;height:40px;background:#e2e0dc"></div>
+          <div class="cert-divider-vert"></div>
           <div class="cert-score-box">
             <div class="cert-judge">
               <div class="stars">${starsHtml}</div>
-              <div class="judge-label">Judge Rating: ${cert.admin_rating || 'N/A'} / 5</div>
+              <div class="judge-label">${judgeText}</div>
             </div>
           </div>
         </div>
-        <div style="font-size:11px;color:#8a8580;margin-top:4px;font-style:italic">${ratingLabel}</div>
+        <div style="font-size:11px;color:#8a8580;margin-top:6px;font-style:italic">${ratingLabel}</div>
       </div>
       <div class="cert-footer">
         <div class="cert-sigs">
@@ -611,6 +618,29 @@ exports.getCertificatePDF = async (req, res, next) => {
     const gray = '#6b6560';
     const lightGray = '#b0aaa3';
     const bg = '#ffffff';
+    const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
+
+    function fetchImage(url) {
+      return new Promise((resolve, reject) => {
+        if (!url) return resolve(null);
+        const fullUrl = url.startsWith('http') ? url : 'https://meih.onrender.com' + url;
+        const client = fullUrl.startsWith('https') ? https : http;
+        client.get(fullUrl, (response) => {
+          if (response.statusCode === 301 || response.statusCode === 302) {
+            return fetchImage(response.headers.location).then(resolve).catch(reject);
+          }
+          const chunks = [];
+          response.on('data', chunk => chunks.push(chunk));
+          response.on('end', () => resolve(Buffer.concat(chunks)));
+          response.on('error', reject);
+        }).on('error', reject);
+      });
+    }
+
+    let authorImage = null;
+    try {
+      authorImage = await fetchImage(cert.author_image);
+    } catch (e) { /* image not available */ }
 
     const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 0 });
     const chunks = [];
@@ -662,7 +692,31 @@ exports.getCertificatePDF = async (req, res, next) => {
       .text('This is proudly presented to', 0, topY, { align: 'center', width: pageW });
     topY += 18;
 
-    const authorFontSize = Math.min(24, Math.max(16, 240 / (cert.author_name || 'A').length));
+    if (authorImage) {
+      try {
+        const imgSize = 50;
+        doc.saveClip();
+        doc.circle(pageW / 2, topY + imgSize / 2, imgSize / 2).clip();
+        doc.image(authorImage, pageW / 2 - imgSize / 2, topY, { width: imgSize, height: imgSize });
+        doc.restoreClip();
+        doc.circle(pageW / 2, topY + imgSize / 2, imgSize / 2 + 1.5).lineWidth(1.5).strokeColor(gold).stroke();
+        topY += imgSize + 10;
+      } catch (e) {
+        const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+        doc.circle(pageW / 2, topY + 25, 25).lineWidth(1.5).fillAndStroke('#f0ece6', gold);
+        doc.fontSize(14).font('Helvetica-Bold').fillColor(navy)
+          .text(initials, pageW / 2 - 25, topY + 16, { width: 50, align: 'center' });
+        topY += 60;
+      }
+    } else {
+      const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+      doc.circle(pageW / 2, topY + 25, 25).lineWidth(1.5).fillAndStroke('#f0ece6', gold);
+      doc.fontSize(14).font('Helvetica-Bold').fillColor(navy)
+        .text(initials, pageW / 2 - 25, topY + 16, { width: 50, align: 'center' });
+      topY += 60;
+    }
+
+    const authorFontSize = Math.min(22, Math.max(14, 220 / (cert.author_name || 'A').length));
     doc.fontSize(authorFontSize).font('Helvetica-Bold').fillColor(navy)
       .text(cert.author_name || 'Innovator', 0, topY, { align: 'center', width: pageW });
     topY += authorFontSize + 8;
@@ -707,15 +761,24 @@ exports.getCertificatePDF = async (req, res, next) => {
     doc.fontSize(8).font('Helvetica').fillColor(gray)
       .text('/ 10', pageW / 2 + 20, topY + 14, { align: 'left', width: 30 });
 
-    const judgeRating = cert.admin_rating || 'N/A';
-    const starCount = Math.round(Number(judgeRating)) || 0;
-    doc.fontSize(8).font('Helvetica').fillColor(gray)
-      .text('Judge Rating: ' + judgeRating + ' / 5', pageW / 2 - 140, topY + 18, { width: 280, align: 'center' });
+    const judgeRating = hasRating ? cert.admin_rating : null;
+    const starCount = hasRating ? Math.round(Number(judgeRating)) || 0 : 0;
 
     let starStr = '';
-    for (let i = 0; i < 5; i++) starStr += i < starCount ? '\u2605 ' : '\u2606 ';
-    doc.fontSize(10).fillColor(gold)
-      .text(starStr.trim(), pageW / 2 - 140, topY + 30, { width: 280, align: 'center' });
+    for (let i = 0; i < 5; i++) {
+      if (hasRating) starStr += i < starCount ? '\u2605 ' : '\u2606 ';
+      else starStr += '\u2014 ';
+    }
+
+    if (hasRating) {
+      doc.fontSize(8).font('Helvetica').fillColor(gray)
+        .text('Judge Rating: ' + judgeRating + ' / 5', pageW / 2 - 140, topY + 18, { width: 280, align: 'center' });
+      doc.fontSize(10).fillColor(gold)
+        .text(starStr.trim(), pageW / 2 - 140, topY + 30, { width: 280, align: 'center' });
+    } else {
+      doc.fontSize(8).font('Helvetica').fillColor(lightGray)
+        .text('Pending Evaluation', pageW / 2 - 140, topY + 24, { width: 280, align: 'center' });
+    }
 
     topY += 52;
 
