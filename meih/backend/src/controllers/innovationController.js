@@ -1,4 +1,49 @@
 const innovationService = require('../services/innovationService');
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
+const http = require('http');
+
+function loadImageAsDataUrl(imageUrl) {
+  return new Promise(resolve => {
+    if (!imageUrl) return resolve(null);
+    const filename = path.basename(imageUrl);
+    const filePath = path.join(__dirname, '../../../uploads/profiles', filename);
+    if (fs.existsSync(filePath)) {
+      const ext = path.extname(filename).toLowerCase().replace('.', '');
+      const mime = ext === 'jpg' ? 'jpeg' : ext === 'jpeg' ? 'jpeg' : ext === 'png' ? 'png' : ext === 'gif' ? 'gif' : ext === 'webp' ? 'webp' : 'jpeg';
+      try {
+        const data = fs.readFileSync(filePath);
+        const b64 = data.toString('base64');
+        console.log('[CERT-IMG] Loaded from disk:', filePath, '(' + (data.length / 1024).toFixed(1) + 'KB)');
+        return resolve('data:image/' + mime + ';base64,' + b64);
+      } catch (e) { console.log('[CERT-IMG] Disk read failed:', e.message); }
+    } else {
+      console.log('[CERT-IMG] File not on disk:', filePath);
+    }
+    const baseUrl = (process.env.BACKEND_URL || 'https://meih.onrender.com').replace(/\/+$/, '');
+    const fullUrl = imageUrl.startsWith('http') ? imageUrl : baseUrl + '/' + imageUrl.replace(/^\//, '');
+    const client = fullUrl.startsWith('https') ? https : http;
+    client.get(fullUrl, res => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return loadImageAsDataUrl(res.headers.location).then(resolve);
+      }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        const contentType = res.headers['content-type'] || 'image/jpeg';
+        const b64 = buf.toString('base64');
+        console.log('[CERT-IMG] Fetched from URL:', fullUrl, '(' + (buf.length / 1024).toFixed(1) + 'KB)');
+        resolve('data:' + contentType + ';base64,' + b64);
+      });
+      res.on('error', () => resolve(null));
+    }).on('error', () => {
+      console.log('[CERT-IMG] HTTP fetch failed for:', fullUrl);
+      resolve(null);
+    });
+  });
+}
 
 exports.listCompetitions = async (req, res, next) => {
   try {
@@ -453,12 +498,9 @@ exports.getCertificate = async (req, res, next) => {
     else { rating = 'PARTICIPANT'; ratingColor = '#37474f'; ratingBg = '#eceff1'; ratingLabel = 'Innovation Showcase Participant'; }
 
     const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const baseUrl = (req.protocol + '://' + req.get('host')).replace(/\/+$/, '');
-    let authorImg = cert.author_image
-      ? (cert.author_image.startsWith('http') ? cert.author_image : baseUrl + '/' + cert.author_image.replace(/^\//, ''))
-      : '';
-    authorImg = authorImg && (authorImg.startsWith('http://localhost') || authorImg.startsWith('http://127.0.0.1')) ? authorImg.replace(/\/+/g, '/').replace(':/', '://') : authorImg;
-    console.log('[CERT] author_image:', cert.author_image, '→', authorImg, 'baseUrl:', baseUrl);
+    const authorImgDataUrl = await loadImageAsDataUrl(cert.author_image);
+    const authorImg = authorImgDataUrl || '';
+    console.log('[CERT] author_image:', cert.author_image, '→ data URL:', !!authorImgDataUrl);
     const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
     const judgeStars = hasRating ? Math.round(Number(cert.admin_rating)) : 0;
@@ -606,8 +648,6 @@ exports.getCertificate = async (req, res, next) => {
 exports.getCertificatePDF = async (req, res, next) => {
   try {
     const PDFDocument = require('pdfkit');
-    const https = require('https');
-    const http = require('http');
     const cert = await innovationService.getCertificateData(req.params.id);
     if (!cert) return res.status(404).send('Submission not found');
     if (cert.status !== 'approved') return res.status(400).send('Certificate only available for approved innovations');
@@ -624,7 +664,6 @@ exports.getCertificatePDF = async (req, res, next) => {
     else { rating = 'PARTICIPANT'; ratingHex = '#37474f'; ratingLabel = 'Innovation Showcase Participant'; }
 
     const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const baseUrl = req.protocol + '://' + req.get('host');
     const navy = '#1a3a5c';
     const gold = '#c9a84c';
     const gray = '#6b6560';
@@ -632,27 +671,11 @@ exports.getCertificatePDF = async (req, res, next) => {
     const bg = '#ffffff';
     const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
 
-    function fetchImage(url) {
-      return new Promise((resolve, reject) => {
-        if (!url) return resolve(null);
-        const fullUrl = url.startsWith('http') ? url : baseUrl + url;
-        const client = fullUrl.startsWith('https') ? https : http;
-        client.get(fullUrl, (response) => {
-          if (response.statusCode === 301 || response.statusCode === 302) {
-            return fetchImage(response.headers.location).then(resolve).catch(reject);
-          }
-          const chunks = [];
-          response.on('data', chunk => chunks.push(chunk));
-          response.on('end', () => resolve(Buffer.concat(chunks)));
-          response.on('error', reject);
-        }).on('error', reject);
-      });
-    }
-
-    let authorImage = null;
+    let authorImageDataUrl = null;
     try {
-      authorImage = await fetchImage(cert.author_image);
+      authorImageDataUrl = await loadImageAsDataUrl(cert.author_image);
     } catch (e) { /* image not available */ }
+    const authorImage = authorImageDataUrl;
 
     const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 0 });
     const chunks = [];
