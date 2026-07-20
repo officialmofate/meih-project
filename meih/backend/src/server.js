@@ -44,6 +44,7 @@ async function autoMigrate() {
     await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_name VARCHAR(200)`);
     await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_phone VARCHAR(50)`);
     await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url TEXT`);
+    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_base64 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_1 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_2 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_3 TEXT`);

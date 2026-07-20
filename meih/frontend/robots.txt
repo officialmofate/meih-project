@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Allow: /pages/events.html
+Allow: /pages/innovation.html
+Allow: /pages/vendors.html
+Allow: /pages/planners.html
+Allow: /pages/leaderboard.html
+Allow: /pages/event-detail.html
+Allow: /pages/innovation-detail.html
+Allow: /pages/vendor-detail.html
+Allow: /pages/planner-detail.html
+Disallow: /pages/dashboard-
+Disallow: /pages/login.html
+Disallow: /pages/register.html
+Disallow: /pages/verify-email.html
+Disallow: /pages/complete-profile.html
+Disallow: /pages/submit-innovation.html
+Disallow: /pages/create-event.html
+Disallow: /api/
+
+Sitemap: https://meih.onrender.com/sitemap.xml

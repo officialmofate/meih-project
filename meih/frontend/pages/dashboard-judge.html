@@ -89,6 +89,8 @@
     api.get('/innovation/judge/assignments').then((assignments) => {
       if (!Array.isArray(assignments) || !assignments.length) {
         document.getElementById('no-assignments').hidden = false;
+        document.getElementById('assignment-count').textContent = '0';
+        console.log('[JUDGE] No assignments returned from API');
         return;
       }
       document.getElementById('no-assignments').hidden = true;
@@ -117,7 +119,9 @@
           document.getElementById('score-form-section').scrollIntoView({ behavior: 'smooth' });
         });
       });
-    }).catch(() => {
+    }).catch((err) => {
+      console.error('[JUDGE] Error loading assignments:', err);
+      document.getElementById('no-assignments').textContent = 'Error loading assignments. Check console or contact support.';
       document.getElementById('no-assignments').hidden = false;
     });
 

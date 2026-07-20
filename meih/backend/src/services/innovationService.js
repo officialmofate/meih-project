@@ -303,27 +303,41 @@ exports.submitScore = async (judgeId, payload) => {
 };
 
 exports.getJudgeAssignments = async (judgeId) => {
-  const { rows } = await db.query(
-    `SELECT DISTINCT s.*, u.full_name AS author_name, u.image_url AS author_image,
-            COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
-            (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
-            js.innovation_score, js.impact_score, js.feasibility_score,
-            js.scalability_score, js.sustainability_score, js.technology_score,
-            js.business_model_score, js.social_impact_score, js.market_readiness_score,
-            js.presentation_score, js.comments AS judge_comments
-     FROM judge_assignments ja
-     INNER JOIN innovation_submissions s ON
-       (ja.submission_id IS NOT NULL AND s.id = ja.submission_id)
-       OR
-       (ja.submission_id IS NULL AND s.competition_id = ja.competition_id)
-     LEFT JOIN users u ON u.id = s.user_id
-     LEFT JOIN judge_scores js ON js.submission_id = s.id AND js.judge_id = $1
-     WHERE ja.judge_id = $1
-       AND (ja.submission_id IS NOT NULL OR s.status = 'approved')
-     ORDER BY s.created_at DESC`,
-    [judgeId]
-  );
-  return rows;
+  console.log('[JUDGE-SRV] Fetching assignments for judge:', judgeId);
+  try {
+    const { rows } = await db.query(
+      `SELECT DISTINCT s.*, u.full_name AS author_name, u.image_url AS author_image,
+              COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
+              (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
+              js.innovation_score, js.impact_score, js.feasibility_score,
+              js.scalability_score, js.sustainability_score, js.technology_score,
+              js.business_model_score, js.social_impact_score, js.market_readiness_score,
+              js.presentation_score, js.comments AS judge_comments
+       FROM judge_assignments ja
+       INNER JOIN innovation_submissions s ON
+         (ja.submission_id IS NOT NULL AND s.id = ja.submission_id)
+         OR
+         (ja.submission_id IS NULL AND s.competition_id = ja.competition_id)
+       LEFT JOIN users u ON u.id = s.user_id
+       LEFT JOIN judge_scores js ON js.submission_id = s.id AND js.judge_id = $1
+       WHERE ja.judge_id = $1
+         AND (ja.submission_id IS NOT NULL OR s.status = 'approved')
+       ORDER BY s.created_at DESC`,
+      [judgeId]
+    );
+    console.log('[JUDGE-SRV] Found', rows.length, 'assignments for judge:', judgeId);
+    if (rows.length === 0) {
+      const { rows: jaRows } = await db.query(
+        'SELECT id, judge_id, competition_id, submission_id FROM judge_assignments WHERE judge_id = $1',
+        [judgeId]
+      );
+      console.log('[JUDGE-SRV] judge_assignments rows for this judge:', jaRows.length, JSON.stringify(jaRows));
+    }
+    return rows;
+  } catch (err) {
+    console.error('[JUDGE-SRV] Query error for judge', judgeId, ':', err.message);
+    throw err;
+  }
 };
 
 exports.listCategories = async () => {
@@ -670,7 +684,7 @@ exports.getTicketData = async (id) => {
 
 exports.getCertificateData = async (id) => {
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name, u.email AS author_email, u.image_url AS author_image,
+    `SELECT s.*, u.full_name AS author_name, u.email AS author_email, u.image_url AS author_image, u.image_base64 AS author_image_b64,
             c.title AS competition_title, c.closes_at AS competition_closes,
             js.innovation_score, js.impact_score, js.feasibility_score,
             js.scalability_score, js.sustainability_score, js.technology_score,

@@ -269,9 +269,17 @@ exports.uploadInnovatorImage = async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
     const url = '/uploads/profiles/' + req.file.filename;
+    let b64 = null;
+    try {
+      const fileData = fs.readFileSync(req.file.path);
+      b64 = fileData.toString('base64');
+    } catch (e) { console.log('[UPLOAD] Could not read uploaded file for base64:', e.message); }
     const db = require('../config/database');
-    const { rowCount } = await db.query('UPDATE users SET image_url = $1 WHERE id = $2', [url, req.user.id]);
-    console.log('[UPLOAD] Saved image for user', req.user.id, '→', url, 'rows updated:', rowCount);
+    const { rowCount } = await db.query(
+      'UPDATE users SET image_url = $1, image_base64 = $2 WHERE id = $3',
+      [url, b64, req.user.id]
+    );
+    console.log('[UPLOAD] Saved image for user', req.user.id, '→', url, 'base64:', b64 ? b64.length + ' chars' : 'none', 'rows updated:', rowCount);
     res.json({ image_url: url, url });
   } catch (err) { next(err); }
 };
@@ -498,9 +506,17 @@ exports.getCertificate = async (req, res, next) => {
     else { rating = 'PARTICIPANT'; ratingColor = '#37474f'; ratingBg = '#eceff1'; ratingLabel = 'Innovation Showcase Participant'; }
 
     const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const authorImgDataUrl = await loadImageAsDataUrl(cert.author_image);
-    const authorImg = authorImgDataUrl || '';
-    console.log('[CERT] author_image:', cert.author_image, '→ data URL:', !!authorImgDataUrl);
+    let authorImg = '';
+    if (cert.author_image_b64) {
+      const ext = path.extname(cert.author_image || '.jpg').toLowerCase().replace('.', '');
+      const mime = ext === 'jpg' ? 'jpeg' : ext === 'jpeg' ? 'jpeg' : ext === 'png' ? 'png' : ext === 'gif' ? 'gif' : ext === 'webp' ? 'webp' : 'jpeg';
+      authorImg = 'data:image/' + mime + ';base64,' + cert.author_image_b64;
+      console.log('[CERT] Using DB base64:', authorImg.substring(0, 60) + '...');
+    } else {
+      const dataUrl = await loadImageAsDataUrl(cert.author_image);
+      authorImg = dataUrl || '';
+      console.log('[CERT] author_image:', cert.author_image, '→ data URL:', !!dataUrl);
+    }
     const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
     const judgeStars = hasRating ? Math.round(Number(cert.admin_rating)) : 0;
@@ -671,11 +687,18 @@ exports.getCertificatePDF = async (req, res, next) => {
     const bg = '#ffffff';
     const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
 
-    let authorImageDataUrl = null;
-    try {
-      authorImageDataUrl = await loadImageAsDataUrl(cert.author_image);
-    } catch (e) { /* image not available */ }
-    const authorImage = authorImageDataUrl;
+    let authorImage = null;
+    if (cert.author_image_b64) {
+      const ext = path.extname(cert.author_image || '.jpg').toLowerCase().replace('.', '');
+      const mime = ext === 'jpg' ? 'jpeg' : ext === 'jpeg' ? 'jpeg' : ext === 'png' ? 'png' : ext === 'gif' ? 'gif' : ext === 'webp' ? 'webp' : 'jpeg';
+      authorImage = 'data:image/' + mime + ';base64,' + cert.author_image_b64;
+      console.log('[CERT-PDF] Using DB base64');
+    } else {
+      try {
+        const dataUrl = await loadImageAsDataUrl(cert.author_image);
+        authorImage = dataUrl;
+      } catch (e) { /* image not available */ }
+    }
 
     const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 0 });
     const chunks = [];
