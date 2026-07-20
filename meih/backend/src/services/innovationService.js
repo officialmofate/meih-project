@@ -304,17 +304,22 @@ exports.submitScore = async (judgeId, payload) => {
 
 exports.getJudgeAssignments = async (judgeId) => {
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
+    `SELECT DISTINCT s.*, u.full_name AS author_name, u.image_url AS author_image,
             COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
             js.innovation_score, js.impact_score, js.feasibility_score,
             js.scalability_score, js.sustainability_score, js.technology_score,
             js.business_model_score, js.social_impact_score, js.market_readiness_score,
             js.presentation_score, js.comments AS judge_comments
-     FROM innovation_submissions s
+     FROM judge_assignments ja
+     INNER JOIN innovation_submissions s ON (
+       (ja.submission_id IS NOT NULL AND s.id = ja.submission_id)
+       OR
+       (ja.submission_id IS NULL AND s.competition_id = ja.competition_id AND s.status = 'approved')
+     )
      LEFT JOIN users u ON u.id = s.user_id
      LEFT JOIN judge_scores js ON js.submission_id = s.id AND js.judge_id = $1
-     WHERE s.status = 'approved'
+     WHERE ja.judge_id = $1 AND s.status = 'approved'
      ORDER BY s.created_at DESC`,
     [judgeId]
   );

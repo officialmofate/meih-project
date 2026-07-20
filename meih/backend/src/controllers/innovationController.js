@@ -445,8 +445,9 @@ exports.getCertificate = async (req, res, next) => {
     else { rating = 'PARTICIPANT'; ratingColor = '#37474f'; ratingBg = '#eceff1'; ratingLabel = 'Innovation Showcase Participant'; }
 
     const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const baseUrl = req.protocol + '://' + req.get('host');
     const authorImg = cert.author_image
-      ? (cert.author_image.startsWith('http') ? cert.author_image : 'https://meih.onrender.com' + cert.author_image)
+      ? (cert.author_image.startsWith('http') ? cert.author_image : baseUrl + cert.author_image)
       : '';
     const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
@@ -613,6 +614,7 @@ exports.getCertificatePDF = async (req, res, next) => {
     else { rating = 'PARTICIPANT'; ratingHex = '#37474f'; ratingLabel = 'Innovation Showcase Participant'; }
 
     const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const baseUrl = req.protocol + '://' + req.get('host');
     const navy = '#1a3a5c';
     const gold = '#c9a84c';
     const gray = '#6b6560';
@@ -623,7 +625,7 @@ exports.getCertificatePDF = async (req, res, next) => {
     function fetchImage(url) {
       return new Promise((resolve, reject) => {
         if (!url) return resolve(null);
-        const fullUrl = url.startsWith('http') ? url : 'https://meih.onrender.com' + url;
+        const fullUrl = url.startsWith('http') ? url : baseUrl + url;
         const client = fullUrl.startsWith('https') ? https : http;
         client.get(fullUrl, (response) => {
           if (response.statusCode === 301 || response.statusCode === 302) {
