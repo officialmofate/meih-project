@@ -173,9 +173,14 @@ exports.submitScore = async (req, res, next) => {
 
 exports.getJudgeAssignments = async (req, res, next) => {
   try {
+    console.log('[JUDGE-CTRL] getJudgeAssignments for user:', req.user.id, 'role:', req.user.role);
     const assignments = await innovationService.getJudgeAssignments(req.user.id);
+    console.log('[JUDGE-CTRL] Returning', assignments.length, 'assignments');
     res.json(assignments);
-  } catch (err) { next(err); }
+  } catch (err) {
+    console.error('[JUDGE-CTRL] Error:', err.message, err.stack);
+    next(err);
+  }
 };
 
 exports.approveSubmission = async (req, res, next) => {
@@ -261,7 +266,12 @@ exports.uploadScreenshot = async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No screenshot uploaded' });
     const url = '/uploads/payments/' + req.file.filename;
-    res.json({ screenshot_url: url, url });
+    let b64 = null;
+    try {
+      const fileData = fs.readFileSync(req.file.path);
+      b64 = fileData.toString('base64');
+    } catch (e) { console.log('[UPLOAD] Could not read uploaded file for base64:', e.message); }
+    res.json({ screenshot_url: url, url, base64: b64 });
   } catch (err) { next(err); }
 };
 
@@ -280,6 +290,27 @@ exports.uploadInnovatorImage = async (req, res, next) => {
       [url, b64, req.user.id]
     );
     console.log('[UPLOAD] Saved image for user', req.user.id, '→', url, 'base64:', b64 ? b64.length + ' chars' : 'none', 'rows updated:', rowCount);
+    res.json({ image_url: url, url });
+  } catch (err) { next(err); }
+};
+
+exports.uploadSubmissionImage = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
+    const submissionId = req.body.submissionId;
+    if (!submissionId) return res.status(400).json({ message: 'submissionId required' });
+    const url = '/uploads/profiles/' + req.file.filename;
+    let b64 = null;
+    try {
+      const fileData = fs.readFileSync(req.file.path);
+      b64 = fileData.toString('base64');
+    } catch (e) { console.log('[UPLOAD] Could not read uploaded file for base64:', e.message); }
+    const db = require('../config/database');
+    const { rowCount } = await db.query(
+      'UPDATE innovation_submissions SET image_url = $1, image_base64 = $2 WHERE id = $3 AND user_id = $4',
+      [url, b64, submissionId, req.user.id]
+    );
+    console.log('[UPLOAD] Saved submission image for submission', submissionId, '→', url, 'base64:', b64 ? b64.length + ' chars' : 'none', 'rows updated:', rowCount);
     res.json({ image_url: url, url });
   } catch (err) { next(err); }
 };
@@ -511,11 +542,18 @@ exports.getCertificate = async (req, res, next) => {
       const ext = path.extname(cert.author_image || '.jpg').toLowerCase().replace('.', '');
       const mime = ext === 'jpg' ? 'jpeg' : ext === 'jpeg' ? 'jpeg' : ext === 'png' ? 'png' : ext === 'gif' ? 'gif' : ext === 'webp' ? 'webp' : 'jpeg';
       authorImg = 'data:image/' + mime + ';base64,' + cert.author_image_b64;
-      console.log('[CERT] Using DB base64:', authorImg.substring(0, 60) + '...');
     } else {
       const dataUrl = await loadImageAsDataUrl(cert.author_image);
       authorImg = dataUrl || '';
-      console.log('[CERT] author_image:', cert.author_image, '→ data URL:', !!dataUrl);
+    }
+    let submissionImg = '';
+    if (cert.submission_image_b64) {
+      const ext = path.extname(cert.submission_image || '.jpg').toLowerCase().replace('.', '');
+      const mime = ext === 'jpg' ? 'jpeg' : ext === 'jpeg' ? 'jpeg' : ext === 'png' ? 'png' : ext === 'gif' ? 'gif' : ext === 'webp' ? 'webp' : 'jpeg';
+      submissionImg = 'data:image/' + mime + ';base64,' + cert.submission_image_b64;
+    } else {
+      const dataUrl = await loadImageAsDataUrl(cert.submission_image);
+      submissionImg = dataUrl || '';
     }
     const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
@@ -558,6 +596,7 @@ exports.getCertificate = async (req, res, next) => {
   .cert-intro{font-family:'Cormorant Garamond',serif;font-size:14px;font-style:italic;color:#6b6560;margin-bottom:12px;letter-spacing:0.02em}
   .cert-author{font-family:'Playfair Display',serif;font-size:30px;font-weight:700;color:#1a3a5c;margin:4px 0 16px;position:relative;display:inline-block}
   .cert-author::after{content:'';display:block;width:60%;height:2px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);margin:6px auto 0}
+  .cert-submission-img{max-width:100%;max-height:280px;border-radius:8px;margin:16px 0;border:1px solid #ece9e4;object-fit:contain;background:#fafaf8}
   .cert-desc{font-family:'Cormorant Garamond',serif;font-size:14px;color:#5a5550;line-height:1.7;max-width:520px;margin:0 auto 24px}
   .cert-desc strong{color:#1a3a5c;font-weight:600}
   .cert-details{display:grid;grid-template-columns:1fr 1fr;gap:14px 32px;text-align:left;margin:20px 0;padding:20px 24px;background:#fafaf8;border:1px solid #ece9e4;border-radius:4px}
@@ -604,6 +643,7 @@ exports.getCertificate = async (req, res, next) => {
         ${authorImg ? `<div class="cert-avatar"><img src="${authorImg}" alt="${cert.author_name || ''}" onerror="this.parentElement.innerHTML='<div class=initials>${initials}</div>'" /></div>` : `<div class="cert-avatar"><div class="initials">${initials}</div></div>`}
         <div class="cert-intro">This is proudly presented to</div>
         <div class="cert-author">${cert.author_name || 'Innovator'}</div>
+        ${submissionImg ? `<img src="${submissionImg}" alt="Innovation Screenshot" class="cert-submission-img" onerror="this.style.display='none'" />` : ''}
         <div class="cert-desc">
           in recognition of successfully showcasing the innovation
           <strong>&ldquo;${cert.title || 'Untitled'}&rdquo;</strong>

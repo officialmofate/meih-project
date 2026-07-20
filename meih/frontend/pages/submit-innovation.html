@@ -66,6 +66,10 @@
           <label for="inno-technology">Technology Used</label>
           <input id="inno-technology" name="technology" type="text" placeholder="e.g. Mobile App, IoT Sensors, AI/ML" />
 
+          <label for="inno-image">Screenshot / Image of Innovation</label>
+          <input id="inno-image" name="image" type="file" accept="image/*" />
+          <p class="text-muted" style="font-size:12px;margin-top:4px;">Optional. Upload a screenshot or image of your innovation. Max 5MB.</p>
+
           <div class="step-actions">
             <button type="button" class="btn btn-secondary" data-back>Back</button>
             <button type="button" class="btn btn-primary" data-next>Next: Review</button>
@@ -265,6 +269,15 @@
           document.getElementById('innovation-payment-section').hidden = false;
           document.getElementById('inno-pay-submission-id').value = result.id || '';
           errorEl.hidden = true;
+          var imgFile = document.getElementById('inno-image').files[0];
+          if (imgFile && result.id) {
+            var imgFd = new FormData();
+            imgFd.append('image', imgFile);
+            imgFd.append('submissionId', result.id);
+            try {
+              await fetch(BASE_URL + '/innovation/upload-submission-image', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: imgFd });
+            } catch(e) { console.error('[MEIH] Image upload failed:', e); }
+          }
         } catch (err) {
           errorEl.textContent = err.message || 'Could not register the innovation. Please try again.';
           errorEl.hidden = false;

@@ -7,7 +7,7 @@ const TOKEN_EXPIRY_BUFFER_SECONDS = 30;
 // Per-user rate limiting for sensitive operations
 const sensitiveOpCounts = new Map();
 const SENSITIVE_OP_WINDOW_MS = 60 * 1000; // 1 minute
-const SENSITIVE_OP_MAX = 10;
+const SENSITIVE_OP_MAX = 15;
 
 function trackSensitiveOp(userId) {
   const now = Date.now();

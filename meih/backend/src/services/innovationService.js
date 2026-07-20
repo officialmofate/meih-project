@@ -685,6 +685,7 @@ exports.getTicketData = async (id) => {
 exports.getCertificateData = async (id) => {
   const { rows } = await db.query(
     `SELECT s.*, u.full_name AS author_name, u.email AS author_email, u.image_url AS author_image, u.image_base64 AS author_image_b64,
+            s.image_url AS submission_image, s.image_base64 AS submission_image_b64,
             c.title AS competition_title, c.closes_at AS competition_closes,
             js.innovation_score, js.impact_score, js.feasibility_score,
             js.scalability_score, js.sustainability_score, js.technology_score,

@@ -48,6 +48,7 @@ router.put('/competitions/:id', authenticate, authorize('admin', 'innovator_mana
 router.get('/competitions/:id/submissions', ctrl.listCompetitionSubmissions);
 router.post('/upload-screenshot', authenticate, authorize('innovator'), upload.single('screenshot'), ctrl.uploadScreenshot);
 router.post('/upload-profile-image', authenticate, profileUpload.single('image'), ctrl.uploadInnovatorImage);
+router.post('/upload-submission-image', authenticate, authorize('innovator'), profileUpload.single('image'), ctrl.uploadSubmissionImage);
 
 router.post('/competitions/:id/submit', authenticate, authorize('innovator'), ctrl.submitInnovation);
 

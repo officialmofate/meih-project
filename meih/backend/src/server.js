@@ -54,6 +54,8 @@ async function autoMigrate() {
     await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS points INT DEFAULT 1`);
     await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS voter_role VARCHAR(50) DEFAULT 'public_voter'`);
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS admin_rating INT`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_url TEXT`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_base64 TEXT`);
     await db.query(`ALTER TABLE judge_assignments ADD COLUMN IF NOT EXISTS submission_id UUID REFERENCES innovation_submissions(id) ON DELETE CASCADE`);
     await db.query(`ALTER TABLE judge_assignments DROP CONSTRAINT IF EXISTS judge_assignments_judge_id_competition_id_key`);
     await db.query(`CREATE TABLE IF NOT EXISTS vendor_quotes (
@@ -146,8 +148,8 @@ function createApp() {
 
   // Specific rate limiters
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
+    windowMs: 60 * 1000,
+    max: 15,
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: 'Too many authentication attempts, please try again later', code: 'RATE_LIMITED' },

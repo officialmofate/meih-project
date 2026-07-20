@@ -17,7 +17,8 @@
 
       <header class="page-header">
         <h1 data-i18n="judge_dashboard">Judge Dashboard</h1>
-        <p data-i18n="judge_welcome">Welcome back — you have <strong id="assignment-count">0</strong> innovations assigned for scoring.</p>
+        <p data-i18n="judge_welcome">Welcome back, <strong id="judge-name">Judge</strong> — you have <strong id="assignment-count">0</strong> innovations assigned for scoring.</p>
+        <p id="judge-error" class="form-error" hidden></p>
       </header>
 
       <div class="dashboard-grid">
@@ -87,6 +88,12 @@
   <script type="module">
     import { api } from '../js/api.js';
 
+    // Display user name
+    try {
+      const user = JSON.parse(localStorage.getItem('meih_user') || sessionStorage.getItem('meih_user') || '{}');
+      document.getElementById('judge-name').textContent = user.full_name || user.name || user.email || 'Judge';
+    } catch (e) {}
+
     // Load judge assignments
     api.get('/innovation/judge/assignments').then((assignments) => {
       if (!Array.isArray(assignments) || !assignments.length) {
@@ -123,8 +130,10 @@
       });
     }).catch((err) => {
       console.error('[JUDGE] Error loading assignments:', err);
-      document.getElementById('no-assignments').textContent = 'Error loading assignments. Check console or contact support.';
+      document.getElementById('judge-error').textContent = 'Error loading assignments: ' + (err.message || 'Unknown error') + '. Please try refreshing the page.';
+      document.getElementById('judge-error').hidden = false;
       document.getElementById('no-assignments').hidden = false;
+      document.getElementById('no-assignments').textContent = 'Error loading assignments. Try again later.';
     });
 
     // Star rating interaction
