@@ -456,23 +456,28 @@ exports.listAllJudges = async () => {
 
 exports.assignJudge = async (judgeId, competitionId, submissionId) => {
   if (submissionId) {
-    const { rows } = await db.query(
-      `INSERT INTO judge_assignments (judge_id, competition_id, submission_id)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (judge_id, competition_id) DO UPDATE SET submission_id = $3
-       RETURNING *`,
+    const { rows: existing } = await db.query(
+      `SELECT id FROM judge_assignments WHERE judge_id = $1 AND competition_id = $2 AND submission_id = $3`,
       [judgeId, competitionId, submissionId]
     );
-    return rows[0] || { judge_id: judgeId, competition_id: competitionId, submission_id: submissionId };
+    if (existing.length > 0) return existing[0];
+    const { rows } = await db.query(
+      `INSERT INTO judge_assignments (judge_id, competition_id, submission_id)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [judgeId, competitionId, submissionId]
+    );
+    return rows[0];
   }
-  const { rows } = await db.query(
-    `INSERT INTO judge_assignments (judge_id, competition_id)
-     VALUES ($1, $2)
-     ON CONFLICT (judge_id, competition_id) DO NOTHING
-     RETURNING *`,
+  const { rows: existing } = await db.query(
+    `SELECT id FROM judge_assignments WHERE judge_id = $1 AND competition_id = $2 AND submission_id IS NULL`,
     [judgeId, competitionId]
   );
-  return rows[0] || { judge_id: judgeId, competition_id: competitionId };
+  if (existing.length > 0) return existing[0];
+  const { rows } = await db.query(
+    `INSERT INTO judge_assignments (judge_id, competition_id) VALUES ($1, $2) RETURNING *`,
+    [judgeId, competitionId]
+  );
+  return rows[0];
 };
 
 exports.adminRateSubmission = async (id, adminId, rating) => {
@@ -490,12 +495,26 @@ exports.adminRateSubmission = async (id, adminId, rating) => {
   return rows[0];
 };
 
-exports.removeJudgeAssignment = async (judgeId, competitionId) => {
+exports.removeJudgeAssignment = async (assignmentId) => {
   const { rowCount } = await db.query(
-    'DELETE FROM judge_assignments WHERE judge_id = $1 AND competition_id = $2',
-    [judgeId, competitionId]
+    'DELETE FROM judge_assignments WHERE id = $1',
+    [assignmentId]
   );
   return rowCount > 0;
+};
+
+exports.listAllJudgeAssignments = async () => {
+  const { rows } = await db.query(
+    `SELECT ja.id, ja.judge_id, ja.competition_id, ja.submission_id, ja.created_at,
+            u.full_name AS judge_name, u.email AS judge_email,
+            c.title AS competition_title, s.title AS submission_title
+     FROM judge_assignments ja
+     LEFT JOIN users u ON u.id = ja.judge_id
+     LEFT JOIN innovation_competitions c ON c.id = ja.competition_id
+     LEFT JOIN innovation_submissions s ON s.id = ja.submission_id
+     ORDER BY ja.created_at DESC`
+  );
+  return rows;
 };
 
 exports.listCompetitionJudges = async (competitionId) => {

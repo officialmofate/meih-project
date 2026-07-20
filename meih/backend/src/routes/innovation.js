@@ -67,9 +67,10 @@ router.get('/leaderboard/:competitionId', ctrl.getCompetitionLeaderboard);
 
 router.post('/judge/score', authenticate, authorize('judge'), ctrl.submitScore);
 router.get('/judge/assignments', authenticate, authorize('judge'), ctrl.getJudgeAssignments);
+router.get('/judge/assignments/all', authenticate, authorize('admin', 'superadmin'), ctrl.listAllJudgeAssignments);
 router.get('/judges', authenticate, authorize('admin', 'superadmin'), ctrl.listAllJudges);
 router.post('/judge/assign', authenticate, authorize('admin', 'superadmin'), ctrl.assignJudge);
-router.delete('/judge/assign/:judgeId/:competitionId', authenticate, authorize('admin', 'superadmin'), ctrl.removeJudgeAssignment);
+router.delete('/judge/assign/:id', authenticate, authorize('admin', 'superadmin'), ctrl.removeJudgeAssignment);
 router.get('/competitions/:competitionId/judges', authenticate, ctrl.listCompetitionJudges);
 
 router.get('/manager/submissions', authenticate, authorize('admin', 'innovator_manager'), ctrl.listManagerSubmissions);

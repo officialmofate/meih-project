@@ -225,7 +225,8 @@ exports.uploadInnovatorImage = async (req, res, next) => {
     if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
     const url = '/uploads/profiles/' + req.file.filename;
     const db = require('../config/database');
-    await db.query('UPDATE users SET image_url = $1 WHERE id = $2', [url, req.user.id]);
+    const { rowCount } = await db.query('UPDATE users SET image_url = $1 WHERE id = $2', [url, req.user.id]);
+    console.log('[UPLOAD] Saved image for user', req.user.id, '→', url, 'rows updated:', rowCount);
     res.json({ image_url: url, url });
   } catch (err) { next(err); }
 };
@@ -255,9 +256,16 @@ exports.assignJudge = async (req, res, next) => {
 
 exports.removeJudgeAssignment = async (req, res, next) => {
   try {
-    const removed = await innovationService.removeJudgeAssignment(req.params.judgeId, req.params.competitionId);
+    const removed = await innovationService.removeJudgeAssignment(req.params.id);
     if (!removed) return res.status(404).json({ message: 'Assignment not found' });
     res.status(204).end();
+  } catch (err) { next(err); }
+};
+
+exports.listAllJudgeAssignments = async (req, res, next) => {
+  try {
+    const assignments = await innovationService.listAllJudgeAssignments();
+    res.json(assignments);
   } catch (err) { next(err); }
 };
 
@@ -445,10 +453,12 @@ exports.getCertificate = async (req, res, next) => {
     else { rating = 'PARTICIPANT'; ratingColor = '#37474f'; ratingBg = '#eceff1'; ratingLabel = 'Innovation Showcase Participant'; }
 
     const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const baseUrl = req.protocol + '://' + req.get('host');
-    const authorImg = cert.author_image
-      ? (cert.author_image.startsWith('http') ? cert.author_image : baseUrl + cert.author_image)
+    const baseUrl = (req.protocol + '://' + req.get('host')).replace(/\/+$/, '');
+    let authorImg = cert.author_image
+      ? (cert.author_image.startsWith('http') ? cert.author_image : baseUrl + '/' + cert.author_image.replace(/^\//, ''))
       : '';
+    authorImg = authorImg && (authorImg.startsWith('http://localhost') || authorImg.startsWith('http://127.0.0.1')) ? authorImg.replace(/\/+/g, '/').replace(':/', '://') : authorImg;
+    console.log('[CERT] author_image:', cert.author_image, '→', authorImg, 'baseUrl:', baseUrl);
     const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
     const judgeStars = hasRating ? Math.round(Number(cert.admin_rating)) : 0;

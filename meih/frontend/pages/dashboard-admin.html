@@ -481,7 +481,7 @@
     Promise.all([
       api.get('/admin/users').catch(() => []),
       api.get('/innovation/competitions').catch(() => []),
-      api.get('/innovation/judges').catch(() => []),
+      api.get('/innovation/judge/assignments/all').catch(() => []),
     ]).then(([users, competitions, judgeAssignments]) => {
       const judges = Array.isArray(users) ? users.filter(u => u.role === 'judge') : [];
       const judgeSelect = document.getElementById('judge-select');
@@ -520,20 +520,20 @@
         document.getElementById('no-judge-assignments').hidden = true;
         document.getElementById('judge-assignments-table').hidden = false;
         document.getElementById('judge-assignments-body').innerHTML = judgeAssignments.map(a => {
-          const judgeName = judges.find(j => j.id === a.judge_id);
-          const compName = competitions ? competitions.find(c => c.id === a.competition_id) : null;
+          const label = a.submission_title ? a.competition_title + ' (' + a.submission_title + ')' : a.competition_title || a.competition_id;
+          const dateStr = a.created_at ? new Date(a.created_at).toLocaleDateString() : '-';
           return '<tr>' +
-            '<td>' + (judgeName ? (judgeName.full_name || judgeName.name || judgeName.email) : a.judge_id) + '</td>' +
-            '<td>' + (compName ? compName.title : a.competition_id) + '</td>' +
-            '<td>' + new Date(a.created_at || Date.now()).toLocaleDateString() + '</td>' +
-            '<td><button class="btn btn-sm btn-danger remove-judge-btn" data-judge="' + a.judge_id + '" data-comp="' + a.competition_id + '">Remove</button></td>' +
+            '<td>' + (a.judge_name || a.judge_id) + '</td>' +
+            '<td>' + label + '</td>' +
+            '<td>' + dateStr + '</td>' +
+            '<td><button class="btn btn-sm btn-danger remove-judge-btn" data-id="' + a.id + '">Remove</button></td>' +
             '</tr>';
         }).join('');
         document.querySelectorAll('.remove-judge-btn').forEach(btn => {
           btn.addEventListener('click', async () => {
             if (!confirm('Remove this judge assignment?')) return;
             try {
-              await api.del('/innovation/judge/assign/' + btn.dataset.judge + '/' + btn.dataset.comp);
+              await api.del('/innovation/judge/assign/' + btn.dataset.id);
               window.location.reload();
             } catch (err) { alert(err.message); }
           });
