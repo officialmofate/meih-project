@@ -3,9 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Planner Profile — MEIH</title>
+  <meta name="description" content="View event planner portfolio, services, and reviews. Hire professional planners in Tanzania." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://meih.onrender.com/pages/planner-detail.html" />
+  <meta property="og:title" content="Planner Profile — MEIH | Event Planners Tanzania" />
+  <meta property="og:description" content="View event planner portfolio, services, and reviews. Hire professional planners in Tanzania." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://meih.onrender.com/pages/planner-detail.html" />
+  <meta property="og:image" content="https://meih.onrender.com/favicon.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Planner Profile — MEIH | Event Planners Tanzania" />
+  <meta name="twitter:description" content="View event planner portfolio, services, and reviews. Hire professional planners in Tanzania." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Planner Profile — MEIH | Event Planners Tanzania</title>
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/pages/events.css" />
+  <script src="../js/seo.js"></script>
   <style>
     .planner-profile { padding-top: var(--space-lg); }
     .profile-header {
@@ -127,8 +140,15 @@
     }
 
     api.get('/planners/' + plannerId).then(p => {
-      document.title = (p.company_name || p.full_name || 'Planner') + ' — MEIH';
-      document.getElementById('planner-initial').textContent = (p.company_name || p.full_name || 'P').charAt(0).toUpperCase();
+      const pName = p.company_name || p.full_name || 'Planner';
+      document.title = pName + ' — MEIH';
+      if (typeof initPageMeta === 'function') initPageMeta({
+        title: pName + ' — MEIH | Event Planners Tanzania',
+        description: (p.bio || '').substring(0, 150),
+        image: p.image_url || '',
+        url: window.location.href
+      });
+      document.getElementById('planner-initial').textContent = (pName).charAt(0).toUpperCase();
       document.getElementById('planner-name').textContent = p.company_name || p.full_name || 'Event Planner';
       document.getElementById('planner-owner').textContent = p.full_name || '';
       document.getElementById('planner-bio').textContent = p.bio || 'No bio provided.';

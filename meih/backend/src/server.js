@@ -182,6 +182,43 @@ function createApp() {
     };
   }
 
+  app.get('/sitemap.xml', async function (req, res) {
+    try {
+      var baseUrl = 'https://meih.onrender.com';
+      var urls = [
+        { loc: baseUrl + '/', priority: '1.0' },
+        { loc: baseUrl + '/pages/events.html', priority: '0.8' },
+        { loc: baseUrl + '/pages/innovation.html', priority: '0.8' },
+        { loc: baseUrl + '/pages/vendors.html', priority: '0.8' },
+        { loc: baseUrl + '/pages/planners.html', priority: '0.8' },
+        { loc: baseUrl + '/pages/leaderboard.html', priority: '0.6' },
+      ];
+      try {
+        var db2 = require('./config/database');
+        var events = await db2.query('SELECT id, updated_at FROM events WHERE status = \'published\' ORDER BY created_at DESC LIMIT 500');
+        if (Array.isArray(events.rows)) events.rows.forEach(function (e) { urls.push({ loc: baseUrl + '/pages/event-detail.html?id=' + e.id, priority: '0.5', lastmod: e.updated_at }); });
+        var subs = await db2.query('SELECT id, updated_at FROM innovation_submissions WHERE status = \'approved\' ORDER BY created_at DESC LIMIT 500');
+        if (Array.isArray(subs.rows)) subs.rows.forEach(function (s) { urls.push({ loc: baseUrl + '/pages/innovation-detail.html?id=' + s.id, priority: '0.5', lastmod: s.updated_at }); });
+        var planners = await db2.query('SELECT id, updated_at FROM planners ORDER BY created_at DESC LIMIT 500');
+        if (Array.isArray(planners.rows)) planners.rows.forEach(function (p) { urls.push({ loc: baseUrl + '/pages/planner-detail.html?id=' + p.id, priority: '0.5', lastmod: p.updated_at }); });
+        var vendors = await db2.query('SELECT id, updated_at FROM vendors ORDER BY created_at DESC LIMIT 500');
+        if (Array.isArray(vendors.rows)) vendors.rows.forEach(function (v) { urls.push({ loc: baseUrl + '/pages/vendor-detail.html?id=' + v.id, priority: '0.5', lastmod: v.updated_at }); });
+      } catch (e) { console.error('[SITEMAP] DB query error:', e.message); }
+      var xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+      urls.forEach(function (u) {
+        xml += '  <url>\n    <loc>' + u.loc + '</loc>\n';
+        if (u.lastmod) xml += '    <lastmod>' + new Date(u.lastmod).toISOString().split('T')[0] + '</lastmod>\n';
+        xml += '    <priority>' + u.priority + '</priority>\n  </url>\n';
+      });
+      xml += '</urlset>';
+      res.setHeader('Content-Type', 'application/xml');
+      res.send(xml);
+    } catch (err) { res.status(500).send('Sitemap generation failed'); }
+  });
+  app.get('/robots.txt', function (req, res) {
+    res.setHeader('Content-Type', 'text/plain');
+    res.send('User-agent: *\nAllow: /\nSitemap: https://meih.onrender.com/sitemap.xml\n');
+  });
   app.get('/health', function (req, res) { res.json({ status: 'ok', timestamp: new Date().toISOString() }); });
   app.get('/health/db', async function (req, res) {
     var available = db.isAvailable();

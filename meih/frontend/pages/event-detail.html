@@ -3,9 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Event Detail — MEIH</title>
+  <meta name="description" content="View event details, planners, and vendors. Plan your perfect event with MOFATE." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://meih.onrender.com/pages/event-detail.html" />
+  <meta property="og:title" content="Event Detail — MEIH | Tanzania Events" />
+  <meta property="og:description" content="View event details, planners, and vendors. Plan your perfect event with MOFATE." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://meih.onrender.com/pages/event-detail.html" />
+  <meta property="og:image" content="https://meih.onrender.com/favicon.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Event Detail — MEIH | Tanzania Events" />
+  <meta name="twitter:description" content="View event details, planners, and vendors. Plan your perfect event with MOFATE." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Event Detail — MEIH | Tanzania Events</title>
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/pages/events.css" />
+  <script src="../js/seo.js"></script>
 </head>
 <body>
   <div id="navbar-root"></div>
@@ -217,6 +230,11 @@
     api.get(`/events/events/${eventId}`).then(ev => {
       paintEvent(ev);
       currentEvent = ev;
+      if (typeof initPageMeta === 'function') initPageMeta({
+        title: (ev.title || 'Event') + ' — MEIH | Tanzania Events',
+        description: (ev.description || '').substring(0, 150),
+        url: window.location.href
+      });
     }).catch(() => {
       document.querySelector('.detail-main').innerHTML = '<p class="empty-state">Event not found.</p>';
     });

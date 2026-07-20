@@ -3,9 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vendor Profile — MEIH</title>
+  <meta name="description" content="View vendor portfolio, services, and reviews. Book trusted event vendors in Tanzania." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://meih.onrender.com/pages/vendor-detail.html" />
+  <meta property="og:title" content="Vendor Profile — MEIH | Event Vendors Tanzania" />
+  <meta property="og:description" content="View vendor portfolio, services, and reviews. Book trusted event vendors in Tanzania." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://meih.onrender.com/pages/vendor-detail.html" />
+  <meta property="og:image" content="https://meih.onrender.com/favicon.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Vendor Profile — MEIH | Event Vendors Tanzania" />
+  <meta name="twitter:description" content="View vendor portfolio, services, and reviews. Book trusted event vendors in Tanzania." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Vendor Profile — MEIH | Event Vendors Tanzania</title>
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/pages/events.css" />
+  <script src="../js/seo.js"></script>
   <style>
     .vendor-profile { padding-top: var(--space-lg); }
     .profile-header {
@@ -161,8 +174,14 @@
     }
 
     api.get('/vendors/' + vendorId).then(v => {
-      document.title = (v.business_name || v.full_name || 'Vendor') + ' — MEIH';
       const name = v.business_name || v.full_name || 'Vendor';
+      document.title = name + ' — MEIH';
+      if (typeof initPageMeta === 'function') initPageMeta({
+        title: name + ' — MEIH | Event Vendors Tanzania',
+        description: (v.bio || '').substring(0, 150),
+        image: v.image_url || '',
+        url: window.location.href
+      });
       document.getElementById('vendor-initial').textContent = name.charAt(0).toUpperCase();
       document.getElementById('vendor-name').textContent = name;
       document.getElementById('vendor-category').textContent = v.category || '';
