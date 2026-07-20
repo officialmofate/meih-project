@@ -312,14 +312,14 @@ exports.getJudgeAssignments = async (judgeId) => {
             js.business_model_score, js.social_impact_score, js.market_readiness_score,
             js.presentation_score, js.comments AS judge_comments
      FROM judge_assignments ja
-     INNER JOIN innovation_submissions s ON (
+     INNER JOIN innovation_submissions s ON
        (ja.submission_id IS NOT NULL AND s.id = ja.submission_id)
        OR
-       (ja.submission_id IS NULL AND s.competition_id = ja.competition_id AND s.status = 'approved')
-     )
+       (ja.submission_id IS NULL AND s.competition_id = ja.competition_id)
      LEFT JOIN users u ON u.id = s.user_id
      LEFT JOIN judge_scores js ON js.submission_id = s.id AND js.judge_id = $1
-     WHERE ja.judge_id = $1 AND s.status = 'approved'
+     WHERE ja.judge_id = $1
+       AND (ja.submission_id IS NOT NULL OR s.status = 'approved')
      ORDER BY s.created_at DESC`,
     [judgeId]
   );
