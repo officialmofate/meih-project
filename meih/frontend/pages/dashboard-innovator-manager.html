@@ -251,7 +251,7 @@
         const method = s.payment_method === 'bank_transfer' ? 'Bank Transfer' : s.payment_method === 'mobile_money' ? 'Mobile Money' : (s.payment_method || '—');
         const amount = s.payment_amount ? 'Tsh ' + Number(s.payment_amount).toLocaleString() : '—';
         const screenshot = s.payment_screenshot_url
-          ? '<a href="' + s.payment_screenshot_url + '" target="_blank" class="btn btn-sm btn-ghost" style="margin-right:4px;">Screenshot</a>'
+          ? `<a href="${window.resolveUrl(s.payment_screenshot_url)}" target="_blank"><img src="${window.resolveUrl(s.payment_screenshot_url)}" alt="Payment Screenshot" style="max-width:80px;max-height:60px;border-radius:4px;border:1px solid var(--color-border);cursor:pointer;" onerror="this.parentElement.innerHTML='View'" /></a>`
           : '';
         return `<tr data-pay-id="${s.id}">
           <td>${s.title || '—'}</td>
