@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Reviewer Dashboard — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/dashboard.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page dashboard" data-page="dashboard-reviewer">
+    <div class="container">
+
+      <header class="page-header">
+        <h1>Reviewer Dashboard</h1>
+        <p>Welcome back, <strong id="reviewer-name">Reviewer</strong> — you have <strong id="assignment-count">0</strong> innovations assigned for review. Submissions must be reviewed before they can be approved to voting.</p>
+        <p id="reviewer-error" class="form-error" hidden></p>
+      </header>
+
+      <div class="dashboard-grid">
+
+        <section class="card wide">
+          <h2>Assigned Innovations</h2>
+          <p id="no-assignments" class="empty-state">No innovations assigned for review yet.</p>
+          <table class="data-table" id="assignments-table" hidden>
+            <thead><tr><th>Title</th><th>Category</th><th>Competition</th><th>Votes</th><th>Status</th><th></th></tr></thead>
+            <tbody id="assignments-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide" id="score-form-section">
+          <h2>Review Sheet — <span id="score-target-title">Select an innovation above</span></h2>
+          <p class="text-muted">Score the innovation across 10 criteria (0-10 each). Your review is required before admin can approve this submission to voting.</p>
+          <form id="score-form" class="stacked-form">
+            <input type="hidden" id="score-submission-id" name="submissionId" />
+
+            <div class="rubric-grid">
+              <label>Innovation (High weight) <input type="range" name="innovationScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+              <label>Impact (High weight) <input type="range" name="impactScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+              <label>Feasibility (Medium) <input type="range" name="feasibilityScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+              <label>Scalability (Medium) <input type="range" name="scalabilityScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+              <label>Sustainability (Medium) <input type="range" name="sustainabilityScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+              <label>Technology Used (Medium) <input type="range" name="technologyScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+              <label>Business Model (Low) <input type="range" name="businessModelScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+              <label>Social Impact (Medium) <input type="range" name="socialImpactScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+              <label>Market Readiness (Low) <input type="range" name="marketReadinessScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+              <label>Presentation (Low) <input type="range" name="presentationScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+            </div>
+
+            <label for="score-comments">Comments for the innovator</label>
+            <textarea id="score-comments" name="comments" rows="3" placeholder="Provide constructive feedback..."></textarea>
+
+            <button type="submit" class="btn btn-primary">Submit Review</button>
+          </form>
+          <p id="score-confirmation" class="form-success" hidden>Review submitted successfully.</p>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script src="../js/config.js"></script>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+
+    try {
+      const user = JSON.parse(localStorage.getItem('meih_user') || sessionStorage.getItem('meih_user') || '{}');
+      if (!user || (user.role !== 'reviewer' && user.role !== 'admin' && user.role !== 'superadmin')) {
+        window.location.href = 'login.html';
+      }
+      document.getElementById('reviewer-name').textContent = user.full_name || user.name || user.email || 'Reviewer';
+    } catch (e) { window.location.href = 'login.html'; }
+
+    api.get('/innovation/reviewer/assignments').then((assignments) => {
+      if (!Array.isArray(assignments) || !assignments.length) {
+        document.getElementById('no-assignments').hidden = false;
+        document.getElementById('assignment-count').textContent = '0';
+        return;
+      }
+      document.getElementById('no-assignments').hidden = true;
+      document.getElementById('assignments-table').hidden = false;
+      document.getElementById('assignment-count').textContent = assignments.length;
+      const tbody = document.getElementById('assignments-body');
+      tbody.innerHTML = assignments.map(a => {
+        const statusClass = a.innovation_score != null ? 'badge-success' : 'badge-muted';
+        const action = a.innovation_score != null ? 'Edit Review' : 'Review';
+        return `<tr>
+          <td>${a.title || '—'}</td>
+          <td>${a.category || '—'}</td>
+          <td>${a.competition_title || '—'}</td>
+          <td>${a.total_points || 0} pts (${a.vote_count || 0} votes)</td>
+          <td><span class="badge ${statusClass}">${a.innovation_score != null ? 'Reviewed' : 'Pending'}</span></td>
+          <td><a href="#score-section" data-open-score="${a.id}">${action}</a></td>
+        </tr>`;
+      }).join('');
+
+      tbody.querySelectorAll('[data-open-score]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const id = link.dataset.openScore;
+          const a = assignments.find(x => x.id === id);
+          document.getElementById('score-target-title').textContent = link.closest('tr').children[0].textContent;
+          document.getElementById('score-submission-id').value = id;
+          if (a && a.innovation_score != null) {
+            const form = document.getElementById('score-form');
+            form.innovationScore.value = a.innovation_score ?? 5;
+            form.impactScore.value = a.impact_score ?? 5;
+            form.feasibilityScore.value = a.feasibility_score ?? 5;
+            form.scalabilityScore.value = a.scalability_score ?? 5;
+            form.sustainabilityScore.value = a.sustainability_score ?? 5;
+            form.technologyScore.value = a.technology_score ?? 5;
+            form.businessModelScore.value = a.business_model_score ?? 5;
+            form.socialImpactScore.value = a.social_impact_score ?? 5;
+            form.marketReadinessScore.value = a.market_readiness_score ?? 5;
+            form.presentationScore.value = a.presentation_score ?? 5;
+            form.comments.value = a.reviewer_comments || '';
+            form.querySelectorAll('input[type=range]').forEach(r => {
+              r.nextElementSibling.textContent = r.value;
+            });
+          }
+          document.getElementById('score-form-section').scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+    }).catch((err) => {
+      document.getElementById('reviewer-error').textContent = 'Error loading assignments: ' + (err.message || 'Unknown');
+      document.getElementById('reviewer-error').hidden = false;
+    });
+
+    document.getElementById('score-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      try {
+        await api.post('/innovation/reviewer/score', data);
+      } catch {}
+      document.getElementById('score-confirmation').hidden = false;
+      setTimeout(() => { document.getElementById('score-confirmation').hidden = true; }, 3000);
+    });
+  </script>
+</body>
+</html>

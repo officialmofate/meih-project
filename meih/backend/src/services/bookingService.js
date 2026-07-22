@@ -50,6 +50,7 @@ exports.create = async (userId, role, payload) => {
 exports.findById = async (id) => {
   const { rows } = await db.query(
     `SELECT b.*, e.name AS event_name, e.location AS event_location,
+            e.ticket_price, e.num_payments, e.event_date,
             v.business_name AS vendor_name, p.company_name AS planner_name,
             u.full_name AS client_name
      FROM bookings b
@@ -69,7 +70,7 @@ exports.list = async (userId, role, { page = 1, limit = 50 } = {}) => {
   const params = [limit, offset];
 
   if (role === 'admin') {
-    query = `SELECT b.*, e.name AS event_name, v.business_name AS vendor_name,
+    query = `SELECT b.*, e.name AS event_name, e.ticket_price, e.num_payments, v.business_name AS vendor_name,
                     p.company_name AS planner_name
              FROM bookings b
              LEFT JOIN events e ON e.id = b.event_id
@@ -79,6 +80,7 @@ exports.list = async (userId, role, { page = 1, limit = 50 } = {}) => {
              LIMIT $1 OFFSET $2`;
   } else if (role === 'vendor') {
     query = `SELECT b.*, e.name AS event_name, e.event_date, e.location AS event_location,
+                    e.ticket_price, e.num_payments,
                     u.full_name AS client_name
              FROM bookings b
              LEFT JOIN events e ON e.id = b.event_id
@@ -90,6 +92,7 @@ exports.list = async (userId, role, { page = 1, limit = 50 } = {}) => {
     params.splice(2, 0, userId);
   } else if (role === 'planner') {
     query = `SELECT b.*, e.name AS event_name, e.event_date, e.guest_count, e.location AS event_location,
+                    e.ticket_price, e.num_payments,
                     e.client_id AS planner_user_id, u.full_name AS client_name,
                     p.company_name AS planner_name
              FROM bookings b
@@ -102,6 +105,7 @@ exports.list = async (userId, role, { page = 1, limit = 50 } = {}) => {
     params.splice(2, 0, userId);
   } else {
     query = `SELECT b.*, e.name AS event_name, e.event_date, e.location AS event_location,
+                    e.ticket_price, e.num_payments,
                     v.business_name AS vendor_name,
                     p.company_name AS planner_name
              FROM bookings b

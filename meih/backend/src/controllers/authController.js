@@ -6,7 +6,7 @@ const db = require('../config/database');
 const { validateEmail } = require('../utils/emailValidator');
 const emailVerification = require('../services/emailVerificationService');
 
-const PUBLIC_ROLES = ['client', 'planner', 'vendor', 'innovator', 'judge', 'public_voter'];
+const PUBLIC_ROLES = ['client', 'planner', 'vendor', 'innovator', 'judge', 'reviewer', 'public_voter'];
 
 // In-memory store for when database is not available
 const memoryUsers = new Map();
@@ -216,7 +216,7 @@ exports.login = async (req, res, next) => {
     res.json({
       token: tokens.accessToken,
       ...tokens,
-      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, name: user.full_name, email_verified: user.email_verified },
+      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, name: user.full_name, email_verified: user.email_verified, image_url: user.image_url },
       profileComplete,
       emailVerified: smtpConfigured ? user.email_verified : true
     });

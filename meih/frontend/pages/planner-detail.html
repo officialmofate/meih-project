@@ -166,7 +166,7 @@
       }
       document.getElementById('portfolio-grid').innerHTML = items.map(item => `
         <div class="portfolio-item">
-          ${item.image_url ? `<img src="${item.image_url}" alt="${item.title || ''}" />` : ''}
+          ${item.image_url ? `<img src="${window.resolveUrl(item.image_url)}" alt="${item.title || ''}" />` : ''}
           <div class="portfolio-item-info">
             <h4>${item.title || 'Untitled'}</h4>
             <p>${item.description || ''}</p>

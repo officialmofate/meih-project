@@ -168,6 +168,34 @@
           </table>
         </section>
 
+        <section class="card wide" id="reviewer-assignments-section">
+          <h2>Assign Reviewers to Innovations</h2>
+          <p class="text-muted">Reviewers must score submissions before they can be approved to voting. Uses the same 10 criteria as judges.</p>
+          <form id="reviewer-assign-form" class="stacked-form">
+            <label for="reviewer-select">Select Reviewer</label>
+            <select id="reviewer-select" name="reviewerId" required>
+              <option value="">Loading reviewers...</option>
+            </select>
+            <label for="reviewer-comp-select">Select Competition</label>
+            <select id="reviewer-comp-select" name="competitionId" required>
+              <option value="">Loading competitions...</option>
+            </select>
+            <label for="reviewer-sub-select">Select Submission (optional — assign to specific innovation)</label>
+            <select id="reviewer-sub-select" name="submissionId">
+              <option value="">All submissions in competition</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Assign Reviewer</button>
+          </form>
+          <p id="reviewer-assign-success" class="form-success" hidden>Reviewer assigned successfully.</p>
+          <p id="reviewer-assign-error" class="form-error" hidden></p>
+          <h3 style="margin-top:var(--space-md);">Current Reviewer Assignments</h3>
+          <p id="no-reviewer-assignments" class="empty-state">No reviewer assignments yet.</p>
+          <table class="data-table" id="reviewer-assignments-table" hidden>
+            <thead><tr><th>Reviewer</th><th>Competition</th><th>Submission</th><th>Assigned</th><th></th></tr></thead>
+            <tbody id="reviewer-assignments-body"></tbody>
+          </table>
+        </section>
+
         <section class="card wide" id="innovation-payments-section">
           <h2>Innovation Payments</h2>
           <p class="text-muted">Innovation submissions with pending payment confirmation.</p>
@@ -248,7 +276,7 @@
         const isSuperadmin = currentUser && currentUser.role === 'superadmin';
         const privilegedRoles = ['admin', 'superadmin'];
         const canChangeRole = isSuperadmin || !privilegedRoles.includes(u.role);
-        const allRoles = ['client','planner','vendor','innovator','innovator_manager','judge','public_voter','admin','superadmin'];
+        const allRoles = ['client','planner','vendor','innovator','innovator_manager','judge','reviewer','public_voter','admin','superadmin'];
         const roleOptions = allRoles.map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`).join('');
         return `<tr data-user-id="${u.id}">
           <td>${u.full_name || u.name || '—'}</td>
@@ -565,6 +593,93 @@
         setTimeout(() => window.location.reload(), 1500);
       } catch (err) {
         errEl.textContent = err.message || 'Failed to assign judge.';
+        errEl.hidden = false;
+      }
+    });
+
+    // Reviewer assignment
+    Promise.all([
+      api.get('/innovation/reviewers').catch(() => []),
+      api.get('/innovation/competitions').catch(() => []),
+      api.get('/innovation/reviewer/assignments/all').catch(() => []),
+    ]).then(([reviewers, competitions, reviewerAssignments]) => {
+      const reviewerSelect = document.getElementById('reviewer-select');
+      const rCompSelect = document.getElementById('reviewer-comp-select');
+      const rSubSelect = document.getElementById('reviewer-sub-select');
+      if (reviewers.length) {
+        reviewerSelect.innerHTML = '<option value="">Select a reviewer</option>' + reviewers.map(r => '<option value="' + r.id + '">' + (r.full_name || r.name || r.email) + '</option>').join('');
+      } else {
+        reviewerSelect.innerHTML = '<option value="">No reviewers found — assign reviewer role to users first</option>';
+      }
+      if (competitions.length) {
+        rCompSelect.innerHTML = '<option value="">Select a competition</option>' + competitions.map(c => '<option value="' + c.id + '">' + c.title + '</option>').join('');
+      } else {
+        rCompSelect.innerHTML = '<option value="">No competitions found</option>';
+      }
+
+      rCompSelect.addEventListener('change', async () => {
+        const compId = rCompSelect.value;
+        rSubSelect.innerHTML = '<option value="">Loading submissions...</option>';
+        if (!compId) {
+          rSubSelect.innerHTML = '<option value="">All submissions in competition</option>';
+          return;
+        }
+        try {
+          const subs = await api.get('/innovation/competitions/' + compId + '/submissions');
+          if (Array.isArray(subs) && subs.length) {
+            rSubSelect.innerHTML = '<option value="">All submissions in competition</option>' + subs.map(s => '<option value="' + s.id + '">' + (s.title || 'Untitled') + ' (' + (s.author_name || 'Unknown') + ')</option>').join('');
+          } else {
+            rSubSelect.innerHTML = '<option value="">No submissions in this competition</option>';
+          }
+        } catch { rSubSelect.innerHTML = '<option value="">Error loading submissions</option>'; }
+      });
+
+      if (Array.isArray(reviewerAssignments) && reviewerAssignments.length) {
+        document.getElementById('no-reviewer-assignments').hidden = true;
+        document.getElementById('reviewer-assignments-table').hidden = false;
+        document.getElementById('reviewer-assignments-body').innerHTML = reviewerAssignments.map(a => {
+          const dateStr = a.created_at ? new Date(a.created_at).toLocaleDateString() : '-';
+          return '<tr>' +
+            '<td>' + (a.reviewer_name || a.reviewer_id) + '</td>' +
+            '<td>' + (a.competition_title || a.competition_id) + '</td>' +
+            '<td>' + (a.submission_title || 'All') + '</td>' +
+            '<td>' + dateStr + '</td>' +
+            '<td><button class="btn btn-sm btn-danger remove-reviewer-btn" data-id="' + a.id + '">Remove</button></td>' +
+            '</tr>';
+        }).join('');
+        document.querySelectorAll('.remove-reviewer-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Remove this reviewer assignment?')) return;
+            try {
+              await api.del('/innovation/reviewer/assign/' + btn.dataset.id);
+              window.location.reload();
+            } catch (err) { alert(err.message); }
+          });
+        });
+      }
+    }).catch(() => {});
+
+    document.getElementById('reviewer-assign-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      const errEl = document.getElementById('reviewer-assign-error');
+      const successEl = document.getElementById('reviewer-assign-success');
+      errEl.hidden = true;
+      successEl.hidden = true;
+      if (!data.reviewerId || !data.competitionId) {
+        errEl.textContent = 'Please select both a reviewer and a competition.';
+        errEl.hidden = false;
+        return;
+      }
+      try {
+        const payload = { reviewerId: data.reviewerId, competitionId: data.competitionId };
+        if (data.submissionId) payload.submissionId = data.submissionId;
+        await api.post('/innovation/reviewer/assign', payload);
+        successEl.hidden = false;
+        e.target.reset();
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        errEl.textContent = err.message || 'Failed to assign reviewer.';
         errEl.hidden = false;
       }
     });

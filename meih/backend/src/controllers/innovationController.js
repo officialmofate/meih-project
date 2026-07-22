@@ -185,6 +185,8 @@ exports.getJudgeAssignments = async (req, res, next) => {
 
 exports.approveSubmission = async (req, res, next) => {
   try {
+    const hasScore = await innovationService.hasReviewerScore(req.params.id);
+    if (!hasScore) return res.status(400).json({ message: 'Cannot approve: submission needs at least one reviewer score first.' });
     const submission = await innovationService.approveSubmission(req.params.id, req.user.id);
     if (!submission) return res.status(404).json({ message: 'Submission not found or not pending review' });
     res.json(submission);
@@ -911,5 +913,55 @@ exports.getCertificatePDF = async (req, res, next) => {
       .text('Certificate No. MEIH-' + cert.id.substring(0, 8).toUpperCase() + '  \u2022  Issued by MOFATE \u2014 Mobile Facilitation Team  \u2022  ' + issueDate, 0, pageH - 28, { align: 'center', width: pageW });
 
     doc.end();
+  } catch (err) { next(err); }
+};
+
+exports.listAllReviewers = async (req, res, next) => {
+  try {
+    const reviewers = await innovationService.listAllReviewers();
+    res.json(reviewers);
+  } catch (err) { next(err); }
+};
+
+exports.assignReviewer = async (req, res, next) => {
+  try {
+    const result = await innovationService.assignReviewer(req.body.reviewerId, req.body.competitionId, req.body.submissionId || null);
+    res.status(201).json(result);
+  } catch (err) { next(err); }
+};
+
+exports.removeReviewerAssignment = async (req, res, next) => {
+  try {
+    const removed = await innovationService.removeReviewerAssignment(req.params.id);
+    if (!removed) return res.status(404).json({ message: 'Assignment not found' });
+    res.status(204).end();
+  } catch (err) { next(err); }
+};
+
+exports.listAllReviewerAssignments = async (req, res, next) => {
+  try {
+    const assignments = await innovationService.listAllReviewerAssignments();
+    res.json(assignments);
+  } catch (err) { next(err); }
+};
+
+exports.getReviewerAssignments = async (req, res, next) => {
+  try {
+    const assignments = await innovationService.getReviewerAssignments(req.user.id);
+    res.json(assignments);
+  } catch (err) { next(err); }
+};
+
+exports.submitReviewerScore = async (req, res, next) => {
+  try {
+    const score = await innovationService.submitReviewerScore(req.user.id, req.body);
+    res.status(201).json(score);
+  } catch (err) { next(err); }
+};
+
+exports.listCompetitionReviewers = async (req, res, next) => {
+  try {
+    const reviewers = await innovationService.listCompetitionReviewers(req.params.competitionId);
+    res.json(reviewers);
   } catch (err) { next(err); }
 };

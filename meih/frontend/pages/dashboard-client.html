@@ -39,7 +39,7 @@
           <h2>My Bookings</h2>
           <p id="no-bookings" class="empty-state" hidden>No bookings yet. <a href="events.html">Browse events</a> to book one.</p>
           <table class="data-table" id="bookings-table" hidden>
-            <thead><tr><th>Event</th><th>Location</th><th>Date</th><th>Status</th><th>Ticket</th></tr></thead>
+            <thead><tr><th>Event</th><th>Location</th><th>Date</th><th>Ticket Price</th><th>Payments</th><th>Status</th><th>Pay</th><th>Ticket</th></tr></thead>
             <tbody id="bookings-body"></tbody>
           </table>
         </section>
@@ -71,6 +71,39 @@
       </div>
     </div>
   </main>
+
+  <div id="pay-modal" class="modal-overlay" style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;">
+    <div class="card" style="max-width:500px;width:90%;max-height:90vh;overflow-y:auto;padding:var(--space-lg);">
+      <h2 style="margin-top:0;">Make Payment</h2>
+      <p class="text-muted" id="pay-modal-event" style="margin-bottom:var(--space-md);"></p>
+      <p class="text-muted" id="pay-modal-installment" style="margin-bottom:var(--space-md);font-weight:600;"></p>
+      <div id="pay-planner-details" style="background:var(--color-bg-alt,#f5f5f5);border-radius:var(--radius-sm,4px);padding:var(--space-md);margin-bottom:var(--space-md);">
+        <p style="margin:0 0 4px;font-weight:600;">Pay to:</p>
+        <p style="margin:0;" id="pay-planner-name">Loading...</p>
+        <p style="margin:4px 0 0;" id="pay-planner-method"></p>
+        <p style="margin:4px 0 0;font-weight:600;" id="pay-planner-number"></p>
+      </div>
+      <form id="pay-booking-form" class="stacked-form">
+        <input type="hidden" id="pay-booking-id" />
+        <label for="pay-amount">Amount (TZS)</label>
+        <input id="pay-amount" name="amount" type="number" min="1" required placeholder="e.g. 50000" />
+        <label for="pay-number">Your payment number</label>
+        <input id="pay-number" name="paymentNumber" type="text" required placeholder="e.g. 0754 123 456" />
+        <label for="pay-name">Your name (on payment)</label>
+        <input id="pay-name" name="paymentName" type="text" required placeholder="e.g. John Doe" />
+        <label for="pay-screenshot">Payment screenshot</label>
+        <input id="pay-screenshot" name="screenshot" type="file" accept="image/*" required />
+        <p class="text-muted" style="font-size:12px;margin-top:4px;">Upload a screenshot of your payment confirmation. Max 5MB.</p>
+        <label for="pay-notes">Notes (optional)</label>
+        <textarea id="pay-notes" name="notes" rows="2" placeholder="Any notes about this payment..."></textarea>
+        <p id="pay-error" class="form-error" role="alert" hidden></p>
+        <div style="display:flex;gap:var(--space-sm);margin-top:var(--space-md);">
+          <button type="submit" class="btn btn-primary">Submit Payment</button>
+          <button type="button" class="btn btn-ghost" id="pay-modal-close">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div id="footer-root"></div>
   <div id="ai-root"></div>
@@ -158,18 +191,37 @@
       const tbody = document.getElementById('bookings-body');
       table.hidden = false;
       const API_BASE = window.MEIH_API_URL || '/api/v1';
-      tbody.innerHTML = bookings.map(b => {
-        const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
-        const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
-        const ticketBtn = `<a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank">&#128065; View</a>`;
-        return `<tr>
-          <td>${b.event_name || '—'}</td>
-          <td>${b.event_location || '—'}</td>
-          <td>${eventDate}</td>
-          <td><span class="badge ${statusClass}">${b.status}</span></td>
-          <td>${ticketBtn}</td>
-        </tr>`;
-      }).join('');
+
+      const bookingIds = bookings.map(b => b.id);
+      Promise.all(bookingIds.map(id => api.get('/payments?bookingId=' + id).catch(() => []))).then((allPayments) => {
+        tbody.innerHTML = bookings.map((b, idx) => {
+          const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
+          const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
+          const ticketPrice = b.ticket_price ? 'Tsh ' + Number(b.ticket_price).toLocaleString() : 'Free';
+          const numPayments = b.num_payments || 1;
+          const bookingPayments = Array.isArray(allPayments[idx]) ? allPayments[idx] : [];
+          const completedPayments = bookingPayments.filter(p => p.status === 'completed' || p.status === 'pending').length;
+          const payBtn = b.status === 'pending' && completedPayments < numPayments
+            ? `<button class="btn btn-sm btn-primary pay-booking-btn" data-booking-id="${b.id}" data-event-name="${b.event_name || ''}" data-num-payments="${numPayments}" data-completed-payments="${completedPayments}">Pay (${completedPayments + 1}/${numPayments})</button>`
+            : completedPayments >= numPayments ? '<span class="badge badge-success">Fully Paid</span>' : '';
+          const ticketBtn = `<a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank">&#128065; View</a>`;
+          return `<tr>
+            <td>${b.event_name || '—'}</td>
+            <td>${b.event_location || '—'}</td>
+            <td>${eventDate}</td>
+            <td>${ticketPrice}</td>
+            <td>${completedPayments}/${numPayments}</td>
+            <td><span class="badge ${statusClass}">${b.status}</span></td>
+            <td>${payBtn}</td>
+            <td>${ticketBtn}</td>
+          </tr>`;
+        }).join('');
+
+        document.getElementById('bookings-body').addEventListener('click', (e) => {
+          const btn = e.target.closest('.pay-booking-btn');
+          if (!btn) return;
+          openPayModal(btn.dataset.bookingId, btn.dataset.eventName);
+        });
 
       // My Tickets section
       const ticketsList = document.getElementById('tickets-list');
@@ -177,11 +229,12 @@
         document.getElementById('no-tickets').hidden = true;
         ticketsList.innerHTML = bookings.map(b => {
           const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : 'badge-muted';
+          const ticketPrice = b.ticket_price ? 'Tsh ' + Number(b.ticket_price).toLocaleString() : 'Free';
           return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
             <div>
               <strong>${b.event_name || '—'}</strong>
               <span class="badge ${statusClass}" style="margin-left:var(--space-xs);">${b.status}</span>
-              <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${b.event_location || ''} &middot; ${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD'}</p>
+              <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${b.event_location || ''} &middot; ${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD'} &middot; Ticket: ${ticketPrice}</p>
             </div>
             <div>
               <a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128196; Download PDF</a>
@@ -233,6 +286,92 @@
       if (!btn) return;
       activePaymentId = btn.dataset.paymentId;
       screenshotInput.click();
+    });
+
+    // Payment modal for bookings
+    const payModal = document.getElementById('pay-modal');
+    const payError = document.getElementById('pay-error');
+
+    function openPayModal(bookingId, eventName) {
+      payModal.style.display = 'flex';
+      payError.hidden = true;
+      document.getElementById('pay-booking-id').value = bookingId;
+      document.getElementById('pay-modal-event').textContent = 'Booking: ' + eventName;
+      document.getElementById('pay-modal-installment').textContent = '';
+      document.getElementById('pay-booking-form').reset();
+      document.getElementById('pay-booking-id').value = bookingId;
+
+      // Fetch planner payment details
+      document.getElementById('pay-planner-name').textContent = 'Loading...';
+      document.getElementById('pay-planner-method').textContent = '';
+      document.getElementById('pay-planner-number').textContent = '';
+      api.get('/payments/booking/' + bookingId).then((details) => {
+        if (details) {
+          const method = details.payment_method === 'bank_transfer' ? 'Bank Transfer' : 'Mobile Money';
+          document.getElementById('pay-planner-name').textContent = details.payee_name || 'Planner';
+          document.getElementById('pay-planner-method').textContent = 'Method: ' + method;
+          document.getElementById('pay-planner-number').textContent = 'Number: ' + (details.payment_number || 'Not set');
+        } else {
+          document.getElementById('pay-planner-name').textContent = 'No payment details available';
+        }
+      }).catch(() => {
+        document.getElementById('pay-planner-name').textContent = 'Could not load payment details';
+      });
+    }
+
+    function closePayModal() {
+      payModal.style.display = 'none';
+    }
+
+    document.getElementById('pay-modal-close').addEventListener('click', closePayModal);
+    payModal.addEventListener('click', (e) => { if (e.target === payModal) closePayModal(); });
+
+    document.getElementById('bookings-body').addEventListener('click', (e) => {
+      const btn = e.target.closest('.pay-booking-btn');
+      if (!btn) return;
+      openPayModal(btn.dataset.bookingId, btn.dataset.eventName);
+    });
+
+    document.getElementById('pay-booking-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      payError.hidden = true;
+      const bookingId = document.getElementById('pay-booking-id').value;
+      const amount = document.getElementById('pay-amount').value;
+      const paymentNumber = document.getElementById('pay-number').value;
+      const paymentName = document.getElementById('pay-name').value;
+      const screenshotFile = document.getElementById('pay-screenshot').files[0];
+      const notes = document.getElementById('pay-notes').value;
+
+      if (!amount || !paymentNumber || !paymentName) {
+        payError.textContent = 'Please fill in all required fields.';
+        payError.hidden = false;
+        return;
+      }
+      if (!screenshotFile) {
+        payError.textContent = 'Please upload a payment screenshot.';
+        payError.hidden = false;
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('bookingId', bookingId);
+      formData.append('amount', amount);
+      formData.append('paymentNumber', paymentNumber);
+      formData.append('paymentName', paymentName);
+      formData.append('method', 'mobile_money');
+      formData.append('currency', 'TZS');
+      formData.append('screenshot', screenshotFile);
+      if (notes) formData.append('notes', notes);
+
+      try {
+        await api.upload('/payments', formData);
+        alert('Payment submitted successfully! Pending planner confirmation.');
+        closePayModal();
+        window.location.reload();
+      } catch (err) {
+        payError.textContent = err.message || 'Failed to submit payment.';
+        payError.hidden = false;
+      }
     });
   </script>
 </body>

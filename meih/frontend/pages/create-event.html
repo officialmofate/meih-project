@@ -111,7 +111,19 @@
           <div class="form-group">
             <label for="ev-budget" data-i18n="event.budget_label">Total budget (Tsh)</label>
             <input id="ev-budget" name="budget" type="number" min="1" required data-i18n-ph="event.budget_ph" placeholder="e.g. 2,500,000" />
-            <span class="form-hint" data-i18n="event.budget_hint">Set your total event budget. A 30% deposit is due once you award a vendor or planner.</span>
+            <span class="form-hint" data-i18n="event.budget_hint">Set your total event budget.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="ev-ticket-price">Ticket price (Tsh)</label>
+            <input id="ev-ticket-price" name="ticketPrice" type="number" min="0" placeholder="e.g. 50000" />
+            <span class="form-hint">Price per ticket for attendees. Leave blank or 0 if free.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="ev-num-payments">Number of payments</label>
+            <input id="ev-num-payments" name="numPayments" type="number" min="1" value="1" required placeholder="e.g. 3" />
+            <span class="form-hint">How many payment installments will attendees make (e.g. 3 for deposit + 2 follow-ups).</span>
           </div>
 
           <div class="form-group">
@@ -521,7 +533,9 @@
 
         document.getElementById('review-budget').innerHTML =
           '<dt>Budget</dt><dd>Tsh ' + Number(data.get('budget') || 0).toLocaleString() + '</dd>' +
-          '<dt>Guests</dt><dd>' + (data.get('guestCount') || '—') + '</dd>';
+          '<dt>Guests</dt><dd>' + (data.get('guestCount') || '—') + '</dd>' +
+          '<dt>Ticket Price</dt><dd>' + (data.get('ticketPrice') ? 'Tsh ' + Number(data.get('ticketPrice')).toLocaleString() : 'Free') + '</dd>' +
+          '<dt>Number of Payments</dt><dd>' + (data.get('numPayments') || '1') + '</dd>';
 
         document.getElementById('review-requirements').innerHTML =
           '<dt>Services</dt><dd>' + (serviceNames.length ? serviceNames.join(', ') : 'None specified') + '</dd>' +
@@ -639,6 +653,12 @@
 
         var guests = fd.get('guestCount');
         data.guestCount = guests ? parseInt(guests, 10) : null;
+
+        var ticketPrice = fd.get('ticketPrice');
+        data.ticketPrice = ticketPrice ? parseFloat(ticketPrice) : null;
+
+        var numPayments = fd.get('numPayments');
+        data.numPayments = numPayments ? parseInt(numPayments, 10) : 1;
 
         var services = fd.getAll('services');
         data.services = services.length > 0 ? services : null;

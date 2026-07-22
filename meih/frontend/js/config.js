@@ -6,7 +6,12 @@ window.MEIH_BACKEND_URL = 'https://meih.onrender.com';
 window.resolveUrl = function (path) {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  if (path.startsWith('data:')) return path;
   var backend = window.MEIH_BACKEND_URL || '';
   if (!backend) return path;
+  if (path.startsWith('/uploads/')) {
+    var filename = path.replace('/uploads/', '');
+    return backend + '/uploads/serve/' + filename;
+  }
   return backend + path;
 };

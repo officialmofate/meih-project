@@ -5,7 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 
-const VALID_ROLES = ['client', 'planner', 'vendor', 'innovator', 'innovator_manager', 'judge', 'public_voter', 'admin', 'superadmin'];
+const VALID_ROLES = ['client', 'planner', 'vendor', 'innovator', 'innovator_manager', 'judge', 'reviewer', 'public_voter', 'admin', 'superadmin'];
 const PRIVILEGED_ROLES = ['admin', 'superadmin'];
 
 const storage = multer.diskStorage({

@@ -25,14 +25,15 @@ exports.create = async (clientId, payload) => {
     }
   }
   const { rows } = await db.query(
-    `INSERT INTO events (client_id, name, category_id, location, latitude, longitude, budget, event_date, guest_count, services, requirements, quote_deadline)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+    `INSERT INTO events (client_id, name, category_id, location, latitude, longitude, budget, event_date, guest_count, services, requirements, quote_deadline, ticket_price, num_payments)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
     [
       clientId, payload.name, nullable(categoryId), nullable(payload.location),
       nullable(payload.latitude), nullable(payload.longitude),
       nullable(payload.budget), nullable(payload.eventDate),
       nullable(payload.guestCount), nullable(payload.services),
-      nullable(payload.requirements), nullable(payload.quoteDeadline)
+      nullable(payload.requirements), nullable(payload.quoteDeadline),
+      nullable(payload.ticketPrice), nullable(payload.numPayments) || 1
     ]
   );
   return rows[0];
@@ -107,6 +108,8 @@ exports.update = async (id, clientId, payload) => {
        services = COALESCE($11, services),
        requirements = COALESCE($12, requirements),
        quote_deadline = COALESCE($13, quote_deadline),
+       ticket_price = COALESCE($14, ticket_price),
+       num_payments = COALESCE($15, num_payments),
        updated_at = now()
      WHERE id = $1 AND client_id = $2
      RETURNING *`,
@@ -114,7 +117,8 @@ exports.update = async (id, clientId, payload) => {
      nullable(payload.latitude), nullable(payload.longitude),
      nullable(payload.budget), nullable(payload.eventDate),
      nullable(payload.guestCount), nullable(payload.services),
-     nullable(payload.requirements), nullable(payload.quoteDeadline)]
+     nullable(payload.requirements), nullable(payload.quoteDeadline),
+     nullable(payload.ticketPrice), nullable(payload.numPayments)]
   );
   return rows[0];
 };

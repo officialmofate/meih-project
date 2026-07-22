@@ -173,7 +173,11 @@
       document.getElementById('event-client').textContent = ev.client_name || '—';
 
       const suggestedFee = ev.suggested_fee_usd || ev.suggestedFeeUsd || 0;
-      if (suggestedFee) {
+      if (ev.ticket_price && Number(ev.ticket_price) > 0) {
+        const priceEl = document.getElementById('ticket-price-display');
+        priceEl.textContent = 'Ticket Price: Tsh ' + Number(ev.ticket_price).toLocaleString() + (ev.num_payments > 1 ? ' (' + ev.num_payments + ' payments)' : '');
+        priceEl.hidden = false;
+      } else if (suggestedFee) {
         const ticketPrice = Math.round(Number(suggestedFee) * 2550);
         const priceEl = document.getElementById('ticket-price-display');
         priceEl.textContent = 'Ticket Price: Tsh ' + ticketPrice.toLocaleString();

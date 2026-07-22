@@ -2,7 +2,7 @@ import { store } from '../state.js';
 
 const HUB_PAGES = {
   event: ['events.html', 'create-event.html', 'event-detail.html', 'dashboard-planner.html', 'dashboard-vendor.html', 'dashboard-client.html', 'planners.html', 'planner-detail.html', 'vendors.html', 'vendor-detail.html'],
-  innovation: ['innovation.html', 'submit-innovation.html', 'innovation-detail.html', 'leaderboard.html', 'dashboard-judge.html', 'dashboard-admin.html', 'dashboard-innovator-manager.html', 'dashboard-innovator.html'],
+  innovation: ['innovation.html', 'submit-innovation.html', 'innovation-detail.html', 'leaderboard.html', 'dashboard-judge.html', 'dashboard-admin.html', 'dashboard-innovator-manager.html', 'dashboard-innovator.html', 'dashboard-reviewer.html'],
 };
 
 function detectHub() {
@@ -47,6 +47,7 @@ export function renderNavbar() {
       vendor: 'dashboard-vendor.html',
       innovator: 'dashboard-innovator.html',
       judge: 'dashboard-judge.html',
+      reviewer: 'dashboard-reviewer.html',
       admin: 'dashboard-admin.html',
       superadmin: 'dashboard-admin.html',
       public_voter: 'innovation.html',

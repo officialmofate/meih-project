@@ -1,6 +1,6 @@
 const adminService = require('../services/adminService');
 
-const VALID_ROLES = ['client', 'planner', 'vendor', 'innovator', 'innovator_manager', 'judge', 'public_voter', 'admin', 'superadmin'];
+const VALID_ROLES = ['client', 'planner', 'vendor', 'innovator', 'innovator_manager', 'judge', 'reviewer', 'public_voter', 'admin', 'superadmin'];
 const PRIVILEGED_ROLES = ['admin', 'superadmin'];
 const VALID_STATUSES = ['active', 'suspended', 'pending', 'inactive'];
 

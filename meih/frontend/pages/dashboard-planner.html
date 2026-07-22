@@ -59,7 +59,7 @@
           <p class="empty-state" id="no-pending-bookings">No bookings awaiting confirmation.</p>
           <table class="data-table" id="pending-bookings-table" hidden>
             <thead>
-              <tr><th>Event</th><th>Client</th><th>Guests</th><th>Date</th><th>Status</th><th></th></tr>
+              <tr><th>Event</th><th>Client</th><th>Guests</th><th>Date</th><th>Ticket</th><th>Payments</th><th>Status</th><th></th></tr>
             </thead>
             <tbody id="pending-bookings-body"></tbody>
           </table>
@@ -70,7 +70,7 @@
           <p id="no-projects" class="empty-state">No active projects yet.</p>
           <table class="data-table" id="projects-table" hidden>
             <thead>
-              <tr><th>Event</th><th>Client</th><th>Stage</th><th>Date</th><th>Deposit</th><th>Ticket</th></tr>
+              <tr><th>Event</th><th>Client</th><th>Stage</th><th>Date</th><th>Deposit</th><th>Ticket Price</th><th>Ticket</th></tr>
             </thead>
             <tbody id="projects-body"></tbody>
           </table>
@@ -150,28 +150,7 @@
           </div>
         </section>
 
-        <section class="card">
-          <h2>My Payment Details</h2>
-          <p class="text-muted">Clients will see these details when making a payment to you.</p>
-          <form id="payment-details-form" class="stacked-form">
-            <label for="pay-method">Payment method</label>
-            <select id="pay-method" name="paymentMethod">
-              <option value="mobile_money">Mobile Money</option>
-              <option value="bank_transfer">Bank Transfer</option>
-            </select>
-
-            <label for="pay-number">Payment number / account</label>
-            <input id="pay-number" name="paymentNumber" type="text" placeholder="e.g. 0754 123 456" required />
-
-            <label for="pay-name">Account holder name</label>
-            <input id="pay-name" name="paymentName" type="text" placeholder="e.g. Kilimanjaro Events Co." required />
-
-            <button type="submit" class="btn btn-primary">Save Payment Details</button>
-          </form>
-          <p id="pay-details-saved" class="form-success" hidden>Payment details saved.</p>
-        </section>
-
-        <section class="card">
+        <section class="card wide">
           <h2>This Week's Calendar</h2>
           <ul class="calendar-list" id="calendar-list">
             <li class="results-count">No events scheduled this week.</li>
@@ -307,11 +286,14 @@
         pendingTable.hidden = false;
         pendingBody.innerHTML = pending.map(b => {
           const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
+          const ticketPrice = b.ticket_price ? 'Tsh ' + Number(b.ticket_price).toLocaleString() : 'Free';
           return `<tr>
             <td>${b.event_name || '—'}</td>
             <td>${b.client_name || '—'}</td>
             <td>${b.guest_count || '—'}</td>
             <td>${eventDate}</td>
+            <td>${ticketPrice}</td>
+            <td>${b.num_payments || 1}</td>
             <td><span class="badge badge-warning">Pending</span></td>
             <td>
               <button class="btn btn-sm btn-success confirm-booking-btn" data-id="${b.id}">Confirm</button>
@@ -352,6 +334,7 @@
       const API_BASE = window.MEIH_API_URL || '/api/v1';
       tbody.innerHTML = active.map(b => {
         const statusClass = b.status === 'completed' ? 'badge-success' : b.status === 'confirmed' ? 'badge' : 'badge-muted';
+        const ticketPrice = b.ticket_price ? 'Tsh ' + Number(b.ticket_price).toLocaleString() : 'Free';
         const ticketBtn = `<a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank" style="margin-left:var(--space-xs);">PDF</a> <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank">View</a>`;
         return `<tr>
           <td>${b.event_name || '—'}</td>
@@ -359,24 +342,11 @@
           <td><span class="badge ${statusClass}">${b.status || 'pending'}</span></td>
           <td>${b.event_date ? new Date(b.event_date).toLocaleDateString() : '—'}</td>
           <td>Tsh ${Number(b.deposit_amount || 0).toLocaleString()}</td>
+          <td>${ticketPrice}</td>
           <td>${ticketBtn}</td>
         </tr>`;
       }).join('');
     }).catch(() => {});
-
-    // Payment details form
-    document.getElementById('payment-details-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(e.target));
-      try {
-        await api.put('/planners/me', data);
-        document.getElementById('pay-details-saved').hidden = false;
-        setTimeout(() => { document.getElementById('pay-details-saved').hidden = true; }, 3000);
-      } catch {
-        document.getElementById('pay-details-saved').hidden = false;
-        setTimeout(() => { document.getElementById('pay-details-saved').hidden = true; }, 3000);
-      }
-    });
 
     document.getElementById('availability-form').addEventListener('submit', async (e) => {
       e.preventDefault();

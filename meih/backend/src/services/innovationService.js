@@ -700,3 +700,138 @@ exports.getCertificateData = async (id) => {
   );
   return rows[0];
 };
+
+// ============================================================
+// REVIEWER FUNCTIONS
+// ============================================================
+
+exports.listAllReviewers = async () => {
+  const { rows } = await db.query(
+    `SELECT id, full_name, name, email, role FROM users WHERE role = 'reviewer' ORDER BY full_name`
+  );
+  return rows;
+};
+
+exports.assignReviewer = async (reviewerId, competitionId, submissionId) => {
+  if (submissionId) {
+    const { rows: existing } = await db.query(
+      `SELECT id FROM reviewer_assignments WHERE reviewer_id = $1 AND competition_id = $2 AND submission_id = $3`,
+      [reviewerId, competitionId, submissionId]
+    );
+    if (existing.length > 0) return existing[0];
+    const { rows } = await db.query(
+      `INSERT INTO reviewer_assignments (reviewer_id, competition_id, submission_id)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [reviewerId, competitionId, submissionId]
+    );
+    return rows[0];
+  }
+  const { rows: existing } = await db.query(
+    `SELECT id FROM reviewer_assignments WHERE reviewer_id = $1 AND competition_id = $2 AND submission_id IS NULL`,
+    [reviewerId, competitionId]
+  );
+  if (existing.length > 0) return existing[0];
+  const { rows } = await db.query(
+    `INSERT INTO reviewer_assignments (reviewer_id, competition_id) VALUES ($1, $2) RETURNING *`,
+    [reviewerId, competitionId]
+  );
+  return rows[0];
+};
+
+exports.removeReviewerAssignment = async (assignmentId) => {
+  const { rowCount } = await db.query(
+    'DELETE FROM reviewer_assignments WHERE id = $1',
+    [assignmentId]
+  );
+  return rowCount > 0;
+};
+
+exports.listAllReviewerAssignments = async () => {
+  const { rows } = await db.query(
+    `SELECT ra.id, ra.reviewer_id, ra.competition_id, ra.submission_id, ra.created_at,
+            u.full_name AS reviewer_name, u.email AS reviewer_email,
+            c.title AS competition_title, s.title AS submission_title
+     FROM reviewer_assignments ra
+     LEFT JOIN users u ON u.id = ra.reviewer_id
+     LEFT JOIN innovation_competitions c ON c.id = ra.competition_id
+     LEFT JOIN innovation_submissions s ON s.id = ra.submission_id
+     ORDER BY ra.created_at DESC`
+  );
+  return rows;
+};
+
+exports.getReviewerAssignments = async (reviewerId) => {
+  const { rows } = await db.query(
+    `SELECT DISTINCT s.*, u.full_name AS author_name, u.image_url AS author_image,
+            COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
+            (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
+            rs.innovation_score, rs.impact_score, rs.feasibility_score,
+            rs.scalability_score, rs.sustainability_score, rs.technology_score,
+            rs.business_model_score, rs.social_impact_score, rs.market_readiness_score,
+            rs.presentation_score, rs.comments AS reviewer_comments,
+            c.title AS competition_title
+     FROM reviewer_assignments ra
+     INNER JOIN innovation_submissions s ON
+       (ra.submission_id IS NOT NULL AND s.id = ra.submission_id)
+       OR
+       (ra.submission_id IS NULL AND s.competition_id = ra.competition_id)
+     LEFT JOIN users u ON u.id = s.user_id
+     LEFT JOIN innovation_competitions c ON c.id = s.competition_id
+     LEFT JOIN reviewer_scores rs ON rs.submission_id = s.id AND rs.reviewer_id = $1
+     WHERE ra.reviewer_id = $1
+       AND (ra.submission_id IS NOT NULL OR s.status = 'pending_review')
+     ORDER BY s.created_at DESC`,
+    [reviewerId]
+  );
+  return rows;
+};
+
+exports.submitReviewerScore = async (reviewerId, payload) => {
+  const { rows } = await db.query(
+    `INSERT INTO reviewer_scores
+       (submission_id, reviewer_id, innovation_score, impact_score, feasibility_score,
+        scalability_score, sustainability_score, technology_score, business_model_score,
+        social_impact_score, market_readiness_score, presentation_score, comments)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+     ON CONFLICT (submission_id, reviewer_id) DO UPDATE SET
+       innovation_score = EXCLUDED.innovation_score,
+       impact_score = EXCLUDED.impact_score,
+       feasibility_score = EXCLUDED.feasibility_score,
+       scalability_score = EXCLUDED.scalability_score,
+       sustainability_score = EXCLUDED.sustainability_score,
+       technology_score = EXCLUDED.technology_score,
+       business_model_score = EXCLUDED.business_model_score,
+       social_impact_score = EXCLUDED.social_impact_score,
+       market_readiness_score = EXCLUDED.market_readiness_score,
+       presentation_score = EXCLUDED.presentation_score,
+       comments = EXCLUDED.comments
+     RETURNING *`,
+    [
+      payload.submissionId, reviewerId,
+      payload.innovationScore, payload.impactScore, payload.feasibilityScore,
+      payload.scalabilityScore, payload.sustainabilityScore, payload.technologyScore,
+      payload.businessModelScore, payload.socialImpactScore, payload.marketReadinessScore,
+      payload.presentationScore, payload.comments
+    ]
+  );
+  return rows[0];
+};
+
+exports.listCompetitionReviewers = async (competitionId) => {
+  const { rows } = await db.query(
+    `SELECT ra.*, u.full_name AS reviewer_name
+     FROM reviewer_assignments ra
+     LEFT JOIN users u ON u.id = ra.reviewer_id
+     WHERE ra.competition_id = $1`,
+    [competitionId]
+  );
+  return rows;
+};
+
+exports.hasReviewerScore = async (submissionId) => {
+  const { rows } = await db.query(
+    `SELECT id FROM reviewer_scores WHERE submission_id = $1 LIMIT 1`,
+    [submissionId]
+  );
+  return rows.length > 0;
+};

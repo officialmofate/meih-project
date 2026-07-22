@@ -16,7 +16,7 @@ CREATE TABLE users (
   full_name VARCHAR(255) NOT NULL,
   phone VARCHAR(50),
   role VARCHAR(50) NOT NULL DEFAULT 'client'
-    CHECK (role IN ('client','planner','vendor','innovator','innovator_manager','judge','public_voter','admin','superadmin')),
+    CHECK (role IN ('client','planner','vendor','innovator','innovator_manager','judge','reviewer','public_voter','admin','superadmin')),
   status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -51,6 +51,8 @@ CREATE TABLE events (
   quote_deadline TIMESTAMPTZ,
   status VARCHAR(20) NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft','published','confirmed','completed','cancelled')),
+  ticket_price NUMERIC(12,2),
+  num_payments INT DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

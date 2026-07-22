@@ -85,6 +85,14 @@ router.get('/submissions/:id/requirements', authenticate, ctrl.getRequirements);
 
 router.get('/manager/pending-payments', authenticate, authorize('admin', 'innovator_manager'), ctrl.listManagerPendingPayments);
 
+router.get('/reviewers', authenticate, authorize('admin', 'superadmin'), ctrl.listAllReviewers);
+router.post('/reviewer/assign', authenticate, authorize('admin', 'superadmin'), ctrl.assignReviewer);
+router.delete('/reviewer/assign/:id', authenticate, authorize('admin', 'superadmin'), ctrl.removeReviewerAssignment);
+router.get('/reviewer/assignments/all', authenticate, authorize('admin', 'superadmin'), ctrl.listAllReviewerAssignments);
+router.get('/reviewer/assignments', authenticate, authorize('reviewer'), ctrl.getReviewerAssignments);
+router.post('/reviewer/score', authenticate, authorize('reviewer'), ctrl.submitReviewerScore);
+router.get('/competitions/:competitionId/reviewers', authenticate, ctrl.listCompetitionReviewers);
+
 router.get('/submissions/:id/ticket', ctrl.getTicket);
 router.get('/submissions/:id/ticket-pdf', ctrl.getTicketPDF);
 router.get('/submissions/:id/certificate', ctrl.getCertificate);

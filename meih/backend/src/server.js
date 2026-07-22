@@ -56,6 +56,8 @@ async function autoMigrate() {
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS admin_rating INT`);
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_url TEXT`);
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_base64 TEXT`);
+    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_price NUMERIC(12,2)`);
+    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS num_payments INT DEFAULT 1`);
     await db.query(`ALTER TABLE judge_assignments ADD COLUMN IF NOT EXISTS submission_id UUID REFERENCES innovation_submissions(id) ON DELETE CASCADE`);
     await db.query(`ALTER TABLE judge_assignments DROP CONSTRAINT IF EXISTS judge_assignments_judge_id_competition_id_key`);
     await db.query(`CREATE TABLE IF NOT EXISTS vendor_quotes (
@@ -75,6 +77,34 @@ async function autoMigrate() {
     await db.query(`CREATE INDEX IF NOT EXISTS idx_vendor_quotes_event ON vendor_quotes(event_id)`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_vendor_quotes_vendor ON vendor_quotes(vendor_id)`);
     await db.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_vendor_quotes_unique_per_event') THEN CREATE UNIQUE INDEX idx_vendor_quotes_unique_per_event ON vendor_quotes(event_id, vendor_id); END IF; END $$`);
+    // Reviewer tables
+    await db.query(`CREATE TABLE IF NOT EXISTS reviewer_assignments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      competition_id UUID NOT NULL REFERENCES innovation_competitions(id) ON DELETE CASCADE,
+      submission_id UUID REFERENCES innovation_submissions(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`);
+    await db.query(`CREATE TABLE IF NOT EXISTS reviewer_scores (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      submission_id UUID NOT NULL REFERENCES innovation_submissions(id) ON DELETE CASCADE,
+      reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      innovation_score INT,
+      impact_score INT,
+      feasibility_score INT,
+      scalability_score INT,
+      sustainability_score INT,
+      technology_score INT,
+      business_model_score INT,
+      social_impact_score INT,
+      market_readiness_score INT,
+      presentation_score INT,
+      comments TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (submission_id, reviewer_id)
+    )`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_reviewer_assignments_reviewer ON reviewer_assignments(reviewer_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_reviewer_scores_submission ON reviewer_scores(submission_id)`);
     await db.query(`CREATE TABLE IF NOT EXISTS event_categories (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name VARCHAR(100) UNIQUE NOT NULL,
@@ -262,6 +292,39 @@ function createApp() {
   app.use('/api/v1/vendor-quotes', apiLimiter, vendorQuoteRoutes);
 
   app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+
+  app.get('/uploads/serve/:filename', async (req, res) => {
+    const fs = require('fs');
+    const filePath = path.join(__dirname, '../../uploads', req.params.filename);
+    if (fs.existsSync(filePath)) {
+      return res.sendFile(filePath);
+    }
+    try {
+      const { rows } = await db.query(
+        `SELECT image_base64, image_url FROM users WHERE image_url LIKE $1
+         UNION ALL
+         SELECT image_base64, image_url FROM innovation_submissions WHERE image_url LIKE $1
+         UNION ALL
+         SELECT image_base64, image_url FROM planners WHERE image_url_1 LIKE $1 OR image_url_2 LIKE $1 OR image_url_3 LIKE $1
+         UNION ALL
+         SELECT image_base64, image_url FROM vendors WHERE image_url_1 LIKE $1 OR image_url_2 LIKE $1 OR image_url_3 LIKE $1
+         LIMIT 1`,
+        ['%' + req.params.filename]
+      );
+      if (rows.length > 0 && rows[0].image_base64) {
+        const ext = path.extname(req.params.filename).toLowerCase().replace('.', '');
+        const mimeMap = { jpg: 'jpeg', jpeg: 'jpeg', png: 'png', gif: 'gif', webp: 'webp' };
+        const mime = mimeMap[ext] || 'jpeg';
+        const buf = Buffer.from(rows[0].image_base64, 'base64');
+        res.setHeader('Content-Type', 'image/' + mime);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(buf);
+      }
+    } catch (e) {
+      console.error('[UPLOADS] Base64 fallback error:', e.message);
+    }
+    res.status(404).json({ message: 'Image not found' });
+  });
 
   var frontendPath = path.join(__dirname, '../../frontend');
   app.use(express.static(frontendPath));
