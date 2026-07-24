@@ -29,17 +29,27 @@ exports.findById = async (id) => {
   return rows[0];
 };
 
-exports.list = async (userId, { page = 1, limit = 50 } = {}) => {
+exports.list = async (userId, { page = 1, limit = 50, bookingId } = {}) => {
   const offset = (page - 1) * limit;
+  const conditions = ['p.user_id = $3'];
+  const params = [limit, offset, userId];
+  let idx = 4;
+
+  if (bookingId) {
+    conditions.push(`p.booking_id = $${idx++}`);
+    params.push(bookingId);
+  }
+
+  const where = conditions.join(' AND ');
   const { rows } = await db.query(
     `SELECT p.*, e.name AS event_name
      FROM payments p
      LEFT JOIN bookings b ON b.id = p.booking_id
      LEFT JOIN events e ON e.id = b.event_id
-     WHERE p.user_id = $3
+     WHERE ${where}
      ORDER BY p.created_at DESC
      LIMIT $1 OFFSET $2`,
-    [limit, offset, userId]
+    params
   );
   return rows;
 };

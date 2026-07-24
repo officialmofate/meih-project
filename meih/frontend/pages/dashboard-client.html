@@ -30,7 +30,7 @@
           <h2>My Events</h2>
           <p id="no-events" class="empty-state" hidden>No events yet. <a href="create-event.html">Register your first event</a>.</p>
           <table class="data-table" id="events-table" hidden>
-            <thead><tr><th>Event</th><th>Category</th><th>Date</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Event</th><th>Date</th><th>Status</th><th></th></tr></thead>
             <tbody id="events-body"></tbody>
           </table>
         </section>
@@ -122,40 +122,113 @@
       }
     } catch {}
 
-    // Load stats
-    let currentUser = null;
-    try {
-      const raw = localStorage.getItem('meih_user');
-      if (raw) currentUser = JSON.parse(raw);
-    } catch {}
+    // Load bookings first — client dashboard derives events from bookings
+    const API_BASE = window.MEIH_API_URL || '/api/v1';
+    api.get('/bookings').then((bookings) => {
+      bookings = Array.isArray(bookings) ? bookings : [];
 
-    api.get('/events/events', { params: currentUser ? { clientId: currentUser.id } : {} }).then((events) => {
-      if (!Array.isArray(events)) return;
-      const active = events.filter(e => e.status !== 'completed').length;
-      const completed = events.filter(e => e.status === 'completed').length;
-      document.getElementById('stat-active').textContent = active;
-      document.getElementById('stat-completed').textContent = completed;
+      // Derive unique events from bookings for "My Events" section
+      const eventMap = new Map();
+      bookings.forEach(b => {
+        if (b.event_id && !eventMap.has(b.event_id)) {
+          eventMap.set(b.event_id, {
+            id: b.event_id,
+            name: b.event_name || 'Untitled',
+            event_date: b.event_date,
+            event_location: b.event_location,
+            status: b.status === 'confirmed' ? 'confirmed' : b.status === 'pending' ? 'pending' : 'other',
+          });
+        }
+      });
+      const myEvents = Array.from(eventMap.values());
+      const activeCount = bookings.filter(b => b.status !== 'cancelled').length;
+      const completedCount = bookings.filter(b => b.status === 'confirmed').length;
+      document.getElementById('stat-active').textContent = activeCount;
+      document.getElementById('stat-completed').textContent = completedCount;
 
       // Render events table
-      if (events.length) {
+      if (myEvents.length) {
         const table = document.getElementById('events-table');
         const tbody = document.getElementById('events-body');
         table.hidden = false;
-        tbody.innerHTML = events.map(ev => {
-          const statusClass = ev.status === 'completed' ? 'badge-success' : ev.status === 'published' ? 'badge-muted' : 'badge';
-          const statusLabel = ev.status === 'published' ? 'Open for Quotes' : ev.status;
+        tbody.innerHTML = myEvents.map(ev => {
+          const statusClass = ev.status === 'confirmed' ? 'badge-success' : ev.status === 'pending' ? 'badge-warning' : 'badge';
           return `<tr>
-            <td>${ev.name || 'Untitled'}</td>
-            <td>${ev.category_name || ev.category || ''}</td>
+            <td>${ev.name}</td>
             <td>${ev.event_date ? new Date(ev.event_date).toLocaleDateString() : 'TBD'}</td>
-            <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+            <td><span class="badge ${statusClass}">${ev.status}</span></td>
             <td><a href="event-detail.html?id=${ev.id}">View</a></td>
           </tr>`;
         }).join('');
       } else {
         document.getElementById('no-events').hidden = false;
       }
-    }).catch(() => {});
+
+      // Render bookings table
+      if (bookings.length) {
+        const table = document.getElementById('bookings-table');
+        const tbody = document.getElementById('bookings-body');
+        table.hidden = false;
+
+        const bookingIds = bookings.map(b => b.id);
+        Promise.all(bookingIds.map(id => api.get('/payments?bookingId=' + id).catch(() => []))).then((allPayments) => {
+          tbody.innerHTML = bookings.map((b, idx) => {
+            const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
+            const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
+            const ticketPrice = b.ticket_price ? 'Tsh ' + Number(b.ticket_price).toLocaleString() : 'Free';
+            const numPayments = b.num_payments || 1;
+            const bookingPayments = Array.isArray(allPayments[idx]) ? allPayments[idx] : [];
+            const completedPayments = bookingPayments.filter(p => p.status === 'completed' || p.status === 'pending').length;
+            const payBtn = b.status === 'pending' && completedPayments < numPayments
+              ? `<button class="btn btn-sm btn-primary pay-booking-btn" data-booking-id="${b.id}" data-event-name="${b.event_name || ''}" data-num-payments="${numPayments}" data-completed-payments="${completedPayments}">Pay (${completedPayments + 1}/${numPayments})</button>`
+              : completedPayments >= numPayments ? '<span class="badge badge-success">Fully Paid</span>' : '';
+            const ticketBtn = `<a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank">&#128065; View</a>`;
+            return `<tr>
+              <td>${b.event_name || '—'}</td>
+              <td>${b.event_location || '—'}</td>
+              <td>${eventDate}</td>
+              <td>${ticketPrice}</td>
+              <td>${completedPayments}/${numPayments}</td>
+              <td><span class="badge ${statusClass}">${b.status}</span></td>
+              <td>${payBtn}</td>
+              <td>${ticketBtn}</td>
+            </tr>`;
+          }).join('');
+
+          tbody.addEventListener('click', (e) => {
+            const btn = e.target.closest('.pay-booking-btn');
+            if (!btn) return;
+            openPayModal(btn.dataset.bookingId, btn.dataset.eventName);
+          });
+        });
+
+        // My Tickets section
+        const ticketsList = document.getElementById('tickets-list');
+        document.getElementById('no-tickets').hidden = true;
+        ticketsList.innerHTML = bookings.map(b => {
+          const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : 'badge-muted';
+          const ticketPrice = b.ticket_price ? 'Tsh ' + Number(b.ticket_price).toLocaleString() : 'Free';
+          return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
+            <div>
+              <strong>${b.event_name || '—'}</strong>
+              <span class="badge ${statusClass}" style="margin-left:var(--space-xs);">${b.status}</span>
+              <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${b.event_location || ''} &middot; ${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD'} &middot; Ticket: ${ticketPrice}</p>
+            </div>
+            <div>
+              <a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128196; Download PDF</a>
+              <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128065; View Ticket</a>
+            </div>
+          </div>`;
+        }).join('');
+      } else {
+        document.getElementById('no-bookings').hidden = false;
+        document.getElementById('no-events').hidden = false;
+        document.getElementById('no-tickets').hidden = false;
+      }
+    }).catch(() => {
+      document.getElementById('no-bookings').hidden = false;
+      document.getElementById('no-events').hidden = false;
+    });
 
     // Load payments
     api.get('/payments').then((payments) => {
@@ -184,75 +257,6 @@
       }).join('');
     }).catch(() => {
       document.getElementById('no-payments').hidden = false;
-    });
-
-    // Load bookings
-    const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
-    api.get('/bookings').then((bookings) => {
-      if (!Array.isArray(bookings) || !bookings.length) {
-        document.getElementById('no-bookings').hidden = false;
-        return;
-      }
-      const table = document.getElementById('bookings-table');
-      const tbody = document.getElementById('bookings-body');
-      table.hidden = false;
-      const API_BASE = window.MEIH_API_URL || '/api/v1';
-
-      const bookingIds = bookings.map(b => b.id);
-      Promise.all(bookingIds.map(id => api.get('/payments?bookingId=' + id).catch(() => []))).then((allPayments) => {
-        tbody.innerHTML = bookings.map((b, idx) => {
-          const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : b.status === 'cancelled' ? 'badge-muted' : 'badge';
-          const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
-          const ticketPrice = b.ticket_price ? 'Tsh ' + Number(b.ticket_price).toLocaleString() : 'Free';
-          const numPayments = b.num_payments || 1;
-          const bookingPayments = Array.isArray(allPayments[idx]) ? allPayments[idx] : [];
-          const completedPayments = bookingPayments.filter(p => p.status === 'completed' || p.status === 'pending').length;
-          const payBtn = b.status === 'pending' && completedPayments < numPayments
-            ? `<button class="btn btn-sm btn-primary pay-booking-btn" data-booking-id="${b.id}" data-event-name="${b.event_name || ''}" data-num-payments="${numPayments}" data-completed-payments="${completedPayments}">Pay (${completedPayments + 1}/${numPayments})</button>`
-            : completedPayments >= numPayments ? '<span class="badge badge-success">Fully Paid</span>' : '';
-          const ticketBtn = `<a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank">&#128196; PDF</a> <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank">&#128065; View</a>`;
-          return `<tr>
-            <td>${b.event_name || '—'}</td>
-            <td>${b.event_location || '—'}</td>
-            <td>${eventDate}</td>
-            <td>${ticketPrice}</td>
-            <td>${completedPayments}/${numPayments}</td>
-            <td><span class="badge ${statusClass}">${b.status}</span></td>
-            <td>${payBtn}</td>
-            <td>${ticketBtn}</td>
-          </tr>`;
-        }).join('');
-
-        document.getElementById('bookings-body').addEventListener('click', (e) => {
-          const btn = e.target.closest('.pay-booking-btn');
-          if (!btn) return;
-          openPayModal(btn.dataset.bookingId, btn.dataset.eventName);
-        });
-
-      // My Tickets section
-      const ticketsList = document.getElementById('tickets-list');
-      if (bookings.length > 0) {
-        document.getElementById('no-tickets').hidden = true;
-        ticketsList.innerHTML = bookings.map(b => {
-          const statusClass = b.status === 'confirmed' ? 'badge-success' : b.status === 'pending' ? 'badge-warning' : 'badge-muted';
-          const ticketPrice = b.ticket_price ? 'Tsh ' + Number(b.ticket_price).toLocaleString() : 'Free';
-          return `<div class="card" style="margin-bottom:var(--space-sm);padding:var(--space-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-sm);">
-            <div>
-              <strong>${b.event_name || '—'}</strong>
-              <span class="badge ${statusClass}" style="margin-left:var(--space-xs);">${b.status}</span>
-              <p class="text-muted" style="margin:4px 0 0;font-size:13px;">${b.event_location || ''} &middot; ${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD'} &middot; Ticket: ${ticketPrice}</p>
-            </div>
-            <div>
-              <a class="btn btn-sm btn-primary" href="${API_BASE}/bookings/${b.id}/ticket-pdf" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128196; Download PDF</a>
-              <a class="btn btn-sm btn-ghost" href="${API_BASE}/bookings/${b.id}/ticket" target="_blank" style="display:inline-flex;align-items:center;gap:4px;">&#128065; View Ticket</a>
-            </div>
-          </div>`;
-        }).join('');
-      } else {
-        document.getElementById('no-tickets').hidden = false;
-      }
-    }).catch(() => {
-      document.getElementById('no-bookings').hidden = false;
     });
 
     // Notifications
@@ -331,12 +335,6 @@
 
     document.getElementById('pay-modal-close').addEventListener('click', closePayModal);
     payModal.addEventListener('click', (e) => { if (e.target === payModal) closePayModal(); });
-
-    document.getElementById('bookings-body').addEventListener('click', (e) => {
-      const btn = e.target.closest('.pay-booking-btn');
-      if (!btn) return;
-      openPayModal(btn.dataset.bookingId, btn.dataset.eventName);
-    });
 
     document.getElementById('pay-booking-form').addEventListener('submit', async (e) => {
       e.preventDefault();
