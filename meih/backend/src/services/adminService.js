@@ -172,6 +172,23 @@ exports.createAdmin = async ({ email, password, fullName, phone }) => {
   return rows[0];
 };
 
+exports.createUser = async ({ email, password, fullName, phone, role }) => {
+  const bcrypt = require('bcryptjs');
+  const passwordHash = await bcrypt.hash(password, 12);
+  const { rows } = await db.query(
+    `INSERT INTO users (email, password_hash, full_name, phone, role, status, email_verified)
+     VALUES ($1, $2, $3, $4, $5, 'active', true)
+     ON CONFLICT (email, role) DO UPDATE SET
+       password_hash = EXCLUDED.password_hash,
+       full_name = EXCLUDED.full_name,
+       phone = EXCLUDED.phone,
+       updated_at = now()
+     RETURNING id, email, full_name, phone, role, status, created_at`,
+    [email, passwordHash, fullName, phone || null, role]
+  );
+  return rows[0];
+};
+
 exports.promoteToAdmin = async (userId) => {
   const { rows } = await db.query(
     `UPDATE users SET role = 'admin', updated_at = now() WHERE id = $1 RETURNING id, email, full_name, phone, role, status`,

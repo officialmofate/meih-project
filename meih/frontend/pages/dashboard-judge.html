@@ -88,25 +88,37 @@
   <script type="module">
     import { api } from '../js/api.js';
 
+    const judgeError = document.getElementById('judge-error');
+    const noAssignments = document.getElementById('no-assignments');
+    const assignmentsTable = document.getElementById('assignments-table');
+    const assignmentsBody = document.getElementById('assignments-body');
+
     // Display user name
     try {
       const user = JSON.parse(localStorage.getItem('meih_user') || sessionStorage.getItem('meih_user') || '{}');
-      document.getElementById('judge-name').textContent = user.full_name || user.name || user.email || 'Judge';
+      const nameEl = document.getElementById('judge-name');
+      if (nameEl) nameEl.textContent = user.full_name || user.name || user.email || 'Judge';
     } catch (e) {}
+
+    function showError(msg) {
+      if (judgeError) { judgeError.textContent = msg; judgeError.hidden = false; }
+      if (noAssignments) { noAssignments.hidden = false; noAssignments.textContent = 'Error loading assignments. Try again later.'; }
+    }
 
     // Load judge assignments
     api.get('/innovation/judge/assignments').then((assignments) => {
       if (!Array.isArray(assignments) || !assignments.length) {
-        document.getElementById('no-assignments').hidden = false;
-        document.getElementById('assignment-count').textContent = '0';
-        console.log('[JUDGE] No assignments returned from API');
+        if (noAssignments) noAssignments.hidden = false;
+        const countEl = document.getElementById('assignment-count');
+        if (countEl) countEl.textContent = '0';
         return;
       }
-      document.getElementById('no-assignments').hidden = true;
-      document.getElementById('assignments-table').hidden = false;
-      document.getElementById('assignment-count').textContent = assignments.length;
-      const tbody = document.getElementById('assignments-body');
-      tbody.innerHTML = assignments.map(a => {
+      if (noAssignments) noAssignments.hidden = true;
+      if (assignmentsTable) assignmentsTable.hidden = false;
+      const countEl = document.getElementById('assignment-count');
+      if (countEl) countEl.textContent = assignments.length;
+      if (!assignmentsBody) return;
+      assignmentsBody.innerHTML = assignments.map(a => {
         const statusClass = a.innovation_score != null ? 'badge-success' : 'badge-muted';
         const action = a.innovation_score != null ? 'Edit Score' : 'Score';
         return `<tr>
@@ -119,46 +131,56 @@
         </tr>`;
       }).join('');
 
-      tbody.querySelectorAll('[data-open-score]').forEach(link => {
+      assignmentsBody.querySelectorAll('[data-open-score]').forEach(link => {
         link.addEventListener('click', (e) => {
           e.preventDefault();
           const id = link.dataset.openScore;
-          document.getElementById('score-target-title').textContent = link.closest('tr').children[0].textContent;
-          document.getElementById('score-submission-id').value = id;
-          document.getElementById('score-form-section').scrollIntoView({ behavior: 'smooth' });
+          const titleEl = document.getElementById('score-target-title');
+          if (titleEl) titleEl.textContent = link.closest('tr').children[0].textContent;
+          const subIdEl = document.getElementById('score-submission-id');
+          if (subIdEl) subIdEl.value = id;
+          const section = document.getElementById('score-form-section');
+          if (section) section.scrollIntoView({ behavior: 'smooth' });
         });
       });
     }).catch((err) => {
       console.error('[JUDGE] Error loading assignments:', err);
-      document.getElementById('judge-error').textContent = 'Error loading assignments: ' + (err.message || 'Unknown error') + '. Please try refreshing the page.';
-      document.getElementById('judge-error').hidden = false;
-      document.getElementById('no-assignments').hidden = false;
-      document.getElementById('no-assignments').textContent = 'Error loading assignments. Try again later.';
+      showError('Error loading assignments: ' + (err.message || 'Unknown error') + '. Please try refreshing the page.');
     });
 
     // Star rating interaction
-    document.getElementById('star-rating').addEventListener('click', (e) => {
-      const star = e.target.closest('[data-star]');
-      if (!star) return;
-      const val = parseInt(star.dataset.star);
-      document.getElementById('rating-value').value = val;
-      document.querySelectorAll('#star-rating [data-star]').forEach(s => {
-        const v = parseInt(s.dataset.star);
-        s.innerHTML = v <= val ? '&#9733;' : '&#9734;';
-        s.style.color = v <= val ? '#f9ca24' : '#636e72';
+    const starRating = document.getElementById('star-rating');
+    if (starRating) {
+      starRating.addEventListener('click', (e) => {
+        const star = e.target.closest('[data-star]');
+        if (!star) return;
+        const val = parseInt(star.dataset.star);
+        const ratingVal = document.getElementById('rating-value');
+        if (ratingVal) ratingVal.value = val;
+        starRating.querySelectorAll('[data-star]').forEach(s => {
+          const v = parseInt(s.dataset.star);
+          s.innerHTML = v <= val ? '&#9733;' : '&#9734;';
+          s.style.color = v <= val ? '#f9ca24' : '#636e72';
+        });
       });
-    });
+    }
 
     // Submit score
-    document.getElementById('score-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(e.target));
-      try {
-        await api.post('/innovation/judge/score', data);
-      } catch {}
-      document.getElementById('score-confirmation').hidden = false;
-      setTimeout(() => { document.getElementById('score-confirmation').hidden = true; }, 3000);
-    });
+    const scoreForm = document.getElementById('score-form');
+    if (scoreForm) {
+      scoreForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target));
+        try {
+          await api.post('/innovation/judge/score', data);
+        } catch {}
+        const confirmEl = document.getElementById('score-confirmation');
+        if (confirmEl) {
+          confirmEl.hidden = false;
+          setTimeout(() => { confirmEl.hidden = true; }, 3000);
+        }
+      });
+    }
   </script>
 </body>
 </html>

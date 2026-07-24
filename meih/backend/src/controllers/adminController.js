@@ -236,6 +236,40 @@ exports.createAdmin = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.createUser = async (req, res, next) => {
+  try {
+    const { email, password, fullName, phone, role } = req.body;
+    if (!email || !password || !fullName || !role) {
+      return res.status(400).json({ message: 'Email, password, full name, and role are required' });
+    }
+    if (!VALID_ROLES.includes(role)) {
+      return res.status(400).json({ message: 'Invalid role: ' + role });
+    }
+    if (PRIVILEGED_ROLES.includes(role) && req.user.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Only superadmin can create admin/superadmin accounts' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return res.status(400).json({ message: 'Password must contain uppercase, lowercase, and a number' });
+    }
+    const sanitizedEmail = sanitizeString(email).toLowerCase();
+    const sanitizedFullName = sanitizeString(fullName);
+    const sanitizedPhone = phone ? sanitizeString(phone) : null;
+
+    const user = await adminService.createUser({
+      email: sanitizedEmail,
+      password,
+      fullName: sanitizedFullName,
+      phone: sanitizedPhone,
+      role: sanitizeString(role),
+    });
+    auditLog('USER_CREATED', { targetId: user.id, newValue: role }, req);
+    res.status(201).json(user);
+  } catch (err) { next(err); }
+};
+
 exports.promoteToAdmin = async (req, res, next) => {
   try {
     if (req.user.role !== 'superadmin') {

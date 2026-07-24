@@ -99,26 +99,37 @@
           <div id="innovation-managers-list"></div>
         </section>
 
-        <section class="card wide superadmin-only" id="admin-management-section" hidden>
-          <h2>Admin Management</h2>
-          <p class="text-muted">Create new admin accounts or promote existing users to admin. Only superadmin can perform these actions.</p>
+        <section class="card wide" id="user-management-section">
+          <h2>User Management</h2>
+          <p class="text-muted">Create new user accounts with any role, or promote existing users to admin.</p>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg);margin-top:var(--space-md);">
             <div>
-              <h3 style="margin-bottom:var(--space-sm);font-size:14px;">Create New Admin</h3>
-              <form id="create-admin-form" class="stacked-form">
-                <label for="admin-fullname">Full Name</label>
-                <input type="text" id="admin-fullname" name="fullName" required placeholder="John Doe" />
-                <label for="admin-email">Email</label>
-                <input type="email" id="admin-email" name="email" required placeholder="admin@example.com" />
-                <label for="admin-phone">Phone (optional)</label>
-                <input type="text" id="admin-phone" name="phone" placeholder="+255 700 000 000" />
-                <label for="admin-password">Password</label>
-                <input type="password" id="admin-password" name="password" required placeholder="Min 8 chars, upper, lower, number" minlength="8" />
-                <button type="submit" class="btn btn-primary" style="margin-top:var(--space-sm);">Create Admin Account</button>
+              <h3 style="margin-bottom:var(--space-sm);font-size:14px;">Create New User</h3>
+              <form id="create-user-form" class="stacked-form">
+                <label for="new-user-role">Role</label>
+                <select id="new-user-role" name="role" required>
+                  <option value="reviewer">Reviewer</option>
+                  <option value="client">Client</option>
+                  <option value="planner">Planner</option>
+                  <option value="vendor">Vendor</option>
+                  <option value="innovator">Innovator</option>
+                  <option value="innovator_manager">Innovation Manager</option>
+                  <option value="judge">Judge</option>
+                  <option value="public_voter">Public Voter</option>
+                </select>
+                <label for="new-user-fullname">Full Name</label>
+                <input type="text" id="new-user-fullname" name="fullName" required placeholder="John Doe" />
+                <label for="new-user-email">Email</label>
+                <input type="email" id="new-user-email" name="email" required placeholder="user@example.com" />
+                <label for="new-user-phone">Phone (optional)</label>
+                <input type="text" id="new-user-phone" name="phone" placeholder="+255 700 000 000" />
+                <label for="new-user-password">Password</label>
+                <input type="password" id="new-user-password" name="password" required placeholder="Min 8 chars, upper, lower, number" minlength="8" />
+                <button type="submit" class="btn btn-primary" style="margin-top:var(--space-sm);">Create User</button>
               </form>
-              <p id="create-admin-success" class="form-success" hidden>Admin account created successfully.</p>
-              <p id="create-admin-error" class="form-error" hidden></p>
+              <p id="create-user-success" class="form-success" hidden>User created successfully.</p>
+              <p id="create-user-error" class="form-error" hidden></p>
             </div>
 
             <div>
@@ -684,28 +695,26 @@
       }
     });
 
-    // Superadmin: Admin Management
-    if (currentUser && currentUser.role === 'superadmin') {
-      document.getElementById('admin-management-section').hidden = false;
-      document.querySelectorAll('.superadmin-only').forEach(el => el.hidden = false);
-
-      // Load non-admin users for promote dropdown
+    // User Management: always visible to admin
+    {
+      // Load users for promote dropdown
       api.get('/admin/users').then((users) => {
         if (!Array.isArray(users)) return;
         const nonAdmins = users.filter(u => u.role !== 'admin' && u.role !== 'superadmin');
         const promoteSelect = document.getElementById('promote-user-select');
-        if (nonAdmins.length) {
+        if (promoteSelect && nonAdmins.length) {
           promoteSelect.innerHTML = '<option value="">Select a user to promote</option>' +
             nonAdmins.map(u => '<option value="' + u.id + '">' + (u.full_name || u.email) + ' (' + u.role + ')</option>').join('');
-        } else {
+        } else if (promoteSelect) {
           promoteSelect.innerHTML = '<option value="">No users available to promote</option>';
         }
 
         // Show current admins
         const admins = users.filter(u => u.role === 'admin');
         const adminsList = document.getElementById('admins-list');
-        if (admins.length) {
-          document.getElementById('no-admins').hidden = true;
+        if (admins.length && adminsList) {
+          const noAdminsEl = document.getElementById('no-admins');
+          if (noAdminsEl) noAdminsEl.hidden = true;
           adminsList.innerHTML = admins.map(a =>
             '<div style="padding:8px 12px;border:1px solid #e2e0dc;border-radius:4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">' +
             '<div><strong style="font-size:13px;">' + (a.full_name || a.email) + '</strong>' +
@@ -716,27 +725,28 @@
         }
       }).catch(() => {});
 
-      // Create admin form
-      document.getElementById('create-admin-form').addEventListener('submit', async (e) => {
+      // Create user form
+      document.getElementById('create-user-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
         const payload = {
+          role: formData.get('role'),
           fullName: formData.get('fullName'),
           email: formData.get('email'),
           phone: formData.get('phone') || undefined,
           password: formData.get('password'),
         };
-        const errEl = document.getElementById('create-admin-error');
-        const successEl = document.getElementById('create-admin-success');
+        const errEl = document.getElementById('create-user-error');
+        const successEl = document.getElementById('create-user-success');
         errEl.hidden = true;
         successEl.hidden = true;
         try {
-          await api.post('/admin/create-admin', payload);
+          await api.post('/admin/create-user', payload);
           successEl.hidden = false;
           e.target.reset();
           setTimeout(() => window.location.reload(), 1500);
         } catch (err) {
-          errEl.textContent = err.message || 'Failed to create admin.';
+          errEl.textContent = err.message || 'Failed to create user.';
           errEl.hidden = false;
         }
       });
