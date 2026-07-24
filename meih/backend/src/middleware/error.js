@@ -110,7 +110,9 @@ function errorHandler(err, req, res, _next) {
 
   var finalStatus = err.status || err.statusCode || 500;
   res.status(finalStatus).json({
-    message: finalStatus === 500 ? 'Internal server error' : (err.message || 'Request failed'),
+    message: finalStatus === 500
+      ? (process.env.NODE_ENV !== 'production' ? err.message || 'Internal server error' : 'Internal server error')
+      : (err.message || 'Request failed'),
     code: err.code || 'INTERNAL_ERROR',
     requestId: requestId,
   });
