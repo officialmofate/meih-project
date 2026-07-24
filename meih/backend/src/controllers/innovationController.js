@@ -2,47 +2,61 @@ const innovationService = require('../services/innovationService');
 const emailNotification = require('../services/emailNotificationService');
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
-const http = require('http');
 
 function loadImageAsDataUrl(imageUrl) {
   return new Promise(resolve => {
     if (!imageUrl) return resolve(null);
     const filename = path.basename(imageUrl);
+    const ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : 'jpeg';
+    const mime = ext === 'jpg' ? 'jpeg' : ext;
     const filePath = path.join(__dirname, '../../../uploads/profiles', filename);
-    if (fs.existsSync(filePath)) {
-      const ext = path.extname(filename).toLowerCase().replace('.', '');
-      const mime = ext === 'jpg' ? 'jpeg' : ext === 'jpeg' ? 'jpeg' : ext === 'png' ? 'png' : ext === 'gif' ? 'gif' : ext === 'webp' ? 'webp' : 'jpeg';
-      try {
-        const data = fs.readFileSync(filePath);
-        const b64 = data.toString('base64');
-        console.log('[CERT-IMG] Loaded from disk:', filePath, '(' + (data.length / 1024).toFixed(1) + 'KB)');
-        return resolve('data:image/' + mime + ';base64,' + b64);
-      } catch (e) { console.log('[CERT-IMG] Disk read failed:', e.message); }
-    } else {
-      console.log('[CERT-IMG] File not on disk:', filePath);
-    }
-    const baseUrl = (process.env.BACKEND_URL || 'https://meih.onrender.com').replace(/\/+$/, '');
-    const relativePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl;
-    const servePath = '/uploads/serve/' + relativePath.substring('/uploads/'.length);
-    const fullUrl = baseUrl + servePath;
-    const client = fullUrl.startsWith('https') ? https : http;
-    client.get(fullUrl, res => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return loadImageAsDataUrl(res.headers.location).then(resolve);
+    const paymentsPath = path.join(__dirname, '../../../uploads/payments', filename);
+    const tryPaths = [filePath, paymentsPath];
+    for (const p of tryPaths) {
+      if (fs.existsSync(p)) {
+        try {
+          const data = fs.readFileSync(p);
+          console.log('[CERT-IMG] Loaded from disk:', p, '(' + (data.length / 1024).toFixed(1) + 'KB)');
+          return resolve('data:image/' + mime + ';base64,' + data.toString('base64'));
+        } catch (e) { console.log('[CERT-IMG] Disk read failed:', e.message); }
       }
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => {
-        const buf = Buffer.concat(chunks);
-        const contentType = res.headers['content-type'] || 'image/jpeg';
-        const b64 = buf.toString('base64');
-        console.log('[CERT-IMG] Fetched from URL:', fullUrl, '(' + (buf.length / 1024).toFixed(1) + 'KB)');
-        resolve('data:' + contentType + ';base64,' + b64);
-      });
-      res.on('error', () => resolve(null));
-    }).on('error', () => {
-      console.log('[CERT-IMG] HTTP fetch failed for:', fullUrl);
+    }
+    console.log('[CERT-IMG] File not on disk:', filename, '— querying DB directly');
+    const db = require('../config/database');
+    const relativePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl;
+    db.query(
+      `SELECT image_base64, image_url FROM users WHERE image_url LIKE $1
+       UNION ALL
+       SELECT image_base64, image_url FROM innovation_submissions WHERE image_url LIKE $1
+       UNION ALL
+       SELECT screenshot_base64 AS image_base64, screenshot_url AS image_url FROM payments WHERE screenshot_url LIKE $1
+       UNION ALL
+       SELECT confirmation_screenshot_base64 AS image_base64, confirmation_screenshot_url AS image_url FROM events WHERE confirmation_screenshot_url LIKE $1
+       UNION ALL
+       SELECT payment_screenshot_base64 AS image_base64, payment_screenshot_url AS image_url FROM innovation_submissions WHERE payment_screenshot_url LIKE $1
+       UNION ALL
+       SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM planners WHERE image_url_1 LIKE $1
+       UNION ALL
+       SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM planners WHERE image_url_2 LIKE $1
+       UNION ALL
+       SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM planners WHERE image_url_3 LIKE $1
+       UNION ALL
+       SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM vendors WHERE image_url_1 LIKE $1
+       UNION ALL
+       SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM vendors WHERE image_url_2 LIKE $1
+       UNION ALL
+       SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM vendors WHERE image_url_3 LIKE $1
+       LIMIT 1`,
+      ['%' + relativePath]
+    ).then(({ rows }) => {
+      if (rows.length > 0 && rows[0].image_base64) {
+        console.log('[CERT-IMG] Loaded from DB base64:', filename, '(' + (rows[0].image_base64.length / 1024).toFixed(1) + 'KB)');
+        return resolve('data:image/' + mime + ';base64,' + rows[0].image_base64);
+      }
+      console.log('[CERT-IMG] No base64 found in DB for:', filename);
+      resolve(null);
+    }).catch(err => {
+      console.error('[CERT-IMG] DB query failed:', err.message);
       resolve(null);
     });
   });

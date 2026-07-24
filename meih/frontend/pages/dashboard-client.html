@@ -247,7 +247,7 @@
           <td>Tsh ${Number(p.amount).toLocaleString()}</td>
           <td><span class="badge ${statusClass}">${p.status}</span></td>
           <td>${hasScreenshot
-            ? `<a href="${window.resolveUrl(p.screenshot_url)}" target="_blank"><img src="${window.resolveUrl(p.screenshot_url)}" alt="Payment Screenshot" style="max-width:80px;max-height:60px;border-radius:4px;border:1px solid var(--color-border);cursor:pointer;" onerror="this.style.display='none'" /></a>`
+            ? `<div class="screenshot-cell" data-url="${window.resolveUrl(p.screenshot_url)}"><a href="${window.resolveUrl(p.screenshot_url)}" target="_blank"><img src="${window.resolveUrl(p.screenshot_url)}" alt="Payment Screenshot" style="max-width:80px;max-height:60px;border-radius:4px;border:1px solid var(--color-border);cursor:pointer;" onerror="this.parentElement.innerHTML='<button class=\\'btn btn-sm btn-secondary upload-screenshot-btn\\' data-payment-id=\\''+p.id+'\\'>Re-upload</button>'" /></a></div>`
             : '—'}</td>
           <td>${new Date(p.created_at).toLocaleDateString()}</td>
           <td>${p.status === 'pending' && !hasScreenshot
