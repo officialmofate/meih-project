@@ -1,5 +1,14 @@
 const db = require('../config/database');
 
+const WORD_LIMITS = { title: 20, problem: 50, description: 150, solution: 100, impact: 50 };
+function enforceWordLimits(payload) {
+  for (const [field, max] of Object.entries(WORD_LIMITS)) {
+    if (payload[field] && payload[field].trim().split(/\s+/).length > max) {
+      throw new Error(`"${field}" must not exceed ${max} words`);
+    }
+  }
+}
+
 exports.listCompetitions = async () => {
   const { rows } = await db.query(
     `SELECT c.*,
@@ -97,6 +106,7 @@ exports.getSubmission = async (id) => {
 };
 
 exports.submit = async (userId, competitionId, payload) => {
+  enforceWordLimits(payload);
   const { rows } = await db.query(
     `INSERT INTO innovation_submissions
        (user_id, competition_id, title, category, description, problem, solution, impact, technology, status)
@@ -111,6 +121,7 @@ exports.submit = async (userId, competitionId, payload) => {
 };
 
 exports.updateSubmission = async (id, userId, payload) => {
+  enforceWordLimits(payload);
   const { rows } = await db.query(
     `UPDATE innovation_submissions SET
        title = COALESCE($3, title),
@@ -165,6 +176,11 @@ exports.vote = async (submissionId, voterFingerprint, voterRole) => {
   );
   if (!sub[0]) throw Object.assign(new Error('Submission not found'), { status: 404 });
   if (sub[0].status !== 'approved') throw Object.assign(new Error('Voting is only open for approved innovations'), { status: 400 });
+
+  const hasRevScore = await exports.hasReviewerScore(submissionId);
+  if (!hasRevScore) throw Object.assign(new Error('Voting has not opened yet: waiting for reviewer evaluation'), { status: 400 });
+  const hasJdgScore = await exports.hasJudgeScore(submissionId);
+  if (!hasJdgScore) throw Object.assign(new Error('Voting has not opened yet: waiting for judge evaluation'), { status: 400 });
 
   const now = new Date();
   if (sub[0].opens_at && now < new Date(sub[0].opens_at)) {
@@ -251,6 +267,11 @@ exports.getComments = async (submissionId) => {
 };
 
 exports.submitScore = async (judgeId, payload) => {
+  const hasReviewer = await exports.hasReviewerScore(payload.submissionId);
+  if (!hasReviewer) {
+    throw Object.assign(new Error('Cannot score: this submission needs at least one reviewer score first.'), { status: 400 });
+  }
+
   const { rows: scoreRows } = await db.query(
     `INSERT INTO judge_scores
        (submission_id, judge_id, innovation_score, impact_score, feasibility_score,
@@ -579,6 +600,10 @@ exports.getSubmissionRequirements = async (id, userId) => {
     else rating = 'PARTICIPANT';
   }
 
+  const hasReviewer = await exports.hasReviewerScore(subData.id);
+  const hasJudge = await exports.hasJudgeScore(subData.id);
+  const voteOpen = subData.status === 'approved' && hasReviewer && hasJudge;
+
   const steps = [
     {
       id: 'submission',
@@ -616,19 +641,25 @@ exports.getSubmissionRequirements = async (id, userId) => {
       completedAt: subData.payment_confirmed_at,
     },
     {
-      id: 'voting',
-      label: 'Public Voting',
-      description: 'Your innovation is open for public votes.',
-      status: subData.status === 'approved' ? 'in_progress' : 'pending',
-      voteCount: subData.vote_count || 0,
+      id: 'reviewer_evaluation',
+      label: 'Reviewer Evaluation',
+      description: 'Expert reviewers score your innovation before judge evaluation.',
+      status: hasReviewer ? 'completed' : (subData.status === 'approved' && subData.payment_status === 'confirmed') ? 'in_progress' : 'pending',
     },
     {
       id: 'judging',
       label: 'Judge Evaluation',
       description: 'Expert judges score your innovation across 10 dimensions.',
-      status: scores.length > 0 ? 'completed' : (subData.status === 'approved' && subData.payment_status === 'confirmed') ? 'in_progress' : 'pending',
+      status: hasJudge ? 'completed' : hasReviewer ? 'in_progress' : 'pending',
       score: avgScore,
       ratedCount: scores.length,
+    },
+    {
+      id: 'voting',
+      label: 'Public Voting',
+      description: 'Your innovation is open for public votes.',
+      status: voteOpen ? 'in_progress' : 'pending',
+      voteCount: subData.vote_count || 0,
     },
     {
       id: 'certificate',
@@ -831,6 +862,14 @@ exports.listCompetitionReviewers = async (competitionId) => {
 exports.hasReviewerScore = async (submissionId) => {
   const { rows } = await db.query(
     `SELECT id FROM reviewer_scores WHERE submission_id = $1 LIMIT 1`,
+    [submissionId]
+  );
+  return rows.length > 0;
+};
+
+exports.hasJudgeScore = async (submissionId) => {
+  const { rows } = await db.query(
+    `SELECT id FROM judge_scores WHERE submission_id = $1 LIMIT 1`,
     [submissionId]
   );
   return rows.length > 0;

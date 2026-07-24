@@ -1,4 +1,5 @@
 const bookingService = require('../services/bookingService');
+const emailNotification = require('../services/emailNotificationService');
 
 exports.create = async (req, res, next) => {
   try {
@@ -34,6 +35,10 @@ exports.confirm = async (req, res, next) => {
   try {
     const booking = await bookingService.confirm(req.params.id, req.user.id, req.user.role);
     if (!booking) return res.status(404).json({ message: 'Booking not found or already processed' });
+    if (booking.client_id) {
+      const fullBooking = await bookingService.findById(booking.id);
+      emailNotification.onEventBookingConfirmed(booking.client_id, fullBooking?.event_name || 'Event').catch(() => {});
+    }
     res.json(booking);
   } catch (err) { next(err); }
 };
@@ -42,6 +47,10 @@ exports.cancel = async (req, res, next) => {
   try {
     const booking = await bookingService.cancel(req.params.id, req.user.id, req.user.role);
     if (!booking) return res.status(404).json({ message: 'Booking not found or already processed' });
+    if (booking.client_id) {
+      const fullBooking = await bookingService.findById(booking.id);
+      emailNotification.onEventBookingCancelled(booking.client_id, fullBooking?.event_name || 'Event').catch(() => {});
+    }
     res.json(booking);
   } catch (err) { next(err); }
 };

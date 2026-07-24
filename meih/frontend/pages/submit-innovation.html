@@ -32,8 +32,9 @@
             <option value="">Select a competition</option>
           </select>
 
-          <label for="inno-title">Title</label>
-          <input id="inno-title" name="title" type="text" required placeholder="A short, descriptive name" />
+          <label for="inno-title">Title <span class="text-muted" style="font-weight:400;">(max 20 words)</span></label>
+          <input id="inno-title" name="title" type="text" required placeholder="A short, descriptive name" maxlength="200" />
+          <p class="word-count-hint" data-for="inno-title" style="font-size:11px;color:var(--color-text-muted,#999);margin:2px 0 0;">0 / 20 words</p>
 
           <label for="inno-category">Category</label>
           <select id="inno-category" name="category" required>
@@ -51,17 +52,21 @@
         <fieldset class="form-step" data-step="2" hidden>
           <legend>Innovation Details</legend>
 
-          <label for="inno-problem">Problem Statement</label>
-          <textarea id="inno-problem" name="problem" rows="3" required placeholder="What problem does this innovation solve?"></textarea>
+          <label for="inno-problem">Introduction <span class="text-muted" style="font-weight:400;">(max 50 words)</span></label>
+          <textarea id="inno-problem" name="problem" rows="3" required placeholder="Briefly introduce your innovation..."></textarea>
+          <p class="word-count-hint" data-for="inno-problem" style="font-size:11px;color:var(--color-text-muted,#999);margin:2px 0 0;">0 / 50 words</p>
 
-          <label for="inno-summary">Summary</label>
-          <textarea id="inno-summary" name="description" rows="4" required placeholder="Briefly describe your innovation..."></textarea>
+          <label for="inno-summary">Methodology <span class="text-muted" style="font-weight:400;">(max 150 words)</span></label>
+          <textarea id="inno-summary" name="description" rows="4" required placeholder="Explain your approach and methodology..."></textarea>
+          <p class="word-count-hint" data-for="inno-summary" style="font-size:11px;color:var(--color-text-muted,#999);margin:2px 0 0;">0 / 150 words</p>
 
-          <label for="inno-how">How does it work?</label>
-          <textarea id="inno-how" name="solution" rows="4" required placeholder="Explain the mechanism or approach..."></textarea>
+          <label for="inno-how">Results <span class="text-muted" style="font-weight:400;">(max 100 words)</span></label>
+          <textarea id="inno-how" name="solution" rows="4" required placeholder="Describe your results and findings..."></textarea>
+          <p class="word-count-hint" data-for="inno-how" style="font-size:11px;color:var(--color-text-muted,#999);margin:2px 0 0;">0 / 100 words</p>
 
-          <label for="inno-impact">Expected Impact</label>
-          <textarea id="inno-impact" name="impact" rows="3" required placeholder="What impact will this innovation have?"></textarea>
+          <label for="inno-impact">Expected Outcomes <span class="text-muted" style="font-weight:400;">(max 50 words)</span></label>
+          <textarea id="inno-impact" name="impact" rows="3" required placeholder="What outcomes do you expect?"></textarea>
+          <p class="word-count-hint" data-for="inno-impact" style="font-size:11px;color:var(--color-text-muted,#999);margin:2px 0 0;">0 / 50 words</p>
 
           <label for="inno-technology">Technology Used</label>
           <input id="inno-technology" name="technology" type="text" placeholder="e.g. Mobile App, IoT Sensors, AI/ML" />
@@ -189,14 +194,70 @@
           '<dt>Title</dt><dd>' + (data.get('title') || '—') + '</dd>' +
           '<dt>Category</dt><dd>' + (data.get('category') || '—') + '</dd>' +
           '<dt>Country</dt><dd>' + (data.get('country') || '—') + '</dd>' +
-          '<dt>Problem</dt><dd>' + (data.get('problem') || '—') + '</dd>' +
-          '<dt>Summary</dt><dd>' + (data.get('description') || '—') + '</dd>' +
-          '<dt>Solution</dt><dd>' + (data.get('solution') || '—') + '</dd>' +
-          '<dt>Impact</dt><dd>' + (data.get('impact') || '—') + '</dd>' +
+          '<dt>Introduction</dt><dd>' + (data.get('problem') || '—') + '</dd>' +
+          '<dt>Methodology</dt><dd>' + (data.get('description') || '—') + '</dd>' +
+          '<dt>Results</dt><dd>' + (data.get('solution') || '—') + '</dd>' +
+          '<dt>Expected Outcomes</dt><dd>' + (data.get('impact') || '—') + '</dd>' +
           '<dt>Technology</dt><dd>' + (data.get('technology') || '—') + '</dd>';
       }
 
       goTo(1);
+    })();
+  </script>
+  <script>
+    // Word count validation
+    (function() {
+      var limits = { 'inno-title': 20, 'inno-problem': 50, 'inno-summary': 150, 'inno-how': 100, 'inno-impact': 50 };
+
+      function countWords(val) { return val.trim() ? val.trim().split(/\s+/).length : 0; }
+
+      Object.keys(limits).forEach(function(id) {
+        var el = document.getElementById(id);
+        var hint = document.querySelector('.word-count-hint[data-for="' + id + '"]');
+        if (!el || !hint) return;
+        var max = limits[id];
+
+        function update() {
+          var count = countWords(el.value);
+          hint.textContent = count + ' / ' + max + ' words';
+          hint.style.color = count > max ? '#e74c3c' : '';
+        }
+        el.addEventListener('input', update);
+        update();
+      });
+
+      // Block Next/Submit if over limit
+      document.querySelectorAll('[data-next]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          var fieldset = btn.closest('.form-step');
+          var inputs = fieldset.querySelectorAll('input[name="title"], textarea[name="problem"], textarea[name="description"], textarea[name="solution"], textarea[name="impact"]');
+          for (var i = 0; i < inputs.length; i++) {
+            var id = inputs[i].id;
+            if (limits[id] && countWords(inputs[i].value) > limits[id]) {
+              e.stopImmediatePropagation();
+              e.preventDefault();
+              inputs[i].focus();
+              inputs[i].style.borderColor = '#e74c3c';
+              alert('Maximum ' + limits[id] + ' words allowed for this field.');
+              return false;
+            }
+          }
+        }, true);
+      });
+
+      var submitForm = document.getElementById('submit-innovation-form');
+      submitForm.addEventListener('submit', function(e) {
+        Object.keys(limits).forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el && countWords(el.value) > limits[id]) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            el.focus();
+            el.style.borderColor = '#e74c3c';
+            alert('Maximum ' + limits[id] + ' words allowed for "' + id.replace('inno-', '') + '" field.');
+          }
+        });
+      }, true);
     })();
   </script>
   <script type="module">

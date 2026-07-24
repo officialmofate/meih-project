@@ -114,7 +114,8 @@
         const user = JSON.parse(raw);
         document.getElementById('innovator-welcome').textContent = (user.full_name || user.name || user.email || 'Innovator') + "'s Dashboard";
         if (user.image_url) {
-          document.getElementById('innovator-avatar').innerHTML = '<img src="' + window.resolveUrl(user.image_url) + '" alt="Profile" style="width:100%;height:100%;object-fit:cover;" />';
+          var initial = (user.full_name || 'I').charAt(0).toUpperCase();
+          document.getElementById('innovator-avatar').innerHTML = '<img src="' + window.resolveUrl(user.image_url) + '" alt="Profile" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';" /><span style="display:none;font-size:32px;font-weight:800;color:#fff;align-items:center;justify-content:center;width:100%;height:100%;">' + initial + '</span>';
         } else {
           document.getElementById('avatar-initial').textContent = (user.full_name || 'I').charAt(0).toUpperCase();
         }
@@ -139,7 +140,8 @@
         if (!res.ok) throw new Error('Upload failed');
         const data = await res.json();
         statusEl.textContent = 'Uploaded!';
-        document.getElementById('innovator-avatar').innerHTML = '<img src="' + window.resolveUrl(data.image_url) + '" alt="Profile" style="width:100%;height:100%;object-fit:cover;" />';
+        var uploadInitial = (JSON.parse(localStorage.getItem('meih_user') || '{}').full_name || 'I').charAt(0).toUpperCase();
+        document.getElementById('innovator-avatar').innerHTML = '<img src="' + window.resolveUrl(data.image_url) + '" alt="Profile" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';" /><span style="display:none;font-size:32px;font-weight:800;color:#fff;align-items:center;justify-content:center;width:100%;height:100%;">' + uploadInitial + '</span>';
         try {
           const user = JSON.parse(localStorage.getItem('meih_user'));
           if (user) { user.image_url = data.image_url; localStorage.setItem('meih_user', JSON.stringify(user)); }

@@ -5,6 +5,7 @@ const { jwtSecret, jwtExpiresIn, jwtRefreshSecret, jwtRefreshExpiresIn } = requi
 const db = require('../config/database');
 const { validateEmail } = require('../utils/emailValidator');
 const emailVerification = require('../services/emailVerificationService');
+const emailNotification = require('../services/emailNotificationService');
 
 const PUBLIC_ROLES = ['client', 'planner', 'vendor', 'innovator', 'judge', 'reviewer', 'public_voter'];
 
@@ -12,10 +13,22 @@ const PUBLIC_ROLES = ['client', 'planner', 'vendor', 'innovator', 'judge', 'revi
 const memoryUsers = new Map();
 let memoryIdCounter = 1;
 
-// Login attempt tracking
+// Login attempt tracking — escalating lockout
 const loginAttempts = new Map();
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const LOCKOUT_TIERS = [
+  { minAttempts: 5,  lockoutMs: 5 * 60 * 1000 },   // 5 fails  → 5 min
+  { minAttempts: 10, lockoutMs: 15 * 60 * 1000 },   // 10 fails → 15 min
+  { minAttempts: 15, lockoutMs: 60 * 60 * 1000 },   // 15 fails → 1 hour
+];
+
+// Cleanup stale login attempt records every 10 minutes
+setInterval(function () {
+  const maxLockout = LOCKOUT_TIERS[LOCKOUT_TIERS.length - 1].lockoutMs;
+  const cutoff = Date.now() - maxLockout * 2;
+  for (const [key, record] of loginAttempts) {
+    if (record.lastAttempt < cutoff) loginAttempts.delete(key);
+  }
+}, 10 * 60 * 1000).unref();
 
 // JWT token version (bump to revoke all tokens)
 const TOKEN_VERSION = 1;
@@ -38,14 +51,27 @@ function getLoginAttemptKey(email) {
   return (email || '').toLowerCase().trim();
 }
 
+function getLockoutDuration(attemptCount) {
+  let lockoutMs = 0;
+  for (const tier of LOCKOUT_TIERS) {
+    if (attemptCount >= tier.minAttempts) lockoutMs = tier.lockoutMs;
+  }
+  return lockoutMs;
+}
+
 function checkLoginAttempts(key) {
   const record = loginAttempts.get(key);
-  if (!record) return { blocked: false, attempts: 0 };
-  if (Date.now() - record.lastAttempt > LOCKOUT_DURATION_MS) {
-    loginAttempts.delete(key);
-    return { blocked: false, attempts: 0 };
+  if (!record) return { blocked: false, attempts: 0, lockoutMs: 0, retryAfterMs: 0 };
+  const lockoutMs = getLockoutDuration(record.count);
+  const elapsed = Date.now() - record.lastAttempt;
+  if (lockoutMs > 0 && elapsed < lockoutMs) {
+    return { blocked: true, attempts: record.count, lockoutMs, retryAfterMs: lockoutMs - elapsed };
   }
-  return { blocked: record.count >= MAX_LOGIN_ATTEMPTS, attempts: record.count };
+  if (elapsed > lockoutMs) {
+    loginAttempts.delete(key);
+    return { blocked: false, attempts: 0, lockoutMs: 0, retryAfterMs: 0 };
+  }
+  return { blocked: false, attempts: record.count, lockoutMs: 0, retryAfterMs: 0 };
 }
 
 function recordLoginAttempt(key) {
@@ -140,6 +166,8 @@ exports.register = async (req, res, next) => {
       }
     }
 
+    emailNotification.onRegistration(user.id, cleanEmail, fullName || user.full_name).catch(() => {});
+
     const tokens = signTokens(user);
     res.status(201).json({
       user,
@@ -160,13 +188,16 @@ exports.login = async (req, res, next) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    // Check login attempts
+    // Check login attempts — escalating lockout
     const attemptKey = getLoginAttemptKey(email);
     const attemptStatus = checkLoginAttempts(attemptKey);
     if (attemptStatus.blocked) {
+      const retryMin = Math.ceil(attemptStatus.retryAfterMs / 60000);
       return res.status(429).json({
-        message: 'Too many login attempts. Please try again in 15 minutes',
+        message: `Too many failed attempts. Try again in ${retryMin} minute${retryMin !== 1 ? 's' : ''}`,
         code: 'ACCOUNT_LOCKED',
+        retryAfterMs: attemptStatus.retryAfterMs,
+        attempts: attemptStatus.attempts,
       });
     }
 
@@ -188,13 +219,21 @@ exports.login = async (req, res, next) => {
     const user = rows[0];
     if (!user) {
       recordLoginAttempt(attemptKey);
-      return res.status(401).json({ message: 'Invalid email or password' });
+      const freshStatus = checkLoginAttempts(attemptKey);
+      const remaining = Math.max(0, 5 - freshStatus.attempts);
+      return res.status(401).json({
+        message: 'Invalid email or password',
+        attemptsRemaining: remaining,
+      });
     }
-    if (user.role !== 'superadmin') {
-      if (!(await bcrypt.compare(password || '', user.password_hash))) {
-        recordLoginAttempt(attemptKey);
-        return res.status(401).json({ message: 'Invalid email or password' });
-      }
+    if (!(await bcrypt.compare(password || '', user.password_hash))) {
+      recordLoginAttempt(attemptKey);
+      const freshStatus = checkLoginAttempts(attemptKey);
+      const remaining = Math.max(0, 5 - freshStatus.attempts);
+      return res.status(401).json({
+        message: 'Invalid email or password',
+        attemptsRemaining: remaining,
+      });
     }
     if (user.status === 'suspended') {
       return res.status(403).json({ message: 'Account has been suspended' });

@@ -47,5 +47,6 @@ router.put('/innovation/:id/reject-payment', ctrl.rejectInnovationPayment);
 router.post('/create-user', ctrl.createUser);
 router.post('/create-admin', ctrl.createAdmin);
 router.post('/promote-to-admin/:id', ctrl.promoteToAdmin);
+router.post('/test-email', ctrl.testEmail);
 
 module.exports = router;

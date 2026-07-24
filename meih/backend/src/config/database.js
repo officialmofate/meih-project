@@ -64,7 +64,7 @@ if (databaseUrl) {
       user,
       password,
       ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
-      max: 20,
+      max: parseInt(process.env.DB_POOL_MAX || '30', 10),
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 15000,
     };

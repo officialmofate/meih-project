@@ -36,11 +36,13 @@
         </div>
 
         <section class="card">
-          <h2 data-i18n="problem">Problem</h2>
+          <h2 data-i18n="introduction">Introduction</h2>
           <p id="inn-problem">—</p>
-          <h2 data-i18n="solution">Solution</h2>
+          <h2 data-i18n="methodology">Methodology</h2>
+          <p id="inn-description">—</p>
+          <h2 data-i18n="results">Results</h2>
           <p id="inn-solution">—</p>
-          <h2 data-i18n="expected_impact">Expected Impact</h2>
+          <h2 data-i18n="expected_outcomes">Expected Outcomes</h2>
           <p id="inn-impact">—</p>
           <dl class="detail-grid">
             <dt data-i18n="technology">Technology</dt><dd id="inn-technology">—</dd>
@@ -103,6 +105,7 @@
       document.getElementById('inn-category').textContent = inn.category || '—';
       document.getElementById('inn-team').textContent = inn.team || '—';
       document.getElementById('inn-problem').textContent = inn.problem || '—';
+      document.getElementById('inn-description').textContent = inn.description || '—';
       document.getElementById('inn-solution').textContent = inn.solution || '—';
       document.getElementById('inn-impact').textContent = inn.impact || '—';
       document.getElementById('inn-technology').textContent = inn.technology || '—';

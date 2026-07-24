@@ -4,6 +4,7 @@ const createApp = require('./server');
 const { setupGracefulShutdown } = require('./server');
 const { initWebsocket } = require('./websocket');
 const { initGemini } = require('./services/aiService');
+const scheduler = require('./services/schedulerService');
 
 const app = createApp();
 const server = http.createServer(app);
@@ -11,6 +12,7 @@ const server = http.createServer(app);
 initWebsocket(server);
 initGemini();
 setupGracefulShutdown(server);
+scheduler.start();
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {

@@ -39,7 +39,7 @@ exports.create = async (clientId, payload) => {
   return rows[0];
 };
 
-exports.list = async ({ page = 1, limit = 50, category, status, search } = {}) => {
+exports.list = async ({ page = 1, limit = 50, category, status, search, clientId } = {}) => {
   const offset = (page - 1) * limit;
   const conditions = [];
   const params = [];
@@ -57,6 +57,10 @@ exports.list = async ({ page = 1, limit = 50, category, status, search } = {}) =
     conditions.push(`(e.name ILIKE $${idx} OR e.location ILIKE $${idx})`);
     params.push(`%${search}%`);
     idx++;
+  }
+  if (clientId) {
+    conditions.push(`e.client_id = $${idx++}`);
+    params.push(clientId);
   }
 
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';

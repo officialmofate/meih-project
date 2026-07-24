@@ -26,6 +26,14 @@ const vendorQuoteRoutes = require('./routes/vendorQuotes');
 
 async function autoMigrate() {
   try {
+    const fs = require('fs');
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    const profilesDir = path.join(uploadsDir, 'profiles');
+    const paymentsDir = path.join(uploadsDir, 'payments');
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    if (!fs.existsSync(profilesDir)) fs.mkdirSync(profilesDir, { recursive: true });
+    if (!fs.existsSync(paymentsDir)) fs.mkdirSync(paymentsDir, { recursive: true });
+
     const db = require('./config/database');
     await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_status VARCHAR(20) DEFAULT 'unconfirmed'`);
     await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_payment_number VARCHAR(50)`);
@@ -45,6 +53,7 @@ async function autoMigrate() {
     await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_phone VARCHAR(50)`);
     await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url TEXT`);
     await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_base64 TEXT`);
+    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_1 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_2 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_3 TEXT`);
@@ -105,6 +114,20 @@ async function autoMigrate() {
     )`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_reviewer_assignments_reviewer ON reviewer_assignments(reviewer_id)`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_reviewer_scores_submission ON reviewer_scores(submission_id)`);
+
+    // Performance indexes for 1000+ user scale
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_bookings_client_id ON bookings(client_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_bookings_event_id ON bookings(event_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_events_status ON events(status)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_events_client_id ON events(client_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_events_category_id ON events(category_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_innovation_submissions_competition_id ON innovation_submissions(competition_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_innovation_submissions_user_id ON innovation_submissions(user_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_innovation_submissions_status ON innovation_submissions(status)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_innovation_votes_submission_id ON innovation_votes(submission_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments(booking_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)`);
     await db.query(`CREATE TABLE IF NOT EXISTS event_categories (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name VARCHAR(100) UNIQUE NOT NULL,
@@ -293,12 +316,28 @@ function createApp() {
 
   app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
-  app.get('/uploads/serve/:filename', async (req, res) => {
+  // Image serve cache — avoids repeated UNION LIKE queries
+  const imageCache = new Map();
+  const IMAGE_CACHE_MAX = 500;
+
+  app.get('/uploads/serve/*', async (req, res) => {
     const fs = require('fs');
-    const filePath = path.join(__dirname, '../../uploads', req.params.filename);
+    const requestedPath = req.params[0] || req.params.filename || '';
+    const filePath = path.join(__dirname, '../../uploads', requestedPath);
     if (fs.existsSync(filePath)) {
       return res.sendFile(filePath);
     }
+
+    // Check memory cache first
+    const cached = imageCache.get(requestedPath);
+    if (cached && Date.now() - cached.ts < 3600000) {
+      const ext = path.extname(requestedPath).toLowerCase().replace('.', '');
+      const mimeMap = { jpg: 'jpeg', jpeg: 'jpeg', png: 'png', gif: 'gif', webp: 'webp' };
+      res.setHeader('Content-Type', 'image/' + (mimeMap[ext] || 'jpeg'));
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(cached.buf);
+    }
+
     try {
       const { rows } = await db.query(
         `SELECT image_base64, image_url FROM users WHERE image_url LIKE $1
@@ -309,13 +348,19 @@ function createApp() {
          UNION ALL
          SELECT image_base64, image_url FROM vendors WHERE image_url_1 LIKE $1 OR image_url_2 LIKE $1 OR image_url_3 LIKE $1
          LIMIT 1`,
-        ['%' + req.params.filename]
+        ['%' + requestedPath]
       );
       if (rows.length > 0 && rows[0].image_base64) {
-        const ext = path.extname(req.params.filename).toLowerCase().replace('.', '');
+        const ext = path.extname(requestedPath).toLowerCase().replace('.', '');
         const mimeMap = { jpg: 'jpeg', jpeg: 'jpeg', png: 'png', gif: 'gif', webp: 'webp' };
         const mime = mimeMap[ext] || 'jpeg';
         const buf = Buffer.from(rows[0].image_base64, 'base64');
+        // Cache it
+        if (imageCache.size > IMAGE_CACHE_MAX) {
+          const firstKey = imageCache.keys().next().value;
+          imageCache.delete(firstKey);
+        }
+        imageCache.set(requestedPath, { buf, ts: Date.now() });
         res.setHeader('Content-Type', 'image/' + mime);
         res.setHeader('Cache-Control', 'public, max-age=86400');
         return res.send(buf);
@@ -349,6 +394,11 @@ function setupGracefulShutdown(server) {
     if (shuttingDown) return;
     shuttingDown = true;
     console.log('[SHUTDOWN] Received ' + signal + ', shutting down gracefully...');
+
+    try {
+      var scheduler = require('./services/schedulerService');
+      scheduler.stop();
+    } catch (e) {}
 
     server.close(function () {
       console.log('[SHUTDOWN] HTTP server closed');

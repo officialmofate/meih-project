@@ -9,6 +9,14 @@ const sensitiveOpCounts = new Map();
 const SENSITIVE_OP_WINDOW_MS = 60 * 1000; // 1 minute
 const SENSITIVE_OP_MAX = 15;
 
+// Cleanup stale entries every 5 minutes
+setInterval(function () {
+  const cutoff = Date.now() - SENSITIVE_OP_WINDOW_MS * 2;
+  for (const [key, record] of sensitiveOpCounts) {
+    if (record.windowStart < cutoff) sensitiveOpCounts.delete(key);
+  }
+}, 5 * 60 * 1000).unref();
+
 function trackSensitiveOp(userId) {
   const now = Date.now();
   const record = sensitiveOpCounts.get(userId);

@@ -218,6 +218,9 @@ exports.createAdmin = async (req, res, next) => {
     const sanitizedEmail = sanitizeString(email).toLowerCase();
     const sanitizedFullName = sanitizeString(fullName);
     const sanitizedPhone = phone ? sanitizeString(phone) : null;
+    if (sanitizedPhone && sanitizedPhone.length > 20) {
+      return res.status(400).json({ message: 'Phone number is too long (max 20 characters)' });
+    }
 
     const existing = await adminService.listUsers({ search: sanitizedEmail });
     const emailTaken = Array.isArray(existing) && existing.some(u => u.email.toLowerCase() === sanitizedEmail && u.role === 'admin');
@@ -257,6 +260,9 @@ exports.createUser = async (req, res, next) => {
     const sanitizedEmail = sanitizeString(email).toLowerCase();
     const sanitizedFullName = sanitizeString(fullName);
     const sanitizedPhone = phone ? sanitizeString(phone) : null;
+    if (sanitizedPhone && sanitizedPhone.length > 20) {
+      return res.status(400).json({ message: 'Phone number is too long (max 20 characters)' });
+    }
 
     const user = await adminService.createUser({
       email: sanitizedEmail,
@@ -280,5 +286,18 @@ exports.promoteToAdmin = async (req, res, next) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     auditLog('PROMOTED_TO_ADMIN', { targetId: targetId, newValue: 'admin' }, req);
     res.json(user);
+  } catch (err) { next(err); }
+};
+
+exports.testEmail = async (req, res, next) => {
+  try {
+    const emailNotification = require('../services/emailNotificationService');
+    const result = await emailNotification.onRegistration(
+      req.user.id,
+      req.user.email,
+      req.user.full_name
+    );
+    auditLog('TEST_EMAIL', { targetId: req.user.id }, req);
+    res.json({ message: 'Test email sent', result });
   } catch (err) { next(err); }
 };

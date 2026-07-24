@@ -1,4 +1,5 @@
 const innovationService = require('../services/innovationService');
+const emailNotification = require('../services/emailNotificationService');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
@@ -22,7 +23,9 @@ function loadImageAsDataUrl(imageUrl) {
       console.log('[CERT-IMG] File not on disk:', filePath);
     }
     const baseUrl = (process.env.BACKEND_URL || 'https://meih.onrender.com').replace(/\/+$/, '');
-    const fullUrl = imageUrl.startsWith('http') ? imageUrl : baseUrl + '/' + imageUrl.replace(/^\//, '');
+    const relativePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl;
+    const servePath = '/uploads/serve/' + relativePath.substring('/uploads/'.length);
+    const fullUrl = baseUrl + servePath;
     const client = fullUrl.startsWith('https') ? https : http;
     client.get(fullUrl, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -93,6 +96,7 @@ exports.getSubmission = async (req, res, next) => {
 exports.submitInnovation = async (req, res, next) => {
   try {
     const submission = await innovationService.submit(req.user.id, req.params.id, req.body);
+    emailNotification.onSubmissionCreated(req.user.id, submission.title, '').catch(() => {});
     res.status(201).json(submission);
   } catch (err) { next(err); }
 };
@@ -167,6 +171,8 @@ exports.getCompetitionLeaderboard = async (req, res, next) => {
 exports.submitScore = async (req, res, next) => {
   try {
     const score = await innovationService.submitScore(req.user.id, req.body);
+    const sub = await innovationService.getSubmission(req.body.submissionId);
+    if (sub) emailNotification.onJudgeScoreSubmitted(sub.user_id, sub.title).catch(() => {});
     res.status(201).json(score);
   } catch (err) { next(err); }
 };
@@ -189,6 +195,7 @@ exports.approveSubmission = async (req, res, next) => {
     if (!hasScore) return res.status(400).json({ message: 'Cannot approve: submission needs at least one reviewer score first.' });
     const submission = await innovationService.approveSubmission(req.params.id, req.user.id);
     if (!submission) return res.status(404).json({ message: 'Submission not found or not pending review' });
+    emailNotification.onSubmissionApproved(submission.user_id, submission.title).catch(() => {});
     res.json(submission);
   } catch (err) { next(err); }
 };
@@ -197,6 +204,7 @@ exports.rejectSubmission = async (req, res, next) => {
   try {
     const submission = await innovationService.rejectSubmission(req.params.id, req.user.id);
     if (!submission) return res.status(404).json({ message: 'Submission not found or not pending review' });
+    emailNotification.onSubmissionRejected(submission.user_id, submission.title).catch(() => {});
     res.json(submission);
   } catch (err) { next(err); }
 };
@@ -235,6 +243,7 @@ exports.confirmPayment = async (req, res, next) => {
   try {
     const submission = await innovationService.confirmInnovationPayment(req.params.id, req.user.id);
     if (!submission) return res.status(404).json({ message: 'Submission not found or not pending payment' });
+    emailNotification.onPaymentConfirmed(submission.user_id, submission.title).catch(() => {});
     res.json(submission);
   } catch (err) { next(err); }
 };
@@ -243,6 +252,7 @@ exports.rejectPayment = async (req, res, next) => {
   try {
     const submission = await innovationService.rejectInnovationPayment(req.params.id);
     if (!submission) return res.status(404).json({ message: 'Submission not found or not pending payment' });
+    emailNotification.onPaymentRejected(submission.user_id, submission.title).catch(() => {});
     res.json(submission);
   } catch (err) { next(err); }
 };
@@ -336,6 +346,10 @@ exports.rateSubmission = async (req, res, next) => {
 exports.assignJudge = async (req, res, next) => {
   try {
     const result = await innovationService.assignJudge(req.body.judgeId, req.body.competitionId, req.body.submissionId || null);
+    if (req.body.submissionId) {
+      const sub = await innovationService.getSubmission(req.body.submissionId);
+      if (sub) emailNotification.onJudgeAssigned(req.body.judgeId, sub.title).catch(() => {});
+    }
     res.status(201).json(result);
   } catch (err) { next(err); }
 };
@@ -926,6 +940,10 @@ exports.listAllReviewers = async (req, res, next) => {
 exports.assignReviewer = async (req, res, next) => {
   try {
     const result = await innovationService.assignReviewer(req.body.reviewerId, req.body.competitionId, req.body.submissionId || null);
+    if (req.body.submissionId) {
+      const sub = await innovationService.getSubmission(req.body.submissionId);
+      if (sub) emailNotification.onReviewerAssigned(req.body.reviewerId, sub.title).catch(() => {});
+    }
     res.status(201).json(result);
   } catch (err) { next(err); }
 };
@@ -955,6 +973,8 @@ exports.getReviewerAssignments = async (req, res, next) => {
 exports.submitReviewerScore = async (req, res, next) => {
   try {
     const score = await innovationService.submitReviewerScore(req.user.id, req.body);
+    const sub = await innovationService.getSubmission(req.body.submissionId);
+    if (sub) emailNotification.onReviewerScoreSubmitted(sub.user_id, sub.title).catch(() => {});
     res.status(201).json(score);
   } catch (err) { next(err); }
 };

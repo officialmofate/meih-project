@@ -5,11 +5,12 @@ export function plannerCard(p) {
   const stars = '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
   const fullName = p.full_name || '';
   const imageUrl = p.image_url || '';
+  const initial = name.charAt(0).toUpperCase();
 
   return `
     <div class="card planner-card">
       <div class="planner-card-avatar">
-        ${imageUrl ? `<img src="${window.resolveUrl ? window.resolveUrl(imageUrl) : imageUrl}" alt="${name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />` : `<span>${name.charAt(0).toUpperCase()}</span>`}
+        ${imageUrl ? `<img src="${window.resolveUrl ? window.resolveUrl(imageUrl) : imageUrl}" alt="${name}" onerror="this.style.display='none';this.parentElement.querySelector('.avatar-fallback').style.display='flex';" /><span class="avatar-fallback" style="display:none;font-size:28px;font-weight:800;color:#fff;">${initial}</span>` : `<span>${initial}</span>`}
       </div>
       <div class="planner-card-body">
         <h3>${name}</h3>

@@ -171,13 +171,54 @@
       scoreForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = Object.fromEntries(new FormData(e.target));
+        ['innovationScore','impactScore','feasibilityScore','scalabilityScore','sustainabilityScore','technologyScore','businessModelScore','socialImpactScore','marketReadinessScore','presentationScore'].forEach(k => {
+          if (data[k] !== undefined) data[k] = parseInt(data[k], 10);
+        });
+        if (data.rating !== undefined) data.rating = parseInt(data.rating, 10);
+        const confirmEl = document.getElementById('score-confirmation');
+        const errEl = document.getElementById('judge-error');
         try {
           await api.post('/innovation/judge/score', data);
-        } catch {}
-        const confirmEl = document.getElementById('score-confirmation');
-        if (confirmEl) {
-          confirmEl.hidden = false;
-          setTimeout(() => { confirmEl.hidden = true; }, 3000);
+          if (errEl) errEl.hidden = true;
+          if (confirmEl) {
+            confirmEl.hidden = false;
+            setTimeout(() => { confirmEl.hidden = true; }, 3000);
+          }
+          scoreForm.reset();
+          const ratingVal = document.getElementById('rating-value');
+          if (ratingVal) ratingVal.value = '0';
+          if (starRating) starRating.querySelectorAll('[data-star]').forEach(s => {
+            s.innerHTML = '&#9734;';
+            s.style.color = '#636e72';
+          });
+          document.getElementById('score-target-title').textContent = 'Select an innovation above';
+          api.cache.clear();
+          api.get('/innovation/judge/assignments').then((assignments) => {
+            if (!Array.isArray(assignments) || !assignments.length) return;
+            assignmentsBody.innerHTML = assignments.map(a => {
+              const statusClass = a.innovation_score != null ? 'badge-success' : 'badge-muted';
+              const action = a.innovation_score != null ? 'Edit Score' : 'Score';
+              return `<tr>
+                <td>${a.title || '—'}</td>
+                <td>${a.category || '—'}</td>
+                <td>${a.total_points || 0} pts (${a.vote_count || 0} votes)</td>
+                <td><label class="checkbox-label"><input type="checkbox" data-conflict /> Declare conflict</label></td>
+                <td><span class="badge ${statusClass}">${a.innovation_score != null ? 'Scored' : 'Pending'}</span></td>
+                <td><a href="#score-section" data-open-score="${a.id}">${action}</a></td>
+              </tr>`;
+            }).join('');
+            assignmentsBody.querySelectorAll('[data-open-score]').forEach(link => {
+              link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const id = link.dataset.openScore;
+                document.getElementById('score-target-title').textContent = link.closest('tr').children[0].textContent;
+                document.getElementById('score-submission-id').value = id;
+                document.getElementById('score-form-section').scrollIntoView({ behavior: 'smooth' });
+              });
+            });
+          }).catch(() => {});
+        } catch (err) {
+          if (errEl) { errEl.textContent = err.message || 'Failed to submit score'; errEl.hidden = false; }
         }
       });
     }

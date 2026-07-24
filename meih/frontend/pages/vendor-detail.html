@@ -199,7 +199,8 @@
       const imageUrl = v.image_url || '';
       if (imageUrl) {
         const avatar = document.getElementById('vendor-avatar');
-        avatar.innerHTML = `<img src="${window.resolveUrl(imageUrl)}" alt="${name}" />`;
+        const initial = name.charAt(0).toUpperCase();
+        avatar.innerHTML = `<img src="${window.resolveUrl(imageUrl)}" alt="${name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span style="display:none;font-size:28px;font-weight:800;color:#1a3a5c;align-items:center;justify-content:center;width:100%;height:100%;">${initial}</span>`;
       }
     }).catch(() => {
       document.getElementById('vendor-name').textContent = 'Vendor not found';

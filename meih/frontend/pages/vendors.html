@@ -149,7 +149,7 @@
         return `
           <div class="card vendor-card" data-id="${v.id}">
             <div class="vendor-card-avatar">
-              ${imageUrl ? `<img src="${window.resolveUrl(imageUrl)}" alt="${name}" />` : `<span>${name.charAt(0).toUpperCase()}</span>`}
+              ${imageUrl ? `<img src="${window.resolveUrl(imageUrl)}" alt="${name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span class="avatar-fallback" style="display:none;font-size:28px;font-weight:800;color:#fff;align-items:center;justify-content:center;width:100%;height:100%;">${name.charAt(0).toUpperCase()}</span>` : `<span>${name.charAt(0).toUpperCase()}</span>`}
             </div>
             <div class="vendor-card-body">
               <h3>${name}</h3>

@@ -107,7 +107,8 @@
           window.location.href = dashMap[user.role] || 'dashboard-client.html';
         }
       } catch (err) {
-        loginError.textContent = err.message || 'Login failed. Check your credentials and try again.';
+        var msg = err.message || 'Login failed. Check your credentials and try again.';
+        loginError.textContent = msg;
         loginError.hidden = false;
       }
     });

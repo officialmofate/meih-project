@@ -22,15 +22,15 @@ const DISPOSABLE_DOMAINS = new Set([
 ]);
 
 const FREE_MAIL_DOMAINS = new Set([
-  'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'live.com',
+  'gmail.com', 'googlemail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'live.com',
   'aol.com', 'icloud.com', 'mail.com', 'protonmail.com', 'proton.me',
   'zoho.com', 'gmx.com', 'yandex.com', 'qq.com', '163.com',
   'naver.com', 'daum.net', 'hanmail.net', 'rediffmail.com',
-  'tutanota.com', 'tutanota.de', 'tutamail.com', 'mail.com',
+  'tutanota.com', 'tutanota.de', 'tutamail.com',
   'email.com', 'freeserve.email', 'windowslive.com', 'msn.com',
   'me.com', 'ymail.com', 'rocketmail.com', 'yahoo.co.uk',
   'yahoo.co.in', 'gmail.co.uk', 'outlook.co.uk', 'hotmail.co.uk',
-  'googlemail.com', 'fastmail.com', 'runbox.com', 'hey.com',
+  'fastmail.com', 'runbox.com', 'hey.com',
 ]);
 
 const DISPOSABLE_TLDS = new Set(['.tk', '.ml', '.ga', '.cf', '.gq']);
@@ -91,13 +91,25 @@ function validateEmail(email) {
     errors.push('Email address cannot contain consecutive dots');
   }
 
+  let normalizedEmail = trimmed;
+  const isGmail = domain === 'gmail.com' || domain === 'googlemail.com';
+  if (isGmail) {
+    const parts = trimmed.split('@');
+    let username = parts[0].replace(/\./g, '');
+    const plusIndex = username.indexOf('+');
+    if (plusIndex !== -1) username = username.substring(0, plusIndex);
+    normalizedEmail = username + '@gmail.com';
+  }
+
   return {
     valid: errors.length === 0,
     errors,
-    email: trimmed,
+    email: normalizedEmail,
+    originalEmail: trimmed,
     domain,
     isFreeMail: FREE_MAIL_DOMAINS.has(domain),
     isDisposable: DISPOSABLE_DOMAINS.has(domain) || DISPOSABLE_TLDS.has(tld),
+    isGmail,
   };
 }
 
