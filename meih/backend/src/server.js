@@ -55,6 +55,16 @@ async function autoMigrate() {
     await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_base64 TEXT`);
     await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`);
     await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false`);
+    // Update role CHECK constraint to include all valid roles
+    await db.query(`DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_role_check') THEN
+        ALTER TABLE users DROP CONSTRAINT users_role_check;
+      END IF;
+      ALTER TABLE users ADD CONSTRAINT users_role_check
+        CHECK (role IN ('client','planner','vendor','innovator','innovator_manager','judge','reviewer','public_voter','admin','superadmin'));
+    END $$`);
+    // Drop old UNIQUE (email, role) constraint that prevents admin user creation
+    await db.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_role_key`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_1 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_2 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_3 TEXT`);
