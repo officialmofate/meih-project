@@ -89,19 +89,24 @@ exports.addPortfolioItem = async (req, res, next) => {
 exports.uploadImages = async (req, res, next) => {
   try {
     if (!req.files || !req.files.length) return res.status(400).json({ message: 'No images uploaded' });
-    const urls = req.files.map(f => '/uploads/profiles/' + f.filename);
     const db = require('../config/database');
+    const fs = require('fs');
     const vendor = await vendorService.findByUserId(req.user.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor profile not found' });
     const setClauses = [];
     const params = [vendor.id];
     let idx = 2;
-    if (urls[0]) { setClauses.push(`image_url_1 = $${idx++}`); params.push(urls[0]); }
-    if (urls[1]) { setClauses.push(`image_url_2 = $${idx++}`); params.push(urls[1]); }
-    if (urls[2]) { setClauses.push(`image_url_3 = $${idx++}`); params.push(urls[2]); }
+    for (let i = 0; i < Math.min(req.files.length, 3); i++) {
+      const url = '/uploads/profiles/' + req.files[i].filename;
+      let b64 = null;
+      try { b64 = fs.readFileSync(req.files[i].path).toString('base64'); } catch (_) {}
+      setClauses.push(`image_url_${i + 1} = $${idx++}`, `image_base64_${i + 1} = $${idx++}`);
+      params.push(url, b64);
+    }
     if (setClauses.length) {
       await db.query(`UPDATE vendors SET ${setClauses.join(', ')}, updated_at = now() WHERE id = $1`, params);
     }
+    const urls = req.files.map(f => '/uploads/profiles/' + f.filename);
     res.json({ urls, images: urls });
   } catch (err) { next(err); }
 };

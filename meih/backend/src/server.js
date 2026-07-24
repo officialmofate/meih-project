@@ -65,6 +65,16 @@ async function autoMigrate() {
     END $$`);
     // Drop old UNIQUE (email, role) constraint that prevents admin user creation
     await db.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_role_key`);
+    // Add base64 columns for image persistence on all tables
+    await db.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_base64 TEXT`);
+    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_screenshot_base64 TEXT`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_screenshot_base64 TEXT`);
+    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_1 TEXT`);
+    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_2 TEXT`);
+    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_3 TEXT`);
+    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_1 TEXT`);
+    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_2 TEXT`);
+    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_3 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_1 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_2 TEXT`);
     await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_3 TEXT`);
@@ -355,9 +365,23 @@ function createApp() {
          UNION ALL
          SELECT image_base64, image_url FROM innovation_submissions WHERE image_url LIKE $1
          UNION ALL
-         SELECT image_base64, image_url FROM planners WHERE image_url_1 LIKE $1 OR image_url_2 LIKE $1 OR image_url_3 LIKE $1
+         SELECT screenshot_base64 AS image_base64, screenshot_url AS image_url FROM payments WHERE screenshot_url LIKE $1
          UNION ALL
-         SELECT image_base64, image_url FROM vendors WHERE image_url_1 LIKE $1 OR image_url_2 LIKE $1 OR image_url_3 LIKE $1
+         SELECT confirmation_screenshot_base64 AS image_base64, confirmation_screenshot_url AS image_url FROM events WHERE confirmation_screenshot_url LIKE $1
+         UNION ALL
+         SELECT payment_screenshot_base64 AS image_base64, payment_screenshot_url AS image_url FROM innovation_submissions WHERE payment_screenshot_url LIKE $1
+         UNION ALL
+         SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM planners WHERE image_url_1 LIKE $1
+         UNION ALL
+         SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM planners WHERE image_url_2 LIKE $1
+         UNION ALL
+         SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM planners WHERE image_url_3 LIKE $1
+         UNION ALL
+         SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM vendors WHERE image_url_1 LIKE $1
+         UNION ALL
+         SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM vendors WHERE image_url_2 LIKE $1
+         UNION ALL
+         SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM vendors WHERE image_url_3 LIKE $1
          LIMIT 1`,
         ['%' + requestedPath]
       );

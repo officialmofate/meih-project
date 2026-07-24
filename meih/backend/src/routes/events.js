@@ -37,7 +37,13 @@ router.get('/events/:id/quotes', authenticate, ctrl.listQuotes);
 router.put('/events/:id/status', authenticate, ctrl.updateStatus);
 router.post('/upload-screenshot', authenticate, upload.single('screenshot'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-  res.json({ screenshot_url: `/uploads/payments/${req.file.filename}` });
+  let b64 = null;
+  try {
+    const fs = require('fs');
+    const fileData = fs.readFileSync(req.file.path);
+    b64 = fileData.toString('base64');
+  } catch (e) {}
+  res.json({ screenshot_url: `/uploads/payments/${req.file.filename}`, base64: b64 });
 });
 router.post('/events/:id/request-confirmation', authenticate, ctrl.requestConfirmation);
 

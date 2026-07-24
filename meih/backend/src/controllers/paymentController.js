@@ -8,9 +8,17 @@ try { if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: tr
 exports.createPayment = async (req, res, next) => {
   try {
     const screenshotUrl = req.file ? `/uploads/payments/${req.file.filename}` : null;
+    let screenshotBase64 = null;
+    if (req.file) {
+      try {
+        const fileData = fs.readFileSync(req.file.path);
+        screenshotBase64 = fileData.toString('base64');
+      } catch (e) { console.log('[PAY] Could not read uploaded file for base64:', e.message); }
+    }
     const payment = await paymentService.create(req.user.id, {
       ...req.body,
-      screenshotUrl
+      screenshotUrl,
+      screenshotBase64
     });
     res.status(201).json(payment);
   } catch (err) { next(err); }
@@ -47,7 +55,12 @@ exports.uploadScreenshot = async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'Screenshot file is required' });
     const screenshotUrl = `/uploads/payments/${req.file.filename}`;
-    const payment = await paymentService.updateScreenshot(req.params.id, req.user.id, screenshotUrl);
+    let screenshotBase64 = null;
+    try {
+      const fileData = fs.readFileSync(req.file.path);
+      screenshotBase64 = fileData.toString('base64');
+    } catch (e) { console.log('[PAY] Could not read uploaded file for base64:', e.message); }
+    const payment = await paymentService.updateScreenshot(req.params.id, req.user.id, screenshotUrl, screenshotBase64);
     if (!payment) return res.status(404).json({ message: 'Payment not found or unauthorized' });
     res.json(payment);
   } catch (err) { next(err); }

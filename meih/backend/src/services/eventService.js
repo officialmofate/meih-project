@@ -205,10 +205,11 @@ exports.requestConfirmation = async (id, plannerUserId, payload) => {
          confirmation_payment_number = $2,
          confirmation_payment_name = $3,
          confirmation_screenshot_url = $4,
+         confirmation_screenshot_base64 = $5,
          updated_at = now()
        WHERE id = $1
        RETURNING *`,
-      [id, payload.paymentNumber, payload.paymentName, payload.screenshotUrl || null]
+      [id, payload.paymentNumber, payload.paymentName, payload.screenshotUrl || null, payload.screenshotBase64 || null]
     );
     return rows[0];
   } catch (err) {

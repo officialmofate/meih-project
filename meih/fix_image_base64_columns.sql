@@ -1,0 +1,10 @@
+-- Add base64 columns for image persistence on all tables
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_base64 TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_screenshot_base64 TEXT;
+ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_screenshot_base64 TEXT;
+ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_1 TEXT;
+ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_2 TEXT;
+ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_3 TEXT;
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_1 TEXT;
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_2 TEXT;
+ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_3 TEXT;

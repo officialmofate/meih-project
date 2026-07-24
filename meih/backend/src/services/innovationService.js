@@ -388,12 +388,13 @@ exports.submitPayment = async (id, userId, payload) => {
        payment_number = $3,
        payment_name = $4,
        payment_screenshot_url = $5,
-       payment_method = $6,
+       payment_screenshot_base64 = $6,
+       payment_method = $7,
        updated_at = now()
      WHERE id = $1
      RETURNING *`,
     [id, payload.amount, payload.paymentNumber, payload.paymentName,
-     payload.screenshotUrl || null, payload.method || 'mobile_money']
+     payload.screenshotUrl || null, payload.screenshotBase64 || null, payload.method || 'mobile_money']
   );
   return rows[0];
 };
@@ -484,7 +485,7 @@ exports.listPendingPayment = async ({ page = 1, limit = 50 } = {}) => {
 
 exports.listAllJudges = async () => {
   const { rows } = await db.query(
-    `SELECT id, full_name, name, email, role FROM users WHERE role = 'judge' ORDER BY full_name`
+    `SELECT id, full_name, email, role FROM users WHERE role = 'judge' ORDER BY full_name`
   );
   return rows;
 };
@@ -738,7 +739,7 @@ exports.getCertificateData = async (id) => {
 
 exports.listAllReviewers = async () => {
   const { rows } = await db.query(
-    `SELECT id, full_name, name, email, role FROM users WHERE role = 'reviewer' ORDER BY full_name`
+    `SELECT id, full_name, email, role FROM users WHERE role = 'reviewer' ORDER BY full_name`
   );
   return rows;
 };

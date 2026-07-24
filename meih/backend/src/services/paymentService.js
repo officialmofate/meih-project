@@ -2,14 +2,14 @@ const db = require('../config/database');
 
 exports.create = async (userId, payload) => {
   const { rows } = await db.query(
-    `INSERT INTO payments (booking_id, user_id, method, amount, currency, status, payment_number, payment_name, screenshot_url, notes)
-     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9)
+    `INSERT INTO payments (booking_id, user_id, method, amount, currency, status, payment_number, payment_name, screenshot_url, screenshot_base64, notes)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10)
      RETURNING *`,
     [
       payload.bookingId || null, userId, payload.method || 'mobile_money',
       payload.amount, payload.currency || 'TZS',
       payload.paymentNumber || null, payload.paymentName || null,
-      payload.screenshotUrl || null, payload.notes || null
+      payload.screenshotUrl || null, payload.screenshotBase64 || null, payload.notes || null
     ]
   );
   return rows[0];
@@ -169,12 +169,12 @@ exports.getPaymentDetails = async (bookingId) => {
   return rows[0];
 };
 
-exports.updateScreenshot = async (id, userId, screenshotUrl) => {
+exports.updateScreenshot = async (id, userId, screenshotUrl, screenshotBase64) => {
   const { rows } = await db.query(
-    `UPDATE payments SET screenshot_url = $3, updated_at = now()
+    `UPDATE payments SET screenshot_url = $3, screenshot_base64 = $4, updated_at = now()
      WHERE id = $1 AND user_id = $2
      RETURNING *`,
-    [id, userId, screenshotUrl]
+    [id, userId, screenshotUrl, screenshotBase64 || null]
   );
   return rows[0];
 };

@@ -73,23 +73,24 @@ exports.addPortfolioItem = async (req, res, next) => {
 exports.uploadImages = async (req, res, next) => {
   try {
     if (!req.files || !req.files.length) return res.status(400).json({ message: 'No images uploaded' });
-    const urls = req.files.map(f => '/uploads/profiles/' + f.filename);
     const db = require('../config/database');
+    const fs = require('fs');
     const planner = await plannerService.findByUserId(req.user.id);
     if (!planner) return res.status(404).json({ message: 'Planner profile not found' });
-    const updates = {};
-    if (urls[0]) updates.image_url_1 = urls[0];
-    if (urls[1]) updates.image_url_2 = urls[1];
-    if (urls[2]) updates.image_url_3 = urls[2];
     const setClauses = [];
     const params = [planner.id];
     let idx = 2;
-    if (updates.image_url_1) { setClauses.push(`image_url_1 = $${idx++}`); params.push(updates.image_url_1); }
-    if (updates.image_url_2) { setClauses.push(`image_url_2 = $${idx++}`); params.push(updates.image_url_2); }
-    if (updates.image_url_3) { setClauses.push(`image_url_3 = $${idx++}`); params.push(updates.image_url_3); }
+    for (let i = 0; i < Math.min(req.files.length, 3); i++) {
+      const url = '/uploads/profiles/' + req.files[i].filename;
+      let b64 = null;
+      try { b64 = fs.readFileSync(req.files[i].path).toString('base64'); } catch (_) {}
+      setClauses.push(`image_url_${i + 1} = $${idx++}`, `image_base64_${i + 1} = $${idx++}`);
+      params.push(url, b64);
+    }
     if (setClauses.length) {
       await db.query(`UPDATE planners SET ${setClauses.join(', ')}, updated_at = now() WHERE id = $1`, params);
     }
+    const urls = req.files.map(f => '/uploads/profiles/' + f.filename);
     res.json({ urls, images: urls });
   } catch (err) { next(err); }
 };
