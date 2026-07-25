@@ -38,17 +38,57 @@
           <form id="score-form" class="stacked-form">
             <input type="hidden" id="score-submission-id" name="submissionId" />
 
-            <div class="rubric-grid">
-              <label>Innovation (High weight) <input type="range" name="innovationScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
-              <label>Impact (High weight) <input type="range" name="impactScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
-              <label>Feasibility (Medium) <input type="range" name="feasibilityScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
-              <label>Scalability (Medium) <input type="range" name="scalabilityScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
-              <label>Sustainability (Medium) <input type="range" name="sustainabilityScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
-              <label>Technology Used (Medium) <input type="range" name="technologyScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
-              <label>Business Model (Low) <input type="range" name="businessModelScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
-              <label>Social Impact (Medium) <input type="range" name="socialImpactScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
-              <label>Market Readiness (Low) <input type="range" name="marketReadinessScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
-              <label>Presentation (Low) <input type="range" name="presentationScore" min="0" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value" /><span>5</span></label>
+            <div class="rubric-grid" style="display:grid;gap:12px;">
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Innovation <span style="font-size:11px;color:#8a8580;font-weight:400;">High weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Originality and creativity of the idea. Does it introduce a novel approach or significant improvement?</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="innovationScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Impact <span style="font-size:11px;color:#8a8580;font-weight:400;">High weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Potential effect on the target community or industry. How significant is the problem it solves?</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="impactScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Feasibility <span style="font-size:11px;color:#8a8580;font-weight:400;">Medium weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Can this realistically be built and deployed with available resources and technology?</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="feasibilityScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Scalability <span style="font-size:11px;color:#8a8580;font-weight:400;">Medium weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Can the solution grow to serve more users or expand to new regions without major redesign?</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="scalabilityScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Sustainability <span style="font-size:11px;color:#8a8580;font-weight:400;">Medium weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Long-term viability. Does it have a plan for ongoing operation, maintenance, and revenue?</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="sustainabilityScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Technology Used <span style="font-size:11px;color:#8a8580;font-weight:400;">Medium weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Appropriate use of technology stack. Are modern tools and best practices leveraged effectively?</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="technologyScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Business Model <span style="font-size:11px;color:#8a8580;font-weight:400;">Low weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Clear path to monetization or self-sustaining operation. Are revenue streams defined?</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="businessModelScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Social Impact <span style="font-size:11px;color:#8a8580;font-weight:400;">Medium weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Contribution to community welfare, inclusion, or sustainable development goals.</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="socialImpactScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Market Readiness <span style="font-size:11px;color:#8a8580;font-weight:400;">Low weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">How close is this to being ready for real users? Is there evidence of demand or testing?</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="marketReadinessScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
+              <div style="background:var(--color-surface,#fff);border:1px solid var(--color-border,#e5e7eb);border-radius:8px;padding:12px 16px;">
+                <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:14px;">Presentation <span style="font-size:11px;color:#8a8580;font-weight:400;">Low weight</span></label>
+                <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Quality of the submission write-up, clarity of explanation, and supporting materials.</p>
+                <div style="display:flex;align-items:center;gap:8px;"><input type="range" name="presentationScore" min="0" max="10" value="5" style="flex:1;" oninput="this.nextElementSibling.textContent=this.value" /><span style="font-weight:700;min-width:24px;text-align:center;">5</span></div>
+              </div>
             </div>
 
             <label for="score-comments">Comments for the innovator</label>

@@ -360,31 +360,47 @@ function createApp() {
     }
 
     try {
-      const { rows } = await db.query(
-        `SELECT image_base64, image_url FROM users WHERE image_url LIKE $1
-         UNION ALL
-         SELECT image_base64, image_url FROM innovation_submissions WHERE image_url LIKE $1
-         UNION ALL
-         SELECT screenshot_base64 AS image_base64, screenshot_url AS image_url FROM payments WHERE screenshot_url LIKE $1
-         UNION ALL
-         SELECT confirmation_screenshot_base64 AS image_base64, confirmation_screenshot_url AS image_url FROM events WHERE confirmation_screenshot_url LIKE $1
-         UNION ALL
-         SELECT payment_screenshot_base64 AS image_base64, payment_screenshot_url AS image_url FROM innovation_submissions WHERE payment_screenshot_url LIKE $1
-         UNION ALL
-         SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM planners WHERE image_url_1 LIKE $1
-         UNION ALL
-         SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM planners WHERE image_url_2 LIKE $1
-         UNION ALL
-         SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM planners WHERE image_url_3 LIKE $1
-         UNION ALL
-         SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM vendors WHERE image_url_1 LIKE $1
-         UNION ALL
-         SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM vendors WHERE image_url_2 LIKE $1
-         UNION ALL
-         SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM vendors WHERE image_url_3 LIKE $1
-         LIMIT 1`,
-        ['%' + requestedPath]
-      );
+      let rows = [];
+      try {
+        const result = await db.query(
+          `SELECT image_base64, image_url FROM users WHERE image_url LIKE $1
+           UNION ALL
+           SELECT image_base64, image_url FROM innovation_submissions WHERE image_url LIKE $1
+           UNION ALL
+           SELECT screenshot_base64 AS image_base64, screenshot_url AS image_url FROM payments WHERE screenshot_url LIKE $1
+           UNION ALL
+           SELECT confirmation_screenshot_base64 AS image_base64, confirmation_screenshot_url AS image_url FROM events WHERE confirmation_screenshot_url LIKE $1
+           UNION ALL
+           SELECT payment_screenshot_base64 AS image_base64, payment_screenshot_url AS image_url FROM innovation_submissions WHERE payment_screenshot_url LIKE $1
+           UNION ALL
+           SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM planners WHERE image_url_1 LIKE $1
+           UNION ALL
+           SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM planners WHERE image_url_2 LIKE $1
+           UNION ALL
+           SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM planners WHERE image_url_3 LIKE $1
+           UNION ALL
+           SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM vendors WHERE image_url_1 LIKE $1
+           UNION ALL
+           SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM vendors WHERE image_url_2 LIKE $1
+           UNION ALL
+           SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM vendors WHERE image_url_3 LIKE $1
+           LIMIT 1`,
+          ['%' + requestedPath]
+        );
+        rows = result.rows;
+      } catch (unionErr) {
+        console.error('[IMAGE-SERVE] Full UNION query failed, trying simplified fallback:', unionErr.message);
+        const fallback = await db.query(
+          `SELECT image_base64, image_url FROM users WHERE image_url LIKE $1
+           UNION ALL
+           SELECT image_base64, image_url FROM innovation_submissions WHERE image_url LIKE $1
+           UNION ALL
+           SELECT screenshot_base64 AS image_base64, screenshot_url AS image_url FROM payments WHERE screenshot_url LIKE $1
+           LIMIT 1`,
+          ['%' + requestedPath]
+        );
+        rows = fallback.rows;
+      }
       if (rows.length > 0 && rows[0].image_base64) {
         const ext = path.extname(requestedPath).toLowerCase().replace('.', '');
         const mimeMap = { jpg: 'jpeg', jpeg: 'jpeg', png: 'png', gif: 'gif', webp: 'webp' };

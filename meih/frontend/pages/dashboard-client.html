@@ -28,10 +28,19 @@
 
         <section class="card wide">
           <h2>My Events</h2>
-          <p id="no-events" class="empty-state" hidden>No events yet. <a href="create-event.html">Register your first event</a>.</p>
+          <p id="no-events" class="empty-state" hidden>No events yet. <a href="events.html">Browse events</a> to book one.</p>
           <table class="data-table" id="events-table" hidden>
             <thead><tr><th>Event</th><th>Date</th><th>Status</th><th></th></tr></thead>
             <tbody id="events-body"></tbody>
+          </table>
+        </section>
+
+        <section class="card wide">
+          <h2>Available Events</h2>
+          <p id="no-available-events" class="empty-state" hidden>No events available at the moment.</p>
+          <table class="data-table" id="available-events-table" hidden>
+            <thead><tr><th>Event</th><th>Location</th><th>Date</th><th></th></tr></thead>
+            <tbody id="available-events-body"></tbody>
           </table>
         </section>
 
@@ -122,10 +131,14 @@
       }
     } catch {}
 
-    // Load bookings first — client dashboard derives events from bookings
+    // Load bookings and events in parallel
     const API_BASE = window.MEIH_API_URL || '/api/v1';
-    api.get('/bookings').then((bookings) => {
+    Promise.all([
+      api.get('/bookings').catch(() => []),
+      fetch(API_BASE + '/events/events').then(r => r.ok ? r.json() : []).catch(() => [])
+    ]).then(([bookings, allEvents]) => {
       bookings = Array.isArray(bookings) ? bookings : [];
+      allEvents = Array.isArray(allEvents) ? allEvents : [];
 
       // Derive unique events from bookings for "My Events" section
       const eventMap = new Map();
@@ -162,6 +175,26 @@
         }).join('');
       } else {
         document.getElementById('no-events').hidden = false;
+      }
+
+      // Render available events (from API, excluding already-booked ones)
+      const bookedEventIds = new Set(myEvents.map(e => e.id));
+      const availableEvents = allEvents.filter(ev => !bookedEventIds.has(ev.id));
+      if (availableEvents.length) {
+        const table = document.getElementById('available-events-table');
+        const tbody = document.getElementById('available-events-body');
+        table.hidden = false;
+        tbody.innerHTML = availableEvents.map(ev => {
+          const evDate = ev.event_date ? new Date(ev.event_date).toLocaleDateString() : 'TBD';
+          return `<tr>
+            <td>${ev.name || 'Untitled'}</td>
+            <td>${ev.location || '—'}</td>
+            <td>${evDate}</td>
+            <td><a href="event-detail.html?id=${ev.id}">View</a></td>
+          </tr>`;
+        }).join('');
+      } else {
+        document.getElementById('no-available-events').hidden = false;
       }
 
       // Render bookings table

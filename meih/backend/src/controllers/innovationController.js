@@ -5,7 +5,10 @@ const path = require('path');
 
 function loadImageAsDataUrl(imageUrl) {
   return new Promise(resolve => {
-    if (!imageUrl) return resolve(null);
+    if (!imageUrl) {
+      console.log('[CERT-IMG] No imageUrl provided');
+      return resolve(null);
+    }
     const filename = path.basename(imageUrl);
     const ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : 'jpeg';
     const mime = ext === 'jpg' ? 'jpeg' : ext;
@@ -16,44 +19,46 @@ function loadImageAsDataUrl(imageUrl) {
       if (fs.existsSync(p)) {
         try {
           const data = fs.readFileSync(p);
-          console.log('[CERT-IMG] Loaded from disk:', p, '(' + (data.length / 1024).toFixed(1) + 'KB)');
-          return resolve('data:image/' + mime + ';base64,' + data.toString('base64'));
-        } catch (e) { console.log('[CERT-IMG] Disk read failed:', e.message); }
+          if (data.length > 0) {
+            console.log('[CERT-IMG] Loaded from disk:', p, '(' + (data.length / 1024).toFixed(1) + 'KB)');
+            return resolve('data:image/' + mime + ';base64,' + data.toString('base64'));
+          }
+        } catch (e) { console.log('[CERT-IMG] Disk read failed for', p + ':', e.message); }
       }
     }
     console.log('[CERT-IMG] File not on disk:', filename, '— querying DB directly');
     const db = require('../config/database');
     const relativePath = imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl;
     db.query(
-      `SELECT image_base64, image_url FROM users WHERE image_url LIKE $1
+      `SELECT image_base64, image_url FROM users WHERE image_url = $1 AND image_base64 IS NOT NULL AND length(image_base64) > 100
        UNION ALL
-       SELECT image_base64, image_url FROM innovation_submissions WHERE image_url LIKE $1
+       SELECT image_base64, image_url FROM innovation_submissions WHERE image_url = $1 AND image_base64 IS NOT NULL AND length(image_base64) > 100
        UNION ALL
-       SELECT screenshot_base64 AS image_base64, screenshot_url AS image_url FROM payments WHERE screenshot_url LIKE $1
+       SELECT screenshot_base64 AS image_base64, screenshot_url AS image_url FROM payments WHERE screenshot_url = $1 AND screenshot_base64 IS NOT NULL AND length(screenshot_base64) > 100
        UNION ALL
-       SELECT confirmation_screenshot_base64 AS image_base64, confirmation_screenshot_url AS image_url FROM events WHERE confirmation_screenshot_url LIKE $1
+       SELECT confirmation_screenshot_base64 AS image_base64, confirmation_screenshot_url AS image_url FROM events WHERE confirmation_screenshot_url = $1 AND confirmation_screenshot_base64 IS NOT NULL AND length(confirmation_screenshot_base64) > 100
        UNION ALL
-       SELECT payment_screenshot_base64 AS image_base64, payment_screenshot_url AS image_url FROM innovation_submissions WHERE payment_screenshot_url LIKE $1
+       SELECT payment_screenshot_base64 AS image_base64, payment_screenshot_url AS image_url FROM innovation_submissions WHERE payment_screenshot_url = $1 AND payment_screenshot_base64 IS NOT NULL AND length(payment_screenshot_base64) > 100
        UNION ALL
-       SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM planners WHERE image_url_1 LIKE $1
+       SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM planners WHERE image_url_1 = $1 AND image_base64_1 IS NOT NULL AND length(image_base64_1) > 100
        UNION ALL
-       SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM planners WHERE image_url_2 LIKE $1
+       SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM planners WHERE image_url_2 = $1 AND image_base64_2 IS NOT NULL AND length(image_base64_2) > 100
        UNION ALL
-       SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM planners WHERE image_url_3 LIKE $1
+       SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM planners WHERE image_url_3 = $1 AND image_base64_3 IS NOT NULL AND length(image_base64_3) > 100
        UNION ALL
-       SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM vendors WHERE image_url_1 LIKE $1
+       SELECT image_base64_1 AS image_base64, image_url_1 AS image_url FROM vendors WHERE image_url_1 = $1 AND image_base64_1 IS NOT NULL AND length(image_base64_1) > 100
        UNION ALL
-       SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM vendors WHERE image_url_2 LIKE $1
+       SELECT image_base64_2 AS image_base64, image_url_2 AS image_url FROM vendors WHERE image_url_2 = $1 AND image_base64_2 IS NOT NULL AND length(image_base64_2) > 100
        UNION ALL
-       SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM vendors WHERE image_url_3 LIKE $1
+       SELECT image_base64_3 AS image_base64, image_url_3 AS image_url FROM vendors WHERE image_url_3 = $1 AND image_base64_3 IS NOT NULL AND length(image_base64_3) > 100
        LIMIT 1`,
-      ['%' + relativePath]
+      [relativePath]
     ).then(({ rows }) => {
       if (rows.length > 0 && rows[0].image_base64) {
         console.log('[CERT-IMG] Loaded from DB base64:', filename, '(' + (rows[0].image_base64.length / 1024).toFixed(1) + 'KB)');
         return resolve('data:image/' + mime + ';base64,' + rows[0].image_base64);
       }
-      console.log('[CERT-IMG] No base64 found in DB for:', filename);
+      console.warn('[CERT-IMG] No base64 found in DB for:', filename, '— user may need to re-upload profile image');
       resolve(null);
     }).catch(err => {
       console.error('[CERT-IMG] DB query failed:', err.message);
@@ -452,7 +457,7 @@ exports.getTicket = async (req, res, next) => {
     </div>
     <hr class="divider"/>
     <div class="qr-section">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent('INNO-TICKET-' + ticket.id)}" alt="Innovation QR Code" />
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(JSON.stringify({ ticketId: ticket.id, innovation: ticket.title, innovator: ticket.author_name, competition: ticket.competition_title, category: ticket.category, status: 'approved', platform: 'MEIH - MOFATE Event & Innovation Hub' }))}" alt="Innovation QR Code" />
       <div class="qr-label">Scan to verify innovation</div>
     </div>
   </div>
@@ -489,6 +494,8 @@ exports.getTicket = async (req, res, next) => {
 exports.getTicketPDF = async (req, res, next) => {
   try {
     const PDFDocument = require('pdfkit');
+    const https = require('https');
+    const http = require('http');
     const ticket = await innovationService.getTicketData(req.params.id);
     if (!ticket) return res.status(404).send('Submission not found');
     if (ticket.status !== 'approved') return res.status(400).send('Ticket only available for approved innovations');
@@ -502,14 +509,54 @@ exports.getTicketPDF = async (req, res, next) => {
     const gray = '#636e72';
     const lightGray = '#dfe6e9';
 
+    const qrData = JSON.stringify({
+      ticketId: ticket.id,
+      innovation: ticket.title,
+      innovator: ticket.author_name,
+      competition: ticket.competition_title,
+      category: ticket.category,
+      status: 'approved',
+      platform: 'MEIH - MOFATE Event & Innovation Hub'
+    });
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(qrData);
+
+    const fetchQR = (url) => {
+      return new Promise((res, rej) => {
+        const client = url.startsWith('https') ? https : http;
+        const req = client.get(url, { timeout: 10000 }, (resp) => {
+          if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location) {
+            return fetchQR(resp.headers.location).then(res).catch(rej);
+          }
+          if (resp.statusCode !== 200) {
+            return rej(new Error('QR code API returned ' + resp.statusCode));
+          }
+          const chunks = [];
+          resp.on('data', c => chunks.push(c));
+          resp.on('end', () => res(Buffer.concat(chunks)));
+          resp.on('error', rej);
+        });
+        req.on('timeout', () => { req.destroy(); rej(new Error('QR code fetch timed out')); });
+        req.on('error', rej);
+      });
+    };
+
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
+    let resolved = false;
     doc.on('data', chunk => chunks.push(chunk));
     doc.on('end', () => {
-      const buf = Buffer.concat(chunks);
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'attachment; filename="innovation-ticket-' + req.params.id.substring(0, 8) + '.pdf"');
-      res.send(buf);
+      if (!resolved) {
+        resolved = true;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename="innovation-ticket-' + req.params.id.substring(0, 8) + '.pdf"');
+        res.send(Buffer.concat(chunks));
+      }
+    });
+    doc.on('error', (err) => {
+      if (!resolved) {
+        resolved = true;
+        next(err);
+      }
     });
 
     doc.rect(0, 0, doc.page.width, 160).fill(purple);
@@ -539,11 +586,20 @@ exports.getTicketPDF = async (req, res, next) => {
     doc.fontSize(9).font('Helvetica').fillColor(gray)
       .text('SCAN TO VERIFY INNOVATION', 50, startY + 195, { align: 'center', width: doc.page.width - 100 });
 
-    doc.fontSize(8).font('Helvetica').fillColor(gray)
-      .text('INNOVATION #' + ticket.id.substring(0, 8).toUpperCase(), 50, doc.page.height - 100, { align: 'center', width: doc.page.width - 100 });
-    doc.fontSize(7).fillColor('#b2bec3')
-      .text('This ticket is issued by MOFATE \u2014 Mobile Facilitation Team. Present at the innovation showcase. Non-transferable.', 50, doc.page.height - 85, { align: 'center', width: doc.page.width - 100 });
-    doc.end();
+    function finalizeDoc() {
+      doc.fontSize(8).font('Helvetica').fillColor(gray)
+        .text('INNOVATION #' + ticket.id.substring(0, 8).toUpperCase(), 50, doc.page.height - 100, { align: 'center', width: doc.page.width - 100 });
+      doc.fontSize(7).fillColor('#b2bec3')
+        .text('This ticket is issued by MOFATE \u2014 Mobile Facilitation Team. Present at the innovation showcase. Non-transferable.', 50, doc.page.height - 85, { align: 'center', width: doc.page.width - 100 });
+      doc.end();
+    }
+
+    fetchQR(qrUrl).then(qrBuf => {
+      doc.image(qrBuf, (doc.page.width - 150) / 2, startY + 210, { width: 150, height: 150 });
+      finalizeDoc();
+    }).catch(() => {
+      finalizeDoc();
+    });
   } catch (err) { next(err); }
 };
 
@@ -823,13 +879,14 @@ exports.getCertificatePDF = async (req, res, next) => {
     if (authorImage) {
       try {
         const imgSize = 50;
-        doc.saveClip();
+        doc.save();
         doc.circle(pageW / 2, topY + imgSize / 2, imgSize / 2).clip();
         doc.image(authorImage, pageW / 2 - imgSize / 2, topY, { width: imgSize, height: imgSize });
-        doc.restoreClip();
+        doc.restore();
         doc.circle(pageW / 2, topY + imgSize / 2, imgSize / 2 + 1.5).lineWidth(1.5).strokeColor(gold).stroke();
         topY += imgSize + 10;
       } catch (e) {
+        console.error('[CERT-PDF] Failed to render author image, falling back to initials:', e.message);
         const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
         doc.circle(pageW / 2, topY + 25, 25).lineWidth(1.5).fillAndStroke('#f0ece6', gold);
         doc.fontSize(14).font('Helvetica-Bold').fillColor(navy)

@@ -528,9 +528,13 @@
     api.get('/planners/me').then(p => {
       const imgs = [p.image_url_1, p.image_url_2, p.image_url_3].filter(Boolean);
       if (imgs.length) {
-        currentImagesEl.innerHTML = imgs.map(u => '<img src="' + window.resolveUrl(u) + '" style="width:120px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--color-border);" />').join('');
+        currentImagesEl.innerHTML = imgs.map(u =>
+          '<div style="position:relative;display:inline-block;">' +
+          '<img src="' + window.resolveUrl(u) + '" style="width:120px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--color-border);" onerror="this.style.opacity=\'0.3\';this.title=\'Image may need re-upload (server restarted)\';" />' +
+          '</div>'
+        ).join('');
       } else {
-        currentImagesEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No images uploaded yet.</p>';
+        currentImagesEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No images uploaded yet. Upload portfolio images for your profile.</p>';
       }
     }).catch(() => {});
 
