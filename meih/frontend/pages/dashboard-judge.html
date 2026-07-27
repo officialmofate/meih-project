@@ -30,6 +30,7 @@
             <thead><tr><th data-i18n="title">Title</th><th data-i18n="category">Category</th><th data-i18n="votes">Votes/Points</th><th data-i18n="conflict_of_interest">Conflict of Interest</th><th data-i18n="status">Status</th><th></th></tr></thead>
             <tbody id="assignments-body"></tbody>
           </table>
+          <p id="judge-view-details" hidden style="margin-top:var(--space-sm);font-size:13px;color:var(--color-text-muted);">Click <strong>View Details</strong> to see the full innovation content (problem, solution, impact, technology).</p>
         </section>
 
         <section class="card wide" id="score-form-section">
@@ -118,6 +119,7 @@
       const countEl = document.getElementById('assignment-count');
       if (countEl) countEl.textContent = assignments.length;
       if (!assignmentsBody) return;
+      document.getElementById('judge-view-details').hidden = false;
       assignmentsBody.innerHTML = assignments.map(a => {
         const statusClass = a.innovation_score != null ? 'badge-success' : 'badge-muted';
         const action = a.innovation_score != null ? 'Edit Score' : 'Score';
@@ -127,7 +129,7 @@
           <td>${a.total_points || 0} pts (${a.vote_count || 0} votes)</td>
           <td><label class="checkbox-label"><input type="checkbox" data-conflict /> Declare conflict</label></td>
           <td><span class="badge ${statusClass}">${a.innovation_score != null ? 'Scored' : 'Pending'}</span></td>
-          <td><a href="#score-section" data-open-score="${a.id}">${action}</a></td>
+          <td><a href="innovation-detail.html?id=${a.id}" target="_blank" style="margin-right:8px;">View Details</a> <a href="#score-section" data-open-score="${a.id}">${action}</a></td>
         </tr>`;
       }).join('');
 
@@ -204,7 +206,7 @@
                 <td>${a.total_points || 0} pts (${a.vote_count || 0} votes)</td>
                 <td><label class="checkbox-label"><input type="checkbox" data-conflict /> Declare conflict</label></td>
                 <td><span class="badge ${statusClass}">${a.innovation_score != null ? 'Scored' : 'Pending'}</span></td>
-                <td><a href="#score-section" data-open-score="${a.id}">${action}</a></td>
+                <td><a href="innovation-detail.html?id=${a.id}" target="_blank" style="margin-right:8px;">View Details</a> <a href="#score-section" data-open-score="${a.id}">${action}</a></td>
               </tr>`;
             }).join('');
             assignmentsBody.querySelectorAll('[data-open-score]').forEach(link => {

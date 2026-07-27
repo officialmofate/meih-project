@@ -342,7 +342,6 @@ exports.getJudgeAssignments = async (judgeId) => {
        LEFT JOIN users u ON u.id = s.user_id
        LEFT JOIN judge_scores js ON js.submission_id = s.id AND js.judge_id = $1
        WHERE ja.judge_id = $1
-         AND (ja.submission_id IS NOT NULL OR s.status = 'approved')
        ORDER BY s.created_at DESC`,
       [judgeId]
     );
@@ -810,8 +809,7 @@ exports.getReviewerAssignments = async (reviewerId) => {
      LEFT JOIN users u ON u.id = s.user_id
      LEFT JOIN innovation_competitions c ON c.id = s.competition_id
      LEFT JOIN reviewer_scores rs ON rs.submission_id = s.id AND rs.reviewer_id = $1
-     WHERE ra.reviewer_id = $1
-       AND (ra.submission_id IS NOT NULL OR s.status = 'pending_review')
+      WHERE ra.reviewer_id = $1
      ORDER BY s.created_at DESC`,
     [reviewerId]
   );

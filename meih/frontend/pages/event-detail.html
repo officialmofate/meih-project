@@ -103,6 +103,15 @@
       <aside class="detail-sidebar">
         <div class="card sticky-card">
           <h2>Book This Event</h2>
+          <div id="booking-payment-details" style="background:var(--color-bg-alt,#f5f5f5);border-radius:var(--radius-sm,4px);padding:var(--space-md);margin-bottom:var(--space-md);">
+            <p style="margin:0 0 8px;font-weight:700;font-size:15px;color:var(--color-primary);">Booking Payment Details</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div><span style="font-size:12px;color:var(--color-text-muted);display:block;">Amount</span><strong id="booking-amount-display">—</strong></div>
+              <div><span style="font-size:12px;color:var(--color-text-muted);display:block;">Number of Payments</span><strong id="booking-num-payments-display">1</strong></div>
+              <div><span style="font-size:12px;color:var(--color-text-muted);display:block;">Payment Per Installment</span><strong id="booking-installment-display">—</strong></div>
+              <div><span style="font-size:12px;color:var(--color-text-muted);display:block;">Your Name</span><strong id="booking-client-name-display">—</strong></div>
+            </div>
+          </div>
           <p class="text-muted" id="ticket-price-display" hidden></p>
           <p class="text-muted">Confirm your attendance and get your ticket.</p>
           <form id="booking-form" class="stacked-form">
@@ -173,12 +182,33 @@
       document.getElementById('event-client').textContent = ev.client_name || '—';
 
       const suggestedFee = ev.suggested_fee_usd || ev.suggestedFeeUsd || 0;
+      const ticketPrice = ev.ticket_price ? Number(ev.ticket_price) : (suggestedFee ? Math.round(Number(suggestedFee) * 2550) : 0);
+      const numPayments = ev.num_payments || 1;
+      const installmentAmount = ticketPrice > 0 && numPayments > 0 ? Math.ceil(ticketPrice / numPayments) : ticketPrice;
+
+      const bookingAmountEl = document.getElementById('booking-amount-display');
+      const bookingNumPaymentsEl = document.getElementById('booking-num-payments-display');
+      const bookingInstallmentEl = document.getElementById('booking-installment-display');
+      const bookingClientNameEl = document.getElementById('booking-client-name-display');
+
+      if (ticketPrice > 0) {
+        bookingAmountEl.textContent = 'Tsh ' + ticketPrice.toLocaleString();
+        bookingNumPaymentsEl.textContent = numPayments;
+        bookingInstallmentEl.textContent = 'Tsh ' + installmentAmount.toLocaleString();
+      } else {
+        bookingAmountEl.textContent = 'Free';
+        bookingNumPaymentsEl.textContent = '0';
+        bookingInstallmentEl.textContent = 'Free';
+      }
+      if (currentUser) {
+        bookingClientNameEl.textContent = currentUser.full_name || currentUser.name || '—';
+      }
+
       if (ev.ticket_price && Number(ev.ticket_price) > 0) {
         const priceEl = document.getElementById('ticket-price-display');
         priceEl.textContent = 'Ticket Price: Tsh ' + Number(ev.ticket_price).toLocaleString() + (ev.num_payments > 1 ? ' (' + ev.num_payments + ' payments)' : '');
         priceEl.hidden = false;
       } else if (suggestedFee) {
-        const ticketPrice = Math.round(Number(suggestedFee) * 2550);
         const priceEl = document.getElementById('ticket-price-display');
         priceEl.textContent = 'Ticket Price: Tsh ' + ticketPrice.toLocaleString();
         priceEl.hidden = false;

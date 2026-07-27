@@ -48,7 +48,7 @@
           <h2>My Bookings</h2>
           <p id="no-bookings" class="empty-state" hidden>No bookings yet. <a href="events.html">Browse events</a> to book one.</p>
           <table class="data-table" id="bookings-table" hidden>
-            <thead><tr><th>Event</th><th>Location</th><th>Date</th><th>Ticket Price</th><th>Payments</th><th>Status</th><th>Pay</th><th>Ticket</th></tr></thead>
+            <thead><tr><th>Event</th><th>Location</th><th>Date</th><th>Amount</th><th>Payments</th><th>Name</th><th>Status</th><th>Pay</th><th>Ticket</th></tr></thead>
             <tbody id="bookings-body"></tbody>
           </table>
         </section>
@@ -85,7 +85,11 @@
     <div class="card" style="max-width:500px;width:90%;max-height:90vh;overflow-y:auto;padding:var(--space-lg);">
       <h2 style="margin-top:0;">Make Payment</h2>
       <p class="text-muted" id="pay-modal-event" style="margin-bottom:var(--space-md);"></p>
-      <p class="text-muted" id="pay-modal-installment" style="margin-bottom:var(--space-md);font-weight:600;"></p>
+      <div id="pay-installment-info" style="background:var(--color-bg-alt,#f5f5f5);border-radius:var(--radius-sm,4px);padding:var(--space-md);margin-bottom:var(--space-md);">
+        <p style="margin:0 0 4px;font-weight:700;">Payment Details</p>
+        <p class="text-muted" id="pay-modal-installment" style="margin:0;font-weight:600;"></p>
+        <p class="text-muted" id="pay-modal-amount" style="margin:4px 0 0;font-weight:700;font-size:18px;color:var(--color-primary);"></p>
+      </div>
       <div id="pay-planner-details" style="background:var(--color-bg-alt,#f5f5f5);border-radius:var(--radius-sm,4px);padding:var(--space-md);margin-bottom:var(--space-md);">
         <p style="margin:0 0 4px;font-weight:600;">Pay to:</p>
         <p style="margin:0;" id="pay-planner-name">Loading...</p>
@@ -94,6 +98,7 @@
       </div>
       <form id="pay-booking-form" class="stacked-form">
         <input type="hidden" id="pay-booking-id" />
+        <input type="hidden" id="pay-installment-amount" />
         <label for="pay-amount">Amount (TZS)</label>
         <input id="pay-amount" name="amount" type="number" min="1" required placeholder="e.g. 50000" />
         <label for="pay-number">Your payment number</label>
@@ -212,6 +217,7 @@
             const numPayments = b.num_payments || 1;
             const bookingPayments = Array.isArray(allPayments[idx]) ? allPayments[idx] : [];
             const completedPayments = bookingPayments.filter(p => p.status === 'completed' || p.status === 'pending').length;
+            const installmentAmount = ticketPrice !== 'Free' && numPayments > 0 ? Math.ceil(Number(b.ticket_price) / numPayments) : 0;
             const payBtn = b.status === 'pending' && completedPayments < numPayments
               ? `<button class="btn btn-sm btn-primary pay-booking-btn" data-booking-id="${b.id}" data-event-name="${b.event_name || ''}" data-num-payments="${numPayments}" data-completed-payments="${completedPayments}">Pay (${completedPayments + 1}/${numPayments})</button>`
               : completedPayments >= numPayments ? '<span class="badge badge-success">Fully Paid</span>' : '';
@@ -220,8 +226,9 @@
               <td>${b.event_name || '—'}</td>
               <td>${b.event_location || '—'}</td>
               <td>${eventDate}</td>
-              <td>${ticketPrice}</td>
+              <td>${ticketPrice}${installmentAmount > 0 ? '<br><span style="font-size:11px;color:var(--color-text-muted);">Per installment: Tsh ' + installmentAmount.toLocaleString() + '</span>' : ''}</td>
               <td>${completedPayments}/${numPayments}</td>
+              <td>${b.client_name || '—'}</td>
               <td><span class="badge ${statusClass}">${b.status}</span></td>
               <td>${payBtn}</td>
               <td>${ticketBtn}</td>
@@ -340,9 +347,23 @@
       payError.hidden = true;
       document.getElementById('pay-booking-id').value = bookingId;
       document.getElementById('pay-modal-event').textContent = 'Booking: ' + eventName;
-      document.getElementById('pay-modal-installment').textContent = '';
       document.getElementById('pay-booking-form').reset();
       document.getElementById('pay-booking-id').value = bookingId;
+
+      // Fetch booking details to calculate installment
+      api.get('/bookings/' + bookingId).then((booking) => {
+        if (booking) {
+          const ticketPrice = Number(booking.ticket_price || 0);
+          const numPayments = booking.num_payments || 1;
+          const installmentAmount = ticketPrice > 0 ? Math.ceil(ticketPrice / numPayments) : 0;
+          
+          document.getElementById('pay-modal-installment').textContent = 'Installment ' + (booking.completed_payments ? booking.completed_payments + 1 : 1) + ' of ' + numPayments;
+          document.getElementById('pay-modal-amount').textContent = installmentAmount > 0 ? 'Tsh ' + installmentAmount.toLocaleString() : 'Free';
+          document.getElementById('pay-installment-amount').value = installmentAmount;
+          document.getElementById('pay-amount').value = installmentAmount;
+          document.getElementById('pay-amount').placeholder = 'e.g. ' + installmentAmount.toLocaleString();
+        }
+      }).catch(() => {});
 
       // Fetch planner payment details
       document.getElementById('pay-planner-name').textContent = 'Loading...';

@@ -30,6 +30,7 @@
             <thead><tr><th>Title</th><th>Category</th><th>Competition</th><th>Votes</th><th>Status</th><th></th></tr></thead>
             <tbody id="assignments-body"></tbody>
           </table>
+          <p id="reviewer-view-details" hidden style="margin-top:var(--space-sm);font-size:13px;color:var(--color-text-muted);">Click <strong>View Details</strong> to see the full innovation content (problem, solution, impact, technology).</p>
         </section>
 
         <section class="card wide" id="score-form-section">
@@ -128,6 +129,7 @@
       document.getElementById('assignments-table').hidden = false;
       document.getElementById('assignment-count').textContent = assignments.length;
       const tbody = document.getElementById('assignments-body');
+      document.getElementById('reviewer-view-details').hidden = false;
       tbody.innerHTML = assignments.map(a => {
         const statusClass = a.innovation_score != null ? 'badge-success' : 'badge-muted';
         const action = a.innovation_score != null ? 'Edit Review' : 'Review';
@@ -137,7 +139,7 @@
           <td>${a.competition_title || '—'}</td>
           <td>${a.total_points || 0} pts (${a.vote_count || 0} votes)</td>
           <td><span class="badge ${statusClass}">${a.innovation_score != null ? 'Reviewed' : 'Pending'}</span></td>
-          <td><a href="#score-section" data-open-score="${a.id}">${action}</a></td>
+          <td><a href="innovation-detail.html?id=${a.id}" target="_blank" style="margin-right:8px;">View Details</a> <a href="#score-section" data-open-score="${a.id}">${action}</a></td>
         </tr>`;
       }).join('');
 
