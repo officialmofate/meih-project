@@ -45,6 +45,7 @@
   <script type="module" src="../js/app.js"></script>
   <script type="module">
     import { auth } from '../js/auth.js';
+    import { showLoading, hideLoading } from '../js/api.js';
     import { isEmail } from '../js/utils/validators.js';
 
     var dashMap = {
@@ -84,12 +85,15 @@
 
     document.getElementById('login-form').addEventListener('submit', async function(e) {
       e.preventDefault();
+      var submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       var data = Object.fromEntries(new FormData(e.target));
       loginError.hidden = true;
 
       if (!isEmail(data.email)) {
         loginError.textContent = 'Please enter a valid email address.';
         loginError.hidden = false;
+        hideLoading(submitBtn);
         return;
       }
 
@@ -111,6 +115,7 @@
         var msg = err.message || 'Login failed. Check your credentials and try again.';
         loginError.textContent = msg;
         loginError.hidden = false;
+        hideLoading(submitBtn);
       }
     });
   </script>

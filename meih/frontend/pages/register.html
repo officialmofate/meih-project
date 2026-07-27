@@ -87,6 +87,7 @@
   <script type="module" src="../js/app.js"></script>
   <script type="module">
     import { auth } from '../js/auth.js';
+    import { showLoading, hideLoading } from '../js/api.js';
     import { isEmail, minLength } from '../js/utils/validators.js';
 
     var DISPOSABLE_DOMAINS = [
@@ -157,14 +158,16 @@
 
     document.getElementById('register-form').addEventListener('submit', async function(e) {
       e.preventDefault();
+      var submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       errorEl.hidden = true;
       var data = Object.fromEntries(new FormData(e.target));
 
       var emailCheck = validateEmailStrict(data.email);
-      if (!emailCheck.valid) return showError(emailCheck.error);
-      if (!minLength(data.password, 8)) return showError('Password must be at least 8 characters.');
-      if (data.password !== data.passwordConfirm) return showError('Passwords do not match.');
-      if (!data.acceptTerms) return showError('Please accept the Terms of Service.');
+      if (!emailCheck.valid) { showError(emailCheck.error); hideLoading(submitBtn); return; }
+      if (!minLength(data.password, 8)) { showError('Password must be at least 8 characters.'); hideLoading(submitBtn); return; }
+      if (data.password !== data.passwordConfirm) { showError('Passwords do not match.'); hideLoading(submitBtn); return; }
+      if (!data.acceptTerms) { showError('Please accept the Terms of Service.'); hideLoading(submitBtn); return; }
 
       delete data.passwordConfirm;
       delete data.acceptTerms;
@@ -178,6 +181,7 @@
         }
       } catch (err) {
         showError(err.message || 'Registration failed. Please try again.');
+        hideLoading(submitBtn);
       }
     });
 
