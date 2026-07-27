@@ -33,10 +33,10 @@
       </section>
 
       <section class="stats-row">
-        <div class="card stat-card"><span class="stat-number" id="stat-bookings">—</span><span class="stat-label">Active Bookings</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-rating">—</span><span class="stat-label">Average Rating</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-revenue">—</span><span class="stat-label">Revenue (this month)</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-reviews">—</span><span class="stat-label">Reviews</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-bookings">&nbsp;</span><span class="stat-label">Active Bookings</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-rating">&nbsp;</span><span class="stat-label">Average Rating</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-revenue">&nbsp;</span><span class="stat-label">Revenue (this month)</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-reviews">&nbsp;</span><span class="stat-label">Reviews</span></div>
       </section>
 
       <div class="dashboard-grid">
@@ -97,7 +97,8 @@
         <section class="card wide">
           <h2>Submit Quote for Events</h2>
           <p class="text-muted">Published events that match your service. Submit a quote to win the job.</p>
-          <p id="no-matching-events" class="empty-state">No matching events at the moment. Check back later.</p>
+          <div class="section-loading" id="vendor-events-loading"><div class="section-spinner"></div><span>Loading matching events...</span></div>
+          <p id="no-matching-events" class="empty-state" hidden>No matching events at the moment. Check back later.</p>
           <div id="matching-events-list"></div>
         </section>
 
@@ -136,7 +137,8 @@
 
         <section class="card wide">
           <h2>Upcoming Bookings</h2>
-          <p id="no-bookings" class="empty-state">No bookings yet.</p>
+          <div class="section-loading" id="vendor-bookings-loading"><div class="section-spinner"></div><span>Loading bookings...</span></div>
+          <p id="no-bookings" class="empty-state" hidden>No bookings yet.</p>
           <table class="data-table" id="bookings-table" hidden>
             <thead>
               <tr><th>Event</th><th>Client</th><th>Date</th><th>Status</th><th>Amount</th><th>Ticket</th></tr>
@@ -194,6 +196,8 @@
 
     // Load matching events with quote buttons
     api.get('/vendors/me/matching-events').then((events) => {
+      var loadEl = document.getElementById('vendor-events-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(events) || !events.length) {
         document.getElementById('no-matching-events').hidden = false;
         return;
@@ -224,6 +228,8 @@
         });
       });
     }).catch(() => {
+      var loadEl = document.getElementById('vendor-events-loading');
+      if (loadEl) loadEl.remove();
       document.getElementById('no-matching-events').hidden = false;
     });
 
@@ -287,13 +293,18 @@
     // Load bookings
     const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
     api.get('/vendors/me/bookings').then((bookings) => {
+      var loadEl = document.getElementById('vendor-bookings-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(bookings) || !bookings.length) {
         document.getElementById('no-bookings').hidden = false;
         return;
       }
       document.getElementById('no-bookings').hidden = true;
       document.getElementById('bookings-table').hidden = false;
+      document.getElementById('bookings-table').classList.add('fade-in');
       document.getElementById('stat-bookings').textContent = bookings.length;
+      document.getElementById('stat-bookings').classList.remove('skeleton');
+      document.getElementById('stat-bookings').classList.add('loaded');
       const API_BASE = window.MEIH_API_URL || '/api/v1';
       const body = document.getElementById('bookings-table-body');
       body.innerHTML = bookings.map(b => {
@@ -309,6 +320,8 @@
         </tr>`;
       }).join('');
     }).catch(() => {
+      var loadEl = document.getElementById('vendor-bookings-loading');
+      if (loadEl) loadEl.remove();
       document.getElementById('no-bookings').hidden = false;
     });
 
@@ -316,12 +329,24 @@
     api.get('/vendors/me/reviews').then((reviews) => {
       if (!Array.isArray(reviews) || !reviews.length) return;
       document.getElementById('stat-reviews').textContent = reviews.length;
+      document.getElementById('stat-reviews').classList.remove('skeleton');
+      document.getElementById('stat-reviews').classList.add('loaded');
       const avgRating = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
       document.getElementById('stat-rating').textContent = avgRating.toFixed(1);
+      document.getElementById('stat-rating').classList.remove('skeleton');
+      document.getElementById('stat-rating').classList.add('loaded');
+      document.getElementById('stat-revenue').classList.remove('skeleton');
+      document.getElementById('stat-revenue').classList.add('loaded');
+      document.getElementById('stat-revenue').textContent = '—';
       document.getElementById('review-list').innerHTML = reviews.map(r =>
         `<li><strong>${r.reviewer_name || r.author_name || 'Anonymous'}</strong> — ${'⭐'.repeat(r.rating || 0)} "${r.comment || r.text || ''}"</li>`
       ).join('');
-    }).catch(() => {});
+    }).catch(() => {
+      ['stat-reviews','stat-rating','stat-revenue'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) { el.classList.remove('skeleton'); el.classList.add('loaded'); el.textContent = '—'; }
+      });
+    });
 
     // Profile form
     document.getElementById('profile-form').addEventListener('submit', async (e) => {

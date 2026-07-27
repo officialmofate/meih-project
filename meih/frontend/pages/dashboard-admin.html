@@ -21,9 +21,9 @@
       </header>
 
       <section class="stats-row">
-        <div class="card stat-card"><span class="stat-number" id="stat-users">—</span><span class="stat-label" data-i18n="total_users">Total Users</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-events">—</span><span class="stat-label" data-i18n="events">Events</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-innovations">—</span><span class="stat-label" data-i18n="innovation_submissions">Innovation Submissions</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-users">&nbsp;</span><span class="stat-label" data-i18n="total_users">Total Users</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-events">&nbsp;</span><span class="stat-label" data-i18n="events">Events</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-innovations">&nbsp;</span><span class="stat-label" data-i18n="innovation_submissions">Innovation Submissions</span></div>
       </section>
 
       <div class="dashboard-grid">
@@ -61,7 +61,8 @@
         <section class="card wide" id="event-confirmations-section">
           <h2>Event Confirmations</h2>
           <p class="text-muted">Events submitted by planners awaiting your confirmation.</p>
-          <p class="empty-state" id="no-pending-confirmations">No events pending confirmation. Planners must submit events first.</p>
+          <div class="section-loading" id="confirmations-loading"><div class="section-spinner"></div><span>Loading confirmations...</span></div>
+          <p class="empty-state" id="no-pending-confirmations" hidden>No events pending confirmation. Planners must submit events first.</p>
           <table class="data-table" id="confirmations-table" hidden>
             <thead>
               <tr><th>Event</th><th>Planner</th><th>Category</th><th>Payment Number</th><th>Payment Name</th><th>Screenshot</th><th>Date</th><th>Actions</th></tr>
@@ -73,7 +74,8 @@
         <section class="card wide" id="all-events-section">
           <h2>All Events</h2>
           <p class="text-muted">Overview of all events with their confirmation and publication status.</p>
-          <p class="empty-state" id="no-all-events">No events found.</p>
+          <div class="section-loading" id="all-events-loading"><div class="section-spinner"></div><span>Loading events...</span></div>
+          <p class="empty-state" id="no-all-events" hidden>No events found.</p>
           <table class="data-table" id="all-events-table" hidden>
             <thead>
               <tr><th>Event</th><th>Created By</th><th>Category</th><th>Status</th><th>Confirmation</th><th>Date</th></tr>
@@ -210,7 +212,8 @@
         <section class="card wide" id="innovation-payments-section">
           <h2>Innovation Payments</h2>
           <p class="text-muted">Innovation submissions with pending payment confirmation.</p>
-          <p class="empty-state" id="no-pending-innovation-payments">No innovation payments pending.</p>
+          <div class="section-loading" id="inno-pay-loading"><div class="section-spinner"></div><span>Loading payments...</span></div>
+          <p class="empty-state" id="no-pending-innovation-payments" hidden>No innovation payments pending.</p>
           <table class="data-table" id="innovation-payments-table" hidden>
             <thead>
               <tr><th>Submission</th><th>Author</th><th>Amount</th><th>Number</th><th>Screenshot</th><th>Date</th><th>Actions</th></tr>
@@ -261,18 +264,30 @@
     } catch {}
 
     // Load stats
-    Promise.all([
-      api.get('/admin/users').catch(() => []),
-      api.get('/events/events').catch(() => []),
-      api.get('/innovation/submissions').catch(() => []),
-    ]).then(([users, events, innovations]) => {
-      document.getElementById('stat-users').textContent = Array.isArray(users) ? users.length : '—';
-      document.getElementById('stat-events').textContent = Array.isArray(events) ? events.length : '—';
-      document.getElementById('stat-innovations').textContent = Array.isArray(innovations) ? innovations.length : '—';
-    });
+      Promise.all([
+        api.get('/admin/users').catch(() => []),
+        api.get('/events/events').catch(() => []),
+        api.get('/innovation/submissions').catch(() => []),
+      ]).then(([users, events, innovations]) => {
+        var uEl = document.getElementById('stat-users');
+        uEl.classList.remove('skeleton');
+        uEl.classList.add('loaded');
+        uEl.textContent = Array.isArray(users) ? users.length : '—';
+        var eEl = document.getElementById('stat-events');
+        eEl.classList.remove('skeleton');
+        eEl.classList.add('loaded');
+        eEl.textContent = Array.isArray(events) ? events.length : '—';
+        var iEl = document.getElementById('stat-innovations');
+        iEl.classList.remove('skeleton');
+        iEl.classList.add('loaded');
+        iEl.textContent = Array.isArray(innovations) ? innovations.length : '—';
+      });
 
     // Load users
+    document.getElementById('users-table-body').closest('.card').querySelector('.empty-state').insertAdjacentHTML('afterend', '<div class="section-loading" id="users-loading"><div class="section-spinner"></div><span>Loading users...</span></div>');
     api.get('/admin/users').then((users) => {
+      var loadEl = document.getElementById('users-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(users) || !users.length) {
         document.getElementById('no-users').hidden = false;
         return;
@@ -299,6 +314,7 @@
           </td>
         </tr>`;
       }).join('');
+      document.getElementById('users-table').classList.add('fade-in');
 
       tbody.querySelectorAll('.role-select').forEach(select => {
         select.addEventListener('change', async () => {
@@ -360,12 +376,15 @@
 
     // Load pending event confirmations
     api.get('/admin/events/pending-confirmation').then((events) => {
+      var loadEl = document.getElementById('confirmations-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(events) || !events.length) {
         document.getElementById('no-pending-confirmations').hidden = false;
         return;
       }
       document.getElementById('no-pending-confirmations').hidden = true;
       document.getElementById('confirmations-table').hidden = false;
+      document.getElementById('confirmations-table').classList.add('fade-in');
       document.getElementById('confirmations-body').innerHTML = events.map(ev => `
         <tr>
           <td>${ev.name || '—'}</td>
@@ -408,12 +427,15 @@
 
     // Load all events
     api.get('/admin/events/all').then((events) => {
+      var loadEl = document.getElementById('all-events-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(events) || !events.length) {
         document.getElementById('no-all-events').hidden = false;
         return;
       }
       document.getElementById('no-all-events').hidden = true;
       document.getElementById('all-events-table').hidden = false;
+      document.getElementById('all-events-table').classList.add('fade-in');
       document.getElementById('all-events-body').innerHTML = events.map(ev => {
         const statusClass = ev.status === 'published' ? 'badge-success' : ev.status === 'draft' ? 'badge-muted' : 'badge';
         const confClass = ev.confirmation_status === 'confirmed' ? 'badge-success' : ev.confirmation_status === 'pending' ? 'badge' : ev.confirmation_status === 'rejected' ? 'badge-danger' : 'badge-muted';
@@ -430,12 +452,15 @@
 
     // Load pending innovation payments
     api.get('/admin/innovation/pending-payment').then((subs) => {
+      var loadEl = document.getElementById('inno-pay-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(subs) || !subs.length) {
         document.getElementById('no-pending-innovation-payments').hidden = false;
         return;
       }
       document.getElementById('no-pending-innovation-payments').hidden = true;
       document.getElementById('innovation-payments-table').hidden = false;
+      document.getElementById('innovation-payments-table').classList.add('fade-in');
       document.getElementById('innovation-payments-body').innerHTML = subs.map(s => `
         <tr>
           <td>${s.title || '—'}</td>

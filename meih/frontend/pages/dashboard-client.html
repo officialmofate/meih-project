@@ -20,14 +20,15 @@
       </header>
 
       <section class="stats-row">
-        <div class="card stat-card"><span class="stat-number" id="stat-active">—</span><span class="stat-label">Active Events</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-completed">—</span><span class="stat-label">Completed Events</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-active">&nbsp;</span><span class="stat-label">Active Events</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-completed">&nbsp;</span><span class="stat-label">Completed Events</span></div>
       </section>
 
       <div class="dashboard-grid">
 
         <section class="card wide">
           <h2>My Events</h2>
+          <div class="section-loading" id="my-events-loading"><div class="section-spinner"></div><span>Loading your events...</span></div>
           <p id="no-events" class="empty-state" hidden>No events yet. <a href="events.html">Browse events</a> to book one.</p>
           <table class="data-table" id="events-table" hidden>
             <thead><tr><th>Event</th><th>Date</th><th>Status</th><th></th></tr></thead>
@@ -37,6 +38,7 @@
 
         <section class="card wide">
           <h2>Available Events</h2>
+          <div class="section-loading" id="available-events-loading"><div class="section-spinner"></div><span>Loading available events...</span></div>
           <p id="no-available-events" class="empty-state" hidden>No events available at the moment.</p>
           <table class="data-table" id="available-events-table" hidden>
             <thead><tr><th>Event</th><th>Location</th><th>Date</th><th>Price</th><th></th></tr></thead>
@@ -46,6 +48,7 @@
 
         <section class="card wide">
           <h2>My Bookings</h2>
+          <div class="section-loading" id="bookings-loading"><div class="section-spinner"></div><span>Loading bookings...</span></div>
           <p id="no-bookings" class="empty-state" hidden>No bookings yet. <a href="events.html">Browse events</a> to book one.</p>
           <table class="data-table" id="bookings-table" hidden>
             <thead><tr><th>Event</th><th>Location</th><th>Date</th><th>Amount</th><th>Payments</th><th>Name</th><th>Status</th><th>Pay</th><th>Ticket</th></tr></thead>
@@ -193,12 +196,19 @@
       const completedCount = bookings.filter(b => b.status === 'confirmed').length;
       document.getElementById('stat-active').textContent = activeCount;
       document.getElementById('stat-completed').textContent = completedCount;
+      document.getElementById('stat-active').classList.remove('skeleton');
+      document.getElementById('stat-active').classList.add('loaded');
+      document.getElementById('stat-completed').classList.remove('skeleton');
+      document.getElementById('stat-completed').classList.add('loaded');
 
       // Render events table
+      var myEventsLoad = document.getElementById('my-events-loading');
+      if (myEventsLoad) myEventsLoad.remove();
       if (myEvents.length) {
         const table = document.getElementById('events-table');
         const tbody = document.getElementById('events-body');
         table.hidden = false;
+        table.classList.add('fade-in');
         tbody.innerHTML = myEvents.map(ev => {
           const statusClass = ev.status === 'confirmed' ? 'badge-success' : ev.status === 'pending' ? 'badge-warning' : 'badge';
           return `<tr>
@@ -213,12 +223,15 @@
       }
 
       // Render available events (from API, excluding already-booked ones)
+      var availLoad = document.getElementById('available-events-loading');
+      if (availLoad) availLoad.remove();
       const bookedEventIds = new Set(myEvents.map(e => e.id));
       const availableEvents = allEvents.filter(ev => !bookedEventIds.has(ev.id));
       if (availableEvents.length) {
         const table = document.getElementById('available-events-table');
         const tbody = document.getElementById('available-events-body');
         table.hidden = false;
+        table.classList.add('fade-in');
         tbody.innerHTML = availableEvents.map(ev => {
           const evDate = ev.event_date ? new Date(ev.event_date).toLocaleDateString() : 'TBD';
           const price = ev.ticket_price ? 'Tsh ' + Number(ev.ticket_price).toLocaleString() : 'Free';
@@ -235,10 +248,13 @@
       }
 
       // Render bookings table
+      var bookingsLoad = document.getElementById('bookings-loading');
+      if (bookingsLoad) bookingsLoad.remove();
       if (bookings.length) {
         const table = document.getElementById('bookings-table');
         const tbody = document.getElementById('bookings-body');
         table.hidden = false;
+        table.classList.add('fade-in');
 
         const bookingIds = bookings.map(b => b.id);
         Promise.all(bookingIds.map(id => api.get('/payments?bookingId=' + id).catch(() => []))).then((allPayments) => {
@@ -293,11 +309,18 @@
           </div>`;
         }).join('');
       } else {
-        document.getElementById('no-bookings').hidden = false;
-        document.getElementById('no-events').hidden = false;
-        document.getElementById('no-tickets').hidden = false;
+      document.getElementById('no-bookings').hidden = false;
+      document.getElementById('no-events').hidden = false;
+      document.getElementById('no-tickets').hidden = false;
+      document.getElementById('my-events-loading').remove();
+      document.getElementById('available-events-loading').remove();
+      document.getElementById('bookings-loading').remove();
       }
     }).catch(() => {
+      ['my-events-loading','available-events-loading','bookings-loading'].forEach(id => {
+        var el = document.getElementById(id);
+        if (el) el.remove();
+      });
       document.getElementById('no-bookings').hidden = false;
       document.getElementById('no-events').hidden = false;
     });

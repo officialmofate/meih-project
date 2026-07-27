@@ -25,7 +25,8 @@
 
         <section class="card wide">
           <h2>Assigned Innovations</h2>
-          <p id="no-assignments" class="empty-state">No innovations assigned for review yet.</p>
+          <div class="section-loading" id="reviewer-assign-loading"><div class="section-spinner"></div><span>Loading assignments...</span></div>
+          <p id="no-assignments" class="empty-state" hidden>No innovations assigned for review yet.</p>
           <table class="data-table" id="assignments-table" hidden>
             <thead><tr><th>Title</th><th>Category</th><th>Competition</th><th>Votes</th><th>Status</th><th></th></tr></thead>
             <tbody id="assignments-body"></tbody>
@@ -120,6 +121,8 @@
     } catch (e) { window.location.href = 'login.html'; }
 
     api.get('/innovation/reviewer/assignments').then((assignments) => {
+      var loadEl = document.getElementById('reviewer-assign-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(assignments) || !assignments.length) {
         document.getElementById('no-assignments').hidden = false;
         document.getElementById('assignment-count').textContent = '0';
@@ -127,6 +130,7 @@
       }
       document.getElementById('no-assignments').hidden = true;
       document.getElementById('assignments-table').hidden = false;
+      document.getElementById('assignments-table').classList.add('fade-in');
       document.getElementById('assignment-count').textContent = assignments.length;
       const tbody = document.getElementById('assignments-body');
       document.getElementById('reviewer-view-details').hidden = false;
@@ -171,6 +175,8 @@
         });
       });
     }).catch((err) => {
+      var loadEl = document.getElementById('reviewer-assign-loading');
+      if (loadEl) loadEl.remove();
       document.getElementById('reviewer-error').textContent = 'Error loading assignments: ' + (err.message || 'Unknown');
       document.getElementById('reviewer-error').hidden = false;
     });

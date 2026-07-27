@@ -25,7 +25,8 @@
 
         <section class="card wide">
           <h2 data-i18n="assigned_innovations">Assigned Innovations</h2>
-          <p id="no-assignments" class="empty-state" data-i18n="no_assignments">No innovations assigned yet.</p>
+          <div class="section-loading" id="judge-assign-loading"><div class="section-spinner"></div><span>Loading assignments...</span></div>
+          <p id="no-assignments" class="empty-state" hidden data-i18n="no_assignments">No innovations assigned yet.</p>
           <table class="data-table" id="assignments-table" hidden>
             <thead><tr><th data-i18n="title">Title</th><th data-i18n="category">Category</th><th data-i18n="votes">Votes/Points</th><th data-i18n="conflict_of_interest">Conflict of Interest</th><th data-i18n="status">Status</th><th></th></tr></thead>
             <tbody id="assignments-body"></tbody>
@@ -108,6 +109,8 @@
 
     // Load judge assignments
     api.get('/innovation/judge/assignments').then((assignments) => {
+      var loadEl = document.getElementById('judge-assign-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(assignments) || !assignments.length) {
         if (noAssignments) noAssignments.hidden = false;
         const countEl = document.getElementById('assignment-count');
@@ -116,6 +119,7 @@
       }
       if (noAssignments) noAssignments.hidden = true;
       if (assignmentsTable) assignmentsTable.hidden = false;
+      if (assignmentsTable) assignmentsTable.classList.add('fade-in');
       const countEl = document.getElementById('assignment-count');
       if (countEl) countEl.textContent = assignments.length;
       if (!assignmentsBody) return;
@@ -146,6 +150,8 @@
         });
       });
     }).catch((err) => {
+      var loadEl = document.getElementById('judge-assign-loading');
+      if (loadEl) loadEl.remove();
       console.error('[JUDGE] Error loading assignments:', err);
       showError('Error loading assignments: ' + (err.message || 'Unknown error') + '. Please try refreshing the page.');
     });

@@ -35,17 +35,18 @@
       </section>
 
       <section class="stats-row">
-        <div class="card stat-card"><span class="stat-number" id="stat-active">0</span><span class="stat-label">Active Projects</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-revenue">Tsh 0</span><span class="stat-label">Revenue (this quarter)</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-pending-payments">0</span><span class="stat-label">Pending Payments</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-rating">—</span><span class="stat-label">Average Rating</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-active">&nbsp;</span><span class="stat-label">Active Projects</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-revenue">&nbsp;</span><span class="stat-label">Revenue (this quarter)</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-pending-payments">&nbsp;</span><span class="stat-label">Pending Payments</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-rating">&nbsp;</span><span class="stat-label">Average Rating</span></div>
       </section>
 
       <div class="dashboard-grid">
 
         <section class="card wide">
           <h2>Payments to Confirm</h2>
-          <p class="empty-state" id="no-pending-payments">No payments awaiting confirmation.</p>
+          <div class="section-loading" id="planner-pay-loading"><div class="section-spinner"></div><span>Loading payments...</span></div>
+          <p class="empty-state" id="no-pending-payments" hidden>No payments awaiting confirmation.</p>
           <table class="data-table" id="pending-payments-table" hidden>
             <thead>
               <tr><th>Event</th><th>Payer</th><th>Amount</th><th>Method</th><th>Screenshot</th><th>Date</th><th></th></tr>
@@ -56,7 +57,8 @@
 
         <section class="card wide">
           <h2>Bookings to Confirm</h2>
-          <p class="empty-state" id="no-pending-bookings">No bookings awaiting confirmation.</p>
+          <div class="section-loading" id="planner-book-loading"><div class="section-spinner"></div><span>Loading bookings...</span></div>
+          <p class="empty-state" id="no-pending-bookings" hidden>No bookings awaiting confirmation.</p>
           <table class="data-table" id="pending-bookings-table" hidden>
             <thead>
               <tr><th>Event</th><th>Client</th><th>Guests</th><th>Date</th><th>Ticket</th><th>Payments</th><th>Status</th><th></th></tr>
@@ -67,7 +69,8 @@
 
         <section class="card wide">
           <h2>Active Projects</h2>
-          <p id="no-projects" class="empty-state">No active projects yet.</p>
+          <div class="section-loading" id="planner-projects-loading"><div class="section-spinner"></div><span>Loading projects...</span></div>
+          <p id="no-projects" class="empty-state" hidden>No active projects yet.</p>
           <table class="data-table" id="projects-table" hidden>
             <thead>
               <tr><th>Event</th><th>Client</th><th>Stage</th><th>Date</th><th>Deposit</th><th>Ticket Price</th><th>Ticket</th></tr>
@@ -221,6 +224,8 @@
 
     // Load pending payments
     api.get('/payments?status=pending').then((payments) => {
+      var loadEl = document.getElementById('planner-pay-loading');
+      if (loadEl) loadEl.remove();
       const pending = Array.isArray(payments) ? payments.filter(p => p.status === 'pending') : [];
       const table = document.getElementById('pending-payments-table');
       const body = document.getElementById('pending-payments-body');
@@ -230,12 +235,15 @@
         table.hidden = true;
         noMsg.hidden = false;
         document.getElementById('stat-pending-payments').textContent = '0';
+        document.getElementById('stat-pending-payments').classList.remove('skeleton');
+        document.getElementById('stat-pending-payments').classList.add('loaded');
         return;
       }
 
       document.getElementById('stat-pending-payments').textContent = String(pending.length);
       noMsg.hidden = true;
       table.hidden = false;
+      table.classList.add('fade-in');
       body.innerHTML = pending.map(p => `
         <tr>
           <td>${p.event_name || '—'}</td>
@@ -270,9 +278,10 @@
           } catch (err) { alert(err.message); }
         });
       });
-    }).catch(() => {});
-
-    // Load active projects (bookings assigned to this planner)
+    }).catch(() => {
+      var loadEl = document.getElementById('planner-pay-loading');
+      if (loadEl) loadEl.remove();
+    });
     const authToken = localStorage.getItem('meih_token') || sessionStorage.getItem('meih_token') || '';
     api.get('/bookings').then((bookings) => {
       if (!Array.isArray(bookings) || !bookings.length) return;
@@ -284,6 +293,7 @@
       if (pending.length > 0) {
         document.getElementById('no-pending-bookings').hidden = true;
         pendingTable.hidden = false;
+        pendingTable.classList.add('fade-in');
         pendingBody.innerHTML = pending.map(b => {
           const eventDate = b.event_date ? new Date(b.event_date).toLocaleDateString() : 'TBD';
           const ticketPrice = b.ticket_price ? 'Tsh ' + Number(b.ticket_price).toLocaleString() : 'Free';
@@ -325,12 +335,15 @@
       }
 
       // Active projects (confirmed/completed)
+      var projectsLoad = document.getElementById('planner-projects-loading');
+      if (projectsLoad) projectsLoad.remove();
       const active = bookings.filter(b => b.status !== 'pending');
       if (active.length === 0) return;
       const table = document.getElementById('projects-table');
       const tbody = document.getElementById('projects-body');
       document.getElementById('no-projects').hidden = true;
       table.hidden = false;
+      table.classList.add('fade-in');
       const API_BASE = window.MEIH_API_URL || '/api/v1';
       tbody.innerHTML = active.map(b => {
         const statusClass = b.status === 'completed' ? 'badge-success' : b.status === 'confirmed' ? 'badge' : 'badge-muted';
@@ -346,7 +359,12 @@
           <td>${ticketBtn}</td>
         </tr>`;
       }).join('');
-    }).catch(() => {});
+    }).catch(() => {
+      ['planner-book-loading','planner-projects-loading'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.remove();
+      });
+    });
 
     document.getElementById('availability-form').addEventListener('submit', async (e) => {
       e.preventDefault();

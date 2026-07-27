@@ -21,9 +21,9 @@
       </header>
 
       <section class="stats-row">
-        <div class="card stat-card"><span class="stat-number" id="stat-competitions">—</span><span class="stat-label" data-i18n="competitions">Competitions</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-pending">—</span><span class="stat-label" data-i18n="pending_review">Pending Review</span></div>
-        <div class="card stat-card"><span class="stat-number" id="stat-approved">—</span><span class="stat-label" data-i18n="approved_submissions">Approved</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-competitions">&nbsp;</span><span class="stat-label" data-i18n="competitions">Competitions</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-pending">&nbsp;</span><span class="stat-label" data-i18n="pending_review">Pending Review</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-approved">&nbsp;</span><span class="stat-label" data-i18n="approved_submissions">Approved</span></div>
       </section>
 
       <div class="dashboard-grid">
@@ -54,7 +54,8 @@
 
         <section class="card wide">
           <h2 data-i18n="my_competitions">My Competitions</h2>
-          <p id="no-competitions" class="empty-state" data-i18n="no_competitions">No competitions created yet.</p>
+          <div class="section-loading" id="mgr-comps-loading"><div class="section-spinner"></div><span>Loading competitions...</span></div>
+          <p id="no-competitions" class="empty-state" hidden data-i18n="no_competitions">No competitions created yet.</p>
           <table class="data-table" id="competitions-table" hidden>
             <thead><tr><th data-i18n="title">Title</th><th data-i18n="opens">Opens</th><th data-i18n="closes">Closes</th><th data-i18n="status">Status</th><th data-i18n="submissions">Submissions</th><th data-i18n="actions">Actions</th></tr></thead>
             <tbody id="competitions-body"></tbody>
@@ -63,7 +64,8 @@
 
         <section class="card wide">
           <h2 data-i18n="pending_submissions">Pending Submissions for Review</h2>
-          <p id="no-pending-subs" class="empty-state" data-i18n="no_pending_submissions">No submissions awaiting review.</p>
+          <div class="section-loading" id="mgr-subs-loading"><div class="section-spinner"></div><span>Loading submissions...</span></div>
+          <p id="no-pending-subs" class="empty-state" hidden data-i18n="no_pending_submissions">No submissions awaiting review.</p>
           <table class="data-table" id="pending-subs-table" hidden>
             <thead><tr><th data-i18n="title">Title</th><th data-i18n="author">Author</th><th data-i18n="competition">Competition</th><th data-i18n="category">Category</th><th data-i18n="submitted">Submitted</th><th data-i18n="actions">Actions</th></tr></thead>
             <tbody id="pending-subs-body"></tbody>
@@ -89,7 +91,7 @@
               <option value="rejected">Rejected</option>
             </select>
           </div>
-          <p id="no-all-subs" class="empty-state">No submissions found.</p>
+          <p id="no-all-subs" class="empty-state" hidden>No submissions found.</p>
           <table class="data-table" id="all-subs-table" hidden>
             <thead><tr><th data-i18n="title">Title</th><th data-i18n="author">Author</th><th data-i18n="competition">Competition</th><th data-i18n="status">Status</th><th data-i18n="votes">Votes</th></tr></thead>
             <tbody id="all-subs-body"></tbody>
@@ -128,19 +130,31 @@
       api.get('/innovation/manager/submissions').catch(() => []),
       api.get('/innovation/submissions').catch(() => []),
     ]).then(([comps, pending, all]) => {
-      document.getElementById('stat-competitions').textContent = Array.isArray(comps) ? comps.length : '—';
-      document.getElementById('stat-pending').textContent = Array.isArray(pending) ? pending.length : '—';
-      document.getElementById('stat-approved').textContent = Array.isArray(all) ? all.filter(s => s.status === 'approved').length : '—';
+      var cEl = document.getElementById('stat-competitions');
+      cEl.classList.remove('skeleton');
+      cEl.classList.add('loaded');
+      cEl.textContent = Array.isArray(comps) ? comps.length : '—';
+      var pEl = document.getElementById('stat-pending');
+      pEl.classList.remove('skeleton');
+      pEl.classList.add('loaded');
+      pEl.textContent = Array.isArray(pending) ? pending.length : '—';
+      var aEl = document.getElementById('stat-approved');
+      aEl.classList.remove('skeleton');
+      aEl.classList.add('loaded');
+      aEl.textContent = Array.isArray(all) ? all.filter(s => s.status === 'approved').length : '—';
     });
 
     // Load competitions
     api.get('/innovation/competitions').then((comps) => {
+      var loadEl = document.getElementById('mgr-comps-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(comps) || !comps.length) {
         document.getElementById('no-competitions').hidden = false;
         return;
       }
       document.getElementById('no-competitions').hidden = true;
       document.getElementById('competitions-table').hidden = false;
+      document.getElementById('competitions-table').classList.add('fade-in');
       document.getElementById('competitions-body').innerHTML = comps.map(c => {
         const statusClass = c.status === 'open' ? 'badge-success' : c.status === 'completed' ? 'badge-muted' : 'badge';
         return `<tr>
@@ -166,9 +180,10 @@
           document.getElementById('create-competition-form').dataset.editId = btn.dataset.id;
         });
       });
-    }).catch(() => {});
-
-    // Create / update competition
+    }).catch(() => {
+      var loadEl = document.getElementById('mgr-comps-loading');
+      if (loadEl) loadEl.remove();
+    });
     document.getElementById('create-competition-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -198,14 +213,17 @@
       }
     });
 
-    // Load pending submissions
+    // Create / update competition
     api.get('/innovation/manager/submissions').then((subs) => {
+      var loadEl = document.getElementById('mgr-subs-loading');
+      if (loadEl) loadEl.remove();
       if (!Array.isArray(subs) || !subs.length) {
         document.getElementById('no-pending-subs').hidden = false;
         return;
       }
       document.getElementById('no-pending-subs').hidden = true;
       document.getElementById('pending-subs-table').hidden = false;
+      document.getElementById('pending-subs-table').classList.add('fade-in');
       document.getElementById('pending-subs-body').innerHTML = subs.map(s => `
         <tr data-sub-id="${s.id}">
           <td><a href="innovation-detail.html?id=${s.id}">${s.title || '—'}</a></td>
@@ -241,9 +259,10 @@
           } catch (err) { alert(err.message || 'Failed to reject.'); }
         });
       });
-    }).catch(() => {});
-
-    // Load pending payments
+    }).catch(() => {
+      var loadEl = document.getElementById('mgr-subs-loading');
+      if (loadEl) loadEl.remove();
+    });
     api.get('/innovation/manager/pending-payments').then((payments) => {
       if (!Array.isArray(payments) || !payments.length) {
         document.getElementById('no-pending-payments').hidden = false;
@@ -293,10 +312,12 @@
           } catch (err) { alert(err.message || 'Failed to reject payment.'); }
         });
       });
-    }).catch(() => {});
+    }).catch(() => {    });
 
-    // Load all submissions
+    // Load pending payments
     function loadAllSubmissions() {
+      var loadEl = document.getElementById('mgr-allsubs-loading');
+      if (loadEl) loadEl.remove();
       api.get('/innovation/submissions').then((subs) => {
         if (!Array.isArray(subs) || !subs.length) {
           document.getElementById('no-all-subs').hidden = false;
@@ -304,6 +325,7 @@
         }
         document.getElementById('no-all-subs').hidden = true;
         document.getElementById('all-subs-table').hidden = false;
+        document.getElementById('all-subs-table').classList.add('fade-in');
         var filter = document.getElementById('sub-status-filter').value;
         var filtered = filter ? subs.filter(s => s.status === filter) : subs;
         document.getElementById('all-subs-body').innerHTML = filtered.map(s => {

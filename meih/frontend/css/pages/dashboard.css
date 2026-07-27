@@ -163,6 +163,78 @@
   .dashboard .card { padding: var(--space-sm); }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   LOADING STATES — Skeleton, Spinner, Fade-in
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Stat card skeleton pulse */
+.dashboard .stat-card .stat-number.skeleton {
+  background: linear-gradient(90deg,
+    var(--color-surface-raised) 25%,
+    rgba(108, 92, 231, 0.08) 50%,
+    var(--color-surface-raised) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  min-width: 60px;
+  min-height: 32px;
+  color: transparent !important;
+  user-select: none;
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Dashboard section spinner */
+.dashboard .section-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-xl) var(--space-lg);
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.dashboard .section-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* Fade-in animation for loaded content */
+.dashboard .fade-in {
+  animation: fadeSlideIn 0.35s ease-out both;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stat number transition when loaded */
+.dashboard .stat-card .stat-number.loaded {
+  animation: fadeSlideIn 0.4s ease-out both;
+}
+
 /* Screenshot thumbnails */
 .screenshot-thumb {
   max-width: 80px;
