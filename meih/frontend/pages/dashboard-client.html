@@ -39,7 +39,7 @@
           <h2>Available Events</h2>
           <p id="no-available-events" class="empty-state" hidden>No events available at the moment.</p>
           <table class="data-table" id="available-events-table" hidden>
-            <thead><tr><th>Event</th><th>Location</th><th>Date</th><th></th></tr></thead>
+            <thead><tr><th>Event</th><th>Location</th><th>Date</th><th>Price</th><th></th></tr></thead>
             <tbody id="available-events-body"></tbody>
           </table>
         </section>
@@ -119,6 +119,36 @@
     </div>
   </div>
 
+  <div id="book-modal" class="modal-overlay" style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;">
+    <div class="card" style="max-width:500px;width:90%;max-height:90vh;overflow-y:auto;padding:var(--space-lg);">
+      <h2 style="margin-top:0;">Book Event</h2>
+      <p class="text-muted" id="book-modal-event-name" style="margin-bottom:var(--space-md);"></p>
+      <div id="book-payment-info" style="background:var(--color-bg-alt,#f5f5f5);border-radius:var(--radius-sm,4px);padding:var(--space-md);margin-bottom:var(--space-md);">
+        <p style="margin:0 0 4px;font-weight:700;">Booking Payment Details</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div><span style="font-size:12px;color:var(--color-text-muted);display:block;">Amount</span><strong id="book-amount-display">—</strong></div>
+          <div><span style="font-size:12px;color:var(--color-text-muted);display:block;">Number of Payments</span><strong id="book-num-payments-display">1</strong></div>
+          <div><span style="font-size:12px;color:var(--color-text-muted);display:block;">Your Name</span><strong id="book-client-name-display">—</strong></div>
+        </div>
+      </div>
+      <form id="book-event-form" class="stacked-form">
+        <input type="hidden" id="book-event-id" />
+        <label for="book-client-name-input">Your Name</label>
+        <input id="book-client-name-input" name="clientName" type="text" required placeholder="e.g. John Doe" />
+        <label for="book-client-phone">Your Phone</label>
+        <input id="book-client-phone" name="clientPhone" type="tel" required placeholder="e.g. 0754 123 456" />
+        <label for="book-screenshot">Payment Screenshot</label>
+        <input id="book-screenshot" name="screenshot" type="file" accept="image/*" required />
+        <p class="text-muted" style="font-size:12px;margin-top:4px;">Upload payment confirmation screenshot. Max 5MB.</p>
+        <p id="book-error" class="form-error" role="alert" hidden></p>
+        <div style="display:flex;gap:var(--space-sm);margin-top:var(--space-md);">
+          <button type="submit" class="btn btn-primary">Book Now</button>
+          <button type="button" class="btn btn-ghost" id="book-modal-close">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="footer-root"></div>
   <div id="ai-root"></div>
   <script src="../js/config.js"></script>
@@ -191,11 +221,13 @@
         table.hidden = false;
         tbody.innerHTML = availableEvents.map(ev => {
           const evDate = ev.event_date ? new Date(ev.event_date).toLocaleDateString() : 'TBD';
+          const price = ev.ticket_price ? 'Tsh ' + Number(ev.ticket_price).toLocaleString() : 'Free';
           return `<tr>
             <td>${ev.name || 'Untitled'}</td>
             <td>${ev.location || '—'}</td>
             <td>${evDate}</td>
-            <td><a href="event-detail.html?id=${ev.id}">View</a></td>
+            <td>${price}</td>
+            <td><button class="btn btn-sm btn-primary book-event-btn" data-event-id="${ev.id}" data-event-name="${ev.name || 'Untitled'}" data-ticket-price="${ev.ticket_price || 0}" data-num-payments="${ev.num_payments || 1}">Book</button></td>
           </tr>`;
         }).join('');
       } else {
@@ -429,6 +461,83 @@
       } catch (err) {
         payError.textContent = err.message || 'Failed to submit payment.';
         payError.hidden = false;
+      }
+    });
+
+    // Booking modal for available events
+    const bookModal = document.getElementById('book-modal');
+    const bookError = document.getElementById('book-error');
+
+    function openBookModal(eventId, eventName, ticketPrice, numPayments) {
+      bookModal.style.display = 'flex';
+      bookError.hidden = true;
+      document.getElementById('book-event-id').value = eventId;
+      document.getElementById('book-modal-event-name').textContent = 'Booking: ' + eventName;
+      document.getElementById('book-amount-display').textContent = ticketPrice ? 'Tsh ' + Number(ticketPrice).toLocaleString() : 'Free';
+      document.getElementById('book-num-payments-display').textContent = numPayments || '1';
+      document.getElementById('book-client-name-display').textContent = '—';
+      document.getElementById('book-client-name-input').value = '';
+      document.getElementById('book-client-phone').value = '';
+      document.getElementById('book-event-form').reset();
+      document.getElementById('book-event-id').value = eventId;
+      // Pre-fill name from current user profile if available
+      const userName = document.getElementById('user-name')?.textContent;
+      if (userName && userName !== 'User') {
+        document.getElementById('book-client-name-input').value = userName;
+        document.getElementById('book-client-name-display').textContent = userName;
+      }
+    }
+
+    function closeBookModal() {
+      bookModal.style.display = 'none';
+    }
+
+    document.getElementById('book-modal-close').addEventListener('click', closeBookModal);
+    bookModal.addEventListener('click', (e) => { if (e.target === bookModal) closeBookModal(); });
+
+    document.getElementById('book-client-name-input').addEventListener('input', (e) => {
+      document.getElementById('book-client-name-display').textContent = e.target.value || '—';
+    });
+
+    document.getElementById('available-events-body').addEventListener('click', (e) => {
+      const btn = e.target.closest('.book-event-btn');
+      if (!btn) return;
+      openBookModal(btn.dataset.eventId, btn.dataset.eventName, btn.dataset.ticketPrice, btn.dataset.numPayments);
+    });
+
+    document.getElementById('book-event-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      bookError.hidden = true;
+      const eventId = document.getElementById('book-event-id').value;
+      const clientName = document.getElementById('book-client-name-input').value;
+      const clientPhone = document.getElementById('book-client-phone').value;
+      const screenshotFile = document.getElementById('book-screenshot').files[0];
+
+      if (!clientName || !clientPhone) {
+        bookError.textContent = 'Please fill in all required fields.';
+        bookError.hidden = false;
+        return;
+      }
+      if (!screenshotFile) {
+        bookError.textContent = 'Please upload a payment screenshot.';
+        bookError.hidden = false;
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('eventId', eventId);
+      formData.append('clientName', clientName);
+      formData.append('clientPhone', clientPhone);
+      formData.append('screenshot', screenshotFile);
+
+      try {
+        await api.upload('/bookings', formData);
+        alert('Booking submitted! Awaiting planner confirmation.');
+        closeBookModal();
+        window.location.reload();
+      } catch (err) {
+        bookError.textContent = err.message || 'Failed to submit booking.';
+        bookError.hidden = false;
       }
     });
   </script>

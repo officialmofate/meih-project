@@ -4,6 +4,21 @@ const emailNotification = require('../services/emailNotificationService');
 exports.create = async (req, res, next) => {
   try {
     const booking = await bookingService.create(req.user.id, req.user.role, req.body);
+    // If a screenshot was uploaded, create an initial pending payment record
+    if (req.file && booking) {
+      const screenshotPath = '/uploads/payments/' + req.file.filename;
+      const paymentService = require('../services/paymentService');
+      await paymentService.create(req.user.id, {
+        bookingId: booking.id,
+        amount: req.body.amount || 0,
+        paymentNumber: req.body.paymentNumber || null,
+        paymentName: req.body.clientName || null,
+        method: 'mobile_money',
+        currency: 'TZS',
+        screenshotUrl: screenshotPath,
+        notes: 'Submitted during booking creation'
+      });
+    }
     res.status(201).json(booking);
   } catch (err) { next(err); }
 };

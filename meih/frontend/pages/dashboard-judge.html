@@ -193,7 +193,8 @@
             s.innerHTML = '&#9734;';
             s.style.color = '#636e72';
           });
-          document.getElementById('score-target-title').textContent = 'Select an innovation above';
+          const titleEl = document.getElementById('score-target-title');
+          if (titleEl) titleEl.textContent = 'Select an innovation above';
           api.cache.clear();
           api.get('/innovation/judge/assignments').then((assignments) => {
             if (!Array.isArray(assignments) || !assignments.length) return;
