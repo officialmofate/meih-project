@@ -105,7 +105,7 @@
   <script src="../js/config.js"></script>
   <script type="module" src="../js/app.js"></script>
   <script type="module">
-    import { api } from '../js/api.js';
+    import { api, showLoading, hideLoading } from '../js/api.js';
 
     var currentUser = null;
     try {
@@ -171,6 +171,8 @@
     // Create / update competition
     document.getElementById('create-competition-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       var errorEl = document.getElementById('comp-create-error');
       var successEl = document.getElementById('comp-create-success');
       errorEl.hidden = true;
@@ -191,6 +193,8 @@
       } catch (err) {
         errorEl.textContent = err.message || 'Failed to save competition.';
         errorEl.hidden = false;
+      } finally {
+        hideLoading(submitBtn);
       }
     });
 

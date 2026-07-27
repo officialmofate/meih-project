@@ -91,7 +91,7 @@
   <script src="../js/config.js"></script>
   <script type="module" src="../js/app.js"></script>
   <script type="module">
-    import { api } from '../js/api.js';
+    import { api, showLoading, hideLoading } from '../js/api.js';
 
     const params = new URLSearchParams(window.location.search);
     const innId = params.get('id');
@@ -140,6 +140,8 @@
     });
 
     document.getElementById('confirm-vote-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('confirm-vote-btn');
+      showLoading(btn);
       const otp = document.getElementById('vote-otp').value;
       try {
         await api.post(`/innovation/submissions/${innId}/vote`, { otp });
@@ -150,6 +152,7 @@
       countEl.textContent = Number(countEl.textContent) + 1;
       otpPanel.hidden = true;
       document.getElementById('vote-confirmation').hidden = false;
+      hideLoading(btn);
     });
 
     document.getElementById('comment-form').addEventListener('submit', (e) => {

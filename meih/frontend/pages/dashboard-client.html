@@ -154,7 +154,7 @@
   <script src="../js/config.js"></script>
   <script type="module" src="../js/app.js"></script>
   <script type="module">
-    import { api } from '../js/api.js';
+    import { api, showLoading, hideLoading } from '../js/api.js';
 
     // Show user name
     try {
@@ -424,6 +424,8 @@
 
     document.getElementById('pay-booking-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       payError.hidden = true;
       const bookingId = document.getElementById('pay-booking-id').value;
       const amount = document.getElementById('pay-amount').value;
@@ -435,11 +437,13 @@
       if (!amount || !paymentNumber || !paymentName) {
         payError.textContent = 'Please fill in all required fields.';
         payError.hidden = false;
+        hideLoading(submitBtn);
         return;
       }
       if (!screenshotFile) {
         payError.textContent = 'Please upload a payment screenshot.';
         payError.hidden = false;
+        hideLoading(submitBtn);
         return;
       }
 
@@ -461,6 +465,8 @@
       } catch (err) {
         payError.textContent = err.message || 'Failed to submit payment.';
         payError.hidden = false;
+      } finally {
+        hideLoading(submitBtn);
       }
     });
 
@@ -507,6 +513,8 @@
 
     document.getElementById('book-event-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       bookError.hidden = true;
       const eventId = document.getElementById('book-event-id').value;
       const clientName = document.getElementById('book-client-name-input').value;
@@ -516,11 +524,13 @@
       if (!clientName || !clientPhone) {
         bookError.textContent = 'Please fill in all required fields.';
         bookError.hidden = false;
+        hideLoading(submitBtn);
         return;
       }
       if (!screenshotFile) {
         bookError.textContent = 'Please upload a payment screenshot.';
         bookError.hidden = false;
+        hideLoading(submitBtn);
         return;
       }
 
@@ -538,6 +548,8 @@
       } catch (err) {
         bookError.textContent = err.message || 'Failed to submit booking.';
         bookError.hidden = false;
+      } finally {
+        hideLoading(submitBtn);
       }
     });
   </script>

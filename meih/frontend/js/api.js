@@ -116,3 +116,20 @@ export const api = {
     },
   },
 };
+
+export function showLoading(btn) {
+  if (!btn) return;
+  btn.disabled = true;
+  btn.dataset.originalHtml = btn.innerHTML;
+  const label = btn.textContent.trim();
+  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px;vertical-align:middle;"></span> ' + label;
+}
+
+export function hideLoading(btn) {
+  if (!btn) return;
+  btn.disabled = false;
+  if (btn.dataset.originalHtml) {
+    btn.innerHTML = btn.dataset.originalHtml;
+    delete btn.dataset.originalHtml;
+  }
+}

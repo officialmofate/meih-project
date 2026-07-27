@@ -18,6 +18,30 @@
   <title>Leaderboard — MEIH | Innovation Competition Rankings</title>
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/pages/innovation.css" />
+  <style>
+    .leaderboard-status { display:flex; align-items:center; gap:8px; margin-bottom:var(--space-md); font-size:13px; color:var(--color-text-muted); }
+    .leaderboard-status .live-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(0,184,148,0.12); color:#00b894; padding:3px 10px; border-radius:20px; font-weight:600; font-size:12px; }
+    .leaderboard-status .live-badge .live-dot { width:7px; height:7px; }
+    .leaderboard-status .last-updated { opacity:0.7; }
+    .leaderboard-row { display:flex; align-items:center; gap:12px; padding:var(--space-md); border-left:4px solid transparent; transition:border-color .2s; }
+    .leaderboard-row .rank { font-weight:800; font-size:18px; min-width:36px; text-align:center; color:var(--color-text-muted); }
+    .leaderboard-row .entry-info { flex:1; min-width:0; }
+    .leaderboard-row .entry-title { font-weight:600; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .leaderboard-row .entry-author { font-size:12px; color:var(--color-text-muted); margin-top:2px; }
+    .leaderboard-row .entry-competition { font-size:11px; color:var(--color-primary); margin-top:1px; }
+    .leaderboard-row .votes { font-weight:700; font-size:15px; white-space:nowrap; color:var(--color-primary); }
+    .leaderboard-row .points { font-size:12px; color:var(--color-text-muted); white-space:nowrap; }
+    .leaderboard-row.rank-1 { border-left-color:#ffd93d; background:rgba(255,217,61,0.06); }
+    .leaderboard-row.rank-1 .rank { color:#ffd93d; }
+    .leaderboard-row.rank-2 { border-left-color:#c0c0c0; background:rgba(192,192,192,0.06); }
+    .leaderboard-row.rank-2 .rank { color:#c0c0c0; }
+    .leaderboard-row.rank-3 { border-left-color:#cd7f32; background:rgba(205,127,50,0.06); }
+    .leaderboard-row.rank-3 .rank { color:#cd7f32; }
+    .leaderboard-row.rank-1 .rank::before { content:'🥇 '; }
+    .leaderboard-row.rank-2 .rank::before { content:'🥈 '; }
+    .leaderboard-row.rank-3 .rank::before { content:'🥉 '; }
+    .leaderboard-empty { text-align:center; padding:var(--space-xl); color:var(--color-text-muted); }
+  </style>
 </head>
 <body>
   <div id="navbar-root"></div>
@@ -26,12 +50,16 @@
     <div class="container narrow">
       <header class="page-header">
         <h1 data-i18n="live_leaderboard">Live Leaderboard</h1>
-        <p data-i18n="live_leaderboard_desc">Rankings update in real time as public votes come in. <span class="live-dot" aria-hidden="true"></span> Live</p>
+        <p data-i18n="live_leaderboard_desc">Rankings update in real time as public votes come in.</p>
       </header>
 
-      <select id="competition-select" aria-label="Select competition" style="margin-bottom: var(--space-md); padding: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); width: 100%; font-size: 14px;">
-        <option value="" data-i18n="all_competitions">All Competitions</option>
-      </select>
+      <div class="leaderboard-status">
+        <span class="live-badge"><span class="live-dot" aria-hidden="true"></span> Live</span>
+        <select id="competition-select" aria-label="Select competition" style="padding:8px 12px; border:1px solid var(--color-border); border-radius:var(--radius-md); font-size:13px; max-width:300px;">
+          <option value="">All Competitions</option>
+        </select>
+        <span class="last-updated" id="last-updated"></span>
+      </div>
 
       <ol id="leaderboard-list" class="leaderboard-list card"></ol>
     </div>
@@ -43,50 +71,60 @@
   <script type="module" src="../js/app.js"></script>
   <script type="module">
     import { api } from '../js/api.js';
-    import { renderLeaderboard } from '../js/components/leaderboard.js';
-
-    function paint(rows) {
-      const list = document.getElementById('leaderboard-list');
-      if (!rows.length) {
-        list.innerHTML = '<li class="results-count">No rankings available yet.</li>';
-        return;
-      }
-      list.innerHTML = rows
-        .map((r, i) => {
-          const votes = r.vote_count ?? r.voteCount ?? 0;
-          const author = r.author_name ? ` — ${r.author_name}` : '';
-          return `<li class="leaderboard-row rank-${i + 1}">
-            <span class="rank">#${i + 1}</span>
-            <span class="title">${r.title}${author}</span>
-            <span class="votes">${votes} votes</span>
-          </li>`;
-        })
-        .join('');
-    }
 
     const container = document.getElementById('leaderboard-list');
     const select = document.getElementById('competition-select');
+    const lastUpdatedEl = document.getElementById('last-updated');
+    let refreshTimer = null;
 
-    function load() {
+    function paint(rows) {
+      if (!rows.length) {
+        container.innerHTML = '<li class="leaderboard-empty">No rankings available yet. Rankings appear once innovations receive votes.</li>';
+        return;
+      }
+      container.innerHTML = rows.map((r, i) => {
+        const votes = r.vote_count ?? r.voteCount ?? 0;
+        const points = r.total_points ?? 0;
+        const author = r.author_name || '';
+        const comp = r.competition_title || '';
+        return `<li class="leaderboard-row rank-${i + 1}">
+          <span class="rank">#${i + 1}</span>
+          <div class="entry-info">
+            <div class="entry-title">${r.title || 'Untitled'}</div>
+            ${author ? `<div class="entry-author">by ${author}</div>` : ''}
+            ${comp ? `<div class="entry-competition">${comp}</div>` : ''}
+          </div>
+          <div style="text-align:right;">
+            <div class="votes">${votes} vote${votes !== 1 ? 's' : ''}</div>
+            <div class="points">${points} pts</div>
+          </div>
+        </li>`;
+      }).join('');
+    }
+
+    async function load() {
       const compId = select.value;
-      if (compId) {
-        renderLeaderboard(compId, container).catch(() => {
-          container.innerHTML = '<li class="results-count">Could not load leaderboard.</li>';
-        });
-      } else {
-        // Load all innovations sorted by votes
-        api.get('/innovation/submissions').then((data) => {
-          const sorted = Array.isArray(data)
-            ? data.sort((a, b) => (b.vote_count || b.voteCount || 0) - (a.vote_count || a.voteCount || 0))
-            : [];
-          paint(sorted);
-        }).catch(() => {
-          container.innerHTML = '<li class="results-count">Could not load leaderboard.</li>';
-        });
+      try {
+        let data;
+        if (compId) {
+          data = await api.get('/innovation/leaderboard/' + compId);
+        } else {
+          data = await api.get('/innovation/leaderboard');
+        }
+        const sorted = Array.isArray(data) ? data : [];
+        paint(sorted);
+        lastUpdatedEl.textContent = 'Updated ' + new Date().toLocaleTimeString();
+      } catch (err) {
+        container.innerHTML = '<li class="leaderboard-empty">Could not load leaderboard. ' + (err.message || '') + '</li>';
       }
     }
 
-    // Load competitions for the dropdown
+    function startAutoRefresh() {
+      if (refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = setInterval(load, 15000);
+    }
+
+    // Load competitions for dropdown
     api.get('/innovation/competitions')
       .then((comps) => {
         if (Array.isArray(comps) && comps.length) {
@@ -97,8 +135,11 @@
       .catch(() => {});
 
     select.addEventListener('change', load);
-    container.innerHTML = '<li class="results-count">Loading leaderboard...</li>';
+
+    // Initial load + auto-refresh
+    container.innerHTML = '<li class="leaderboard-empty">Loading leaderboard...</li>';
     load();
+    startAutoRefresh();
   </script>
 </body>
 </html>

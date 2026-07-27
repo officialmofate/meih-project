@@ -161,7 +161,7 @@
   <script src="../js/config.js"></script>
   <script type="module" src="../js/app.js"></script>
   <script type="module">
-    import { api } from '../js/api.js';
+    import { api, showLoading, hideLoading } from '../js/api.js';
 
     // Load vendor profile
     api.get('/vendors/me').then((vendor) => {
@@ -235,6 +235,8 @@
     // Submit quote form
     document.getElementById('quote-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       const data = Object.fromEntries(new FormData(e.target));
       data.quotedAmount = Number(data.quotedAmount);
       try {
@@ -247,6 +249,8 @@
         }, 1500);
       } catch (err) {
         alert(err.message || 'Failed to submit quote.');
+      } finally {
+        hideLoading(submitBtn);
       }
     });
 
@@ -322,24 +326,31 @@
     // Profile form
     document.getElementById('profile-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       const data = Object.fromEntries(new FormData(e.target));
       try {
         await api.put('/vendors/me', data);
         alert('Profile saved.');
       } catch {
         alert('Profile saved.');
+      } finally {
+        hideLoading(submitBtn);
       }
     });
 
     // Payment details form
     document.getElementById('vendor-payment-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       const data = Object.fromEntries(new FormData(e.target));
       try {
         await api.put('/vendors/me', data);
       } catch {}
       document.getElementById('vp-saved').hidden = false;
       setTimeout(() => { document.getElementById('vp-saved').hidden = true; }, 3000);
+      hideLoading(submitBtn);
     });
 
     // Portfolio form

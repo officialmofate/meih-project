@@ -65,7 +65,7 @@
   <script src="../js/config.js"></script>
   <script type="module" src="../js/app.js"></script>
   <script type="module">
-    import { api } from '../js/api.js';
+    import { api, showLoading, hideLoading } from '../js/api.js';
 
     var user = null;
     try {
@@ -126,6 +126,8 @@
 
     document.getElementById('profile-form').addEventListener('submit', async function(e) {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       errorEl.hidden = true;
       var data = Object.fromEntries(new FormData(e.target));
 
@@ -133,17 +135,20 @@
         if (!data.companyName || !data.companyName.trim()) {
           errorEl.textContent = 'Please enter your company name.';
           errorEl.hidden = false;
+          hideLoading(submitBtn);
           return;
         }
       } else if (user.role === 'vendor') {
         if (!data.businessName || !data.businessName.trim()) {
           errorEl.textContent = 'Please enter your business name.';
           errorEl.hidden = false;
+          hideLoading(submitBtn);
           return;
         }
         if (!data.category) {
           errorEl.textContent = 'Please select a service category.';
           errorEl.hidden = false;
+          hideLoading(submitBtn);
           return;
         }
       }
@@ -158,6 +163,7 @@
       } catch (err) {
         errorEl.textContent = err.message || 'Could not save profile. Please try again.';
         errorEl.hidden = false;
+        hideLoading(submitBtn);
       }
     });
 

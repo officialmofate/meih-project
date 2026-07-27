@@ -87,7 +87,7 @@
   <script src="../js/config.js"></script>
   <script type="module" src="../js/app.js"></script>
   <script type="module">
-    import { api } from '../js/api.js';
+    import { api, showLoading, hideLoading } from '../js/api.js';
 
     const judgeError = document.getElementById('judge-error');
     const noAssignments = document.getElementById('no-assignments');
@@ -172,6 +172,8 @@
     if (scoreForm) {
       scoreForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        showLoading(submitBtn);
         const data = Object.fromEntries(new FormData(e.target));
         ['innovationScore','impactScore','feasibilityScore','scalabilityScore','sustainabilityScore','technologyScore','businessModelScore','socialImpactScore','marketReadinessScore','presentationScore'].forEach(k => {
           if (data[k] !== undefined) data[k] = parseInt(data[k], 10);
@@ -222,6 +224,8 @@
           }).catch(() => {});
         } catch (err) {
           if (errEl) { errEl.textContent = err.message || 'Failed to submit score'; errEl.hidden = false; }
+        } finally {
+          hideLoading(submitBtn);
         }
       });
     }

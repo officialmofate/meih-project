@@ -261,7 +261,7 @@
     })();
   </script>
   <script type="module">
-    import { api } from '../js/api.js';
+    import { api, showLoading, hideLoading } from '../js/api.js';
 
     // Load competitions into dropdown
     (async function() {
@@ -312,11 +312,14 @@
         e.preventDefault();
         var errorEl = document.getElementById('submit-innovation-error');
         errorEl.hidden = true;
+        var submitBtn = form.querySelector('button[type="submit"]');
+        showLoading(submitBtn);
         var data = Object.fromEntries(new FormData(form));
         var competitionId = data.competitionId;
         if (!competitionId) {
           errorEl.textContent = 'Please select a competition.';
           errorEl.hidden = false;
+          hideLoading(submitBtn);
           return;
         }
         try {
@@ -342,6 +345,8 @@
         } catch (err) {
           errorEl.textContent = err.message || 'Could not register the innovation. Please try again.';
           errorEl.hidden = false;
+        } finally {
+          hideLoading(submitBtn);
         }
       });
     } catch(e) { console.error('[MEIH] Innovation form error:', e); }
@@ -351,6 +356,8 @@
     if (innoPayForm) {
       innoPayForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = innoPayForm.querySelector('button[type="submit"]');
+        showLoading(submitBtn);
         const formData = new FormData(innoPayForm);
         const submissionId = formData.get('submissionId');
         
@@ -376,6 +383,8 @@
           document.getElementById('inno-pay-success').hidden = false;
         } catch (err) {
           alert(err.message);
+        } finally {
+          hideLoading(submitBtn);
         }
       });
     }

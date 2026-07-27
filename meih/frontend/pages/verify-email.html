@@ -46,7 +46,7 @@
   <script src="../js/config.js"></script>
   <script type="module" src="../js/app.js"></script>
   <script type="module">
-    import { api } from '../js/api.js';
+    import { api, showLoading, hideLoading } from '../js/api.js';
 
     const params = new URLSearchParams(window.location.search);
     const tokenParam = params.get('token');
@@ -93,6 +93,8 @@
 
     document.getElementById('verify-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       errorEl.hidden = true;
       successEl.hidden = true;
 
@@ -100,6 +102,7 @@
       if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
         errorEl.textContent = 'Please enter a valid 6-digit code.';
         errorEl.hidden = false;
+        hideLoading(submitBtn);
         return;
       }
 
@@ -119,14 +122,18 @@
       } catch (err) {
         errorEl.textContent = err.message || 'Verification failed. Please try again.';
         errorEl.hidden = false;
+      } finally {
+        hideLoading(submitBtn);
       }
     });
 
     document.getElementById('resend-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('resend-btn');
+      showLoading(btn);
       errorEl.hidden = true;
       successEl.hidden = true;
       const email = prompt('Enter your email address to resend the verification code:');
-      if (!email) return;
+      if (!email) { hideLoading(btn); return; }
       try {
         await api.post('/auth/resend-verification', { email });
         successEl.textContent = 'Verification code resent. Check your inbox.';
@@ -134,6 +141,8 @@
       } catch (err) {
         errorEl.textContent = err.message || 'Failed to resend.';
         errorEl.hidden = false;
+      } finally {
+        hideLoading(btn);
       }
     });
   </script>

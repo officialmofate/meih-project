@@ -247,7 +247,7 @@
   <script src="../js/config.js"></script>
   <script type="module" src="../js/app.js"></script>
   <script type="module">
-    import { api } from '../js/api.js';
+    import { api, showLoading, hideLoading } from '../js/api.js';
     import { debounce } from '../js/utils/helpers.js';
 
     var currentUser = null;
@@ -334,11 +334,14 @@
     // Settings form
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       const data = Object.fromEntries(new FormData(e.target));
       try {
         await api.put('/admin/settings', data);
       } catch {}
       alert('Settings saved.');
+      hideLoading(submitBtn);
     });
 
     // User search/filter
@@ -497,6 +500,8 @@
 
     document.getElementById('im-assign-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       const data = Object.fromEntries(new FormData(e.target));
       const errEl = document.getElementById('im-assign-error');
       const successEl = document.getElementById('im-assign-success');
@@ -505,6 +510,7 @@
       if (!data.userId) {
         errEl.textContent = 'Please select a user.';
         errEl.hidden = false;
+        hideLoading(submitBtn);
         return;
       }
       try {
@@ -515,6 +521,8 @@
       } catch (err) {
         errEl.textContent = err.message || 'Failed.';
         errEl.hidden = false;
+      } finally {
+        hideLoading(submitBtn);
       }
     });
 
@@ -585,6 +593,8 @@
     // Judge assignment form
     document.getElementById('judge-assign-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       const data = Object.fromEntries(new FormData(e.target));
       const errEl = document.getElementById('judge-assign-error');
       const successEl = document.getElementById('judge-assign-success');
@@ -593,6 +603,7 @@
       if (!data.judgeId || !data.competitionId) {
         errEl.textContent = 'Please select both a judge and a competition.';
         errEl.hidden = false;
+        hideLoading(submitBtn);
         return;
       }
       try {
@@ -605,6 +616,8 @@
       } catch (err) {
         errEl.textContent = err.message || 'Failed to assign judge.';
         errEl.hidden = false;
+      } finally {
+        hideLoading(submitBtn);
       }
     });
 
@@ -672,6 +685,8 @@
 
     document.getElementById('reviewer-assign-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      showLoading(submitBtn);
       const data = Object.fromEntries(new FormData(e.target));
       const errEl = document.getElementById('reviewer-assign-error');
       const successEl = document.getElementById('reviewer-assign-success');
@@ -680,6 +695,7 @@
       if (!data.reviewerId || !data.competitionId) {
         errEl.textContent = 'Please select both a reviewer and a competition.';
         errEl.hidden = false;
+        hideLoading(submitBtn);
         return;
       }
       try {
@@ -692,6 +708,8 @@
       } catch (err) {
         errEl.textContent = err.message || 'Failed to assign reviewer.';
         errEl.hidden = false;
+      } finally {
+        hideLoading(submitBtn);
       }
     });
 
@@ -728,6 +746,8 @@
       // Create user form
       document.getElementById('create-user-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        showLoading(submitBtn);
         const formData = new FormData(e.target);
         const payload = {
           role: formData.get('role'),
@@ -748,12 +768,16 @@
         } catch (err) {
           errEl.textContent = err.message || 'Failed to create user.';
           errEl.hidden = false;
+        } finally {
+          hideLoading(submitBtn);
         }
       });
 
       // Promote user to admin form
       document.getElementById('promote-admin-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        showLoading(submitBtn);
         const data = Object.fromEntries(new FormData(e.target));
         const errEl = document.getElementById('promote-admin-error');
         const successEl = document.getElementById('promote-admin-success');
@@ -762,6 +786,7 @@
         if (!data.userId) {
           errEl.textContent = 'Please select a user.';
           errEl.hidden = false;
+          hideLoading(submitBtn);
           return;
         }
         try {
@@ -772,6 +797,8 @@
         } catch (err) {
           errEl.textContent = err.message || 'Failed to promote user.';
           errEl.hidden = false;
+        } finally {
+          hideLoading(submitBtn);
         }
       });
     }
