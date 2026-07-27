@@ -117,7 +117,7 @@
       if (raw) {
         const user = JSON.parse(raw);
         document.getElementById('innovator-welcome').textContent = (user.full_name || user.name || user.email || 'Innovator') + "'s Dashboard";
-        if (user.image_url) {
+          if (user.image_url) {
           var initial = (user.full_name || 'I').charAt(0).toUpperCase();
           var imgSrc = window.resolveUrl(user.image_url);
           document.getElementById('innovator-avatar').innerHTML = '<img id="profile-img-check" src="' + imgSrc + '" alt="Profile" style="width:100%;height:100%;object-fit:cover;" /><span style="display:none;font-size:32px;font-weight:800;color:#fff;align-items:center;justify-content:center;width:100%;height:100%;">' + initial + '</span>';
@@ -126,10 +126,6 @@
             profileImg.onerror = function() {
               this.style.display = 'none';
               this.nextElementSibling.style.display = 'flex';
-              document.getElementById('image-broken-warning').hidden = false;
-            };
-            profileImg.onload = function() {
-              document.getElementById('image-broken-warning').hidden = true;
             };
           }
         } else {
@@ -163,10 +159,8 @@
         document.getElementById('innovator-avatar').innerHTML = '<img id="profile-img-check" src="' + newImgSrc + '" alt="Profile" style="width:100%;height:100%;object-fit:cover;" /><span style="display:none;font-size:32px;font-weight:800;color:#fff;align-items:center;justify-content:center;width:100%;height:100%;">' + uploadInitial + '</span>';
         var uploadedImg = document.getElementById('profile-img-check');
         if (uploadedImg) {
-          uploadedImg.onerror = function() { this.style.display = 'none'; this.nextElementSibling.style.display = 'flex'; document.getElementById('image-broken-warning').hidden = false; };
-          uploadedImg.onload = function() { document.getElementById('image-broken-warning').hidden = true; };
+          uploadedImg.onerror = function() { this.style.display = 'none'; this.nextElementSibling.style.display = 'flex'; };
         }
-        document.getElementById('image-broken-warning').hidden = true;
         try {
           const user = JSON.parse(localStorage.getItem('meih_user'));
           if (user) { user.image_url = data.image_url; localStorage.setItem('meih_user', JSON.stringify(user)); }
