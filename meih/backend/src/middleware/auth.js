@@ -65,18 +65,33 @@ function authenticate(req, res, next) {
 }
 
 function authorize(...allowedRoles) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.user) {
       return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
     }
-    // superadmin has access to everything
     if (req.user.role === 'superadmin') {
       return next();
     }
-    if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+    if (allowedRoles.includes(req.user.role)) {
+      return next();
     }
-    next();
+    // JWT role is insufficient — check if role was changed in DB since token was issued
+    try {
+      const { rows } = await db.query('SELECT role FROM users WHERE id = $1', [req.user.id]);
+      if (rows.length) {
+        if (rows[0].role === 'superadmin') {
+          req.user.role = rows[0].role;
+          return next();
+        }
+        if (allowedRoles.includes(rows[0].role)) {
+          req.user.role = rows[0].role;
+          return next();
+        }
+      }
+    } catch (e) {
+      // DB check failed, fall through to rejection
+    }
+    return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
   };
 }
 

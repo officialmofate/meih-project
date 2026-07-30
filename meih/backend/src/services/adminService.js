@@ -184,7 +184,7 @@ exports.createUser = async ({ email, password, fullName, phone, role }) => {
   const bcrypt = require('bcryptjs');
   const passwordHash = await bcrypt.hash(password, 12);
   const { rows: existing } = await db.query(
-    'SELECT id FROM users WHERE email = $1 LIMIT 1',
+    'SELECT id FROM users WHERE email = $1 ORDER BY created_at DESC LIMIT 1',
     [email]
   );
   if (existing.length) {

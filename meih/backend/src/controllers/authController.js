@@ -21,9 +21,12 @@ const LOCKOUT_TIERS = [
   { minAttempts: 15, lockoutMs: 60 * 60 * 1000 },   // 15 fails → 1 hour
 ];
 
+// Maximum lockout duration from tiers (1 hour)
+const LOCKOUT_DURATION_MS = LOCKOUT_TIERS[LOCKOUT_TIERS.length - 1].lockoutMs;
+
 // Cleanup stale login attempt records every 10 minutes
 setInterval(function () {
-  const maxLockout = LOCKOUT_TIERS[LOCKOUT_TIERS.length - 1].lockoutMs;
+  const maxLockout = LOCKOUT_DURATION_MS;
   const cutoff = Date.now() - maxLockout * 2;
   for (const [key, record] of loginAttempts) {
     if (record.lastAttempt < cutoff) loginAttempts.delete(key);
@@ -334,7 +337,20 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ message: 'Token revoked, please login again' });
     }
 
-    const tokens = signTokens({ id: payload.id, role: payload.role || 'client' });
+    // Fetch current role from DB — accounts for role changes after token was issued
+    let currentRole = payload.role || 'client';
+    try {
+      if (db.isAvailable()) {
+        const { rows } = await db.query('SELECT role FROM users WHERE id = $1', [payload.id]);
+        if (rows.length) {
+          currentRole = rows[0].role;
+        }
+      }
+    } catch (e) {
+      // fall back to role from payload
+    }
+
+    const tokens = signTokens({ id: payload.id, role: currentRole });
     res.json(tokens);
   } catch (err) {
     res.status(401).json({ message: 'Invalid or expired refresh token' });

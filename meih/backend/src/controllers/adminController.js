@@ -70,8 +70,12 @@ exports.updateUserRole = async (req, res, next) => {
     const targetId = sanitizeString(req.params.id);
 
     // Get current role for audit log
-    const currentUsers = await adminService.listUsers({ id: targetId });
-    const currentRole = currentUsers && currentUsers.role ? currentUsers.role : 'unknown';
+    const userService = require('../services/userService');
+    let currentRole = 'unknown';
+    try {
+      const currentUser = await userService.findById(targetId);
+      if (currentUser) currentRole = currentUser.role;
+    } catch (e) { /* ignore */ }
 
     auditLog('ROLE_CHANGE', {
       targetId: targetId,
