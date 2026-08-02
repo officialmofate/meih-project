@@ -158,11 +158,29 @@ exports.getMatchingEvents = async (userId) => {
      LEFT JOIN event_categories c ON c.id = e.category_id
      LEFT JOIN users u ON u.id = e.client_id
      WHERE e.status = 'published'
-       AND ($1 = ANY(e.services) OR c.name = $1)
-     ORDER BY e.created_at DESC`,
-    [vendorCategory]
+     ORDER BY e.created_at DESC`
   );
-  return rows;
+
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const serviceAliases = {
+    photographer: ['photography'],
+    videographer: ['videography'],
+    entertainment: ['mc'],
+    mc: ['entertainment'],
+    lighting: ['sound'],
+    sound: ['lighting']
+  };
+  const vendorKey = norm(vendorCategory);
+  const vendorKeys = new Set([vendorKey, ...(serviceAliases[vendorKey] || [])]);
+
+  return rows.filter((ev) => {
+    if (norm(ev.category_name) === vendorKey) return true;
+    const services = Array.isArray(ev.services) ? ev.services : [];
+    return services.some((service) => {
+      const key = norm(service);
+      return vendorKeys.has(key) || vendorKey.includes(key) || key.includes(vendorKey);
+    });
+  });
 };
 
 exports.getAvailability = async (vendorId) => {
