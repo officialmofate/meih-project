@@ -218,8 +218,8 @@ exports.vote = async (submissionId, voterId, otp) => {
 
   await db.query(
     `INSERT INTO innovation_votes (submission_id, voter_fingerprint, voter_id, points, voter_role)
-     VALUES ($1, $2, $2, $3, $4)`,
-    [submissionId, voterId, points, role]
+     VALUES ($1, $2, $3, $4, $5)`,
+    [submissionId, voterId, voterId, points, role]
   );
   const { rows } = await db.query(
     'SELECT COALESCE(SUM(points), 0)::int AS total_points, COUNT(*)::int AS vote_count FROM innovation_votes WHERE submission_id = $1',
