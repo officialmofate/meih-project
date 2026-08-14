@@ -1,5 +1,5 @@
 // Minimal global state store (pub/sub)
-const state = { user: null, theme: 'light' };
+const state = { user: null, theme: 'dark' };
 const listeners = new Set();
 
 export const store = {

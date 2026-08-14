@@ -83,6 +83,33 @@ async function autoMigrate() {
     await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_3 TEXT`);
     await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS points INT DEFAULT 1`);
     await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS voter_role VARCHAR(50) DEFAULT 'public_voter'`);
+    // Public voter OTP + vote ownership — unique 6-digit OTP per voter, one vote per user per submission
+    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS vote_otp VARCHAR(10)`);
+    await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS voter_id UUID REFERENCES users(id) ON DELETE SET NULL`);
+    await db.query(`ALTER TABLE innovation_votes DROP CONSTRAINT IF EXISTS innovation_votes_submission_id_voter_fingerprint_key`);
+    await db.query(`DROP INDEX IF EXISTS innovation_votes_submission_id_voter_fingerprint_key`);
+    await db.query(`DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_innovation_votes_submission_voter') THEN
+        CREATE UNIQUE INDEX idx_innovation_votes_submission_voter ON innovation_votes(submission_id, voter_id);
+      END IF;
+    END $$`);
+    // Backfill voting OTPs for existing public voters created before this feature
+    try {
+      const { rows: voters } = await db.query(
+        "SELECT id FROM users WHERE role = 'public_voter' AND (vote_otp IS NULL OR vote_otp = '')"
+      );
+      for (const v of voters) {
+        let otp = null;
+        for (let i = 0; i < 50; i++) {
+          const candidate = String(Math.floor(100000 + Math.random() * 900000));
+          const dup = await db.query('SELECT 1 FROM users WHERE vote_otp = $1 LIMIT 1', [candidate]);
+          if (dup.rows.length === 0) { otp = candidate; break; }
+        }
+        if (otp) await db.query('UPDATE users SET vote_otp = $2, updated_at = now() WHERE id = $1', [v.id, otp]);
+      }
+    } catch (otpErr) {
+      console.error('[MIGRATION] Vote OTP backfill error:', otpErr.message);
+    }
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS admin_rating INT`);
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_url TEXT`);
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_base64 TEXT`);

@@ -68,10 +68,11 @@
           <p class="vote-count"><span id="vote-count">0</span> <span data-i18n="votes">votes</span></p>
           <button id="vote-btn" class="btn btn-primary btn-block" data-i18n="vote_otp">Vote (OTP verified)</button>
           <p id="vote-confirmation" class="form-success" hidden data-i18n="thanks_voting">Thanks for voting!</p>
+          <p id="vote-error" class="form-error" hidden></p>
 
           <div id="otp-vote-panel" class="stacked-form" hidden>
-            <label for="vote-otp" data-i18n="enter_otp">Enter the code sent to your phone</label>
-            <input id="vote-otp" type="text" inputmode="numeric" maxlength="6" />
+            <label for="vote-otp" data-i18n="enter_otp">Enter your 6-digit Public Voter OTP</label>
+            <input id="vote-otp" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
             <button id="confirm-vote-btn" class="btn btn-primary btn-block" data-i18n="confirm_vote">Confirm Vote</button>
           </div>
         </div>
@@ -134,24 +135,59 @@
 
     const voteBtn = document.getElementById('vote-btn');
     const otpPanel = document.getElementById('otp-vote-panel');
+    const voteError = document.getElementById('vote-error');
+
+    function showVoteError(msg) {
+      voteError.textContent = msg;
+      voteError.hidden = false;
+    }
+
+    const currentUser = (() => {
+      try { return JSON.parse(localStorage.getItem('meih_user') || 'null'); } catch (e) { return null; }
+    })();
+
+    if (currentUser && currentUser.role && currentUser.role !== 'public_voter') {
+      voteBtn.disabled = true;
+      voteBtn.textContent = 'Only Public Voters can vote';
+      showVoteError('You must register as a Public Voter to vote.');
+    }
+
     voteBtn.addEventListener('click', () => {
+      voteError.hidden = true;
+      if (!currentUser) {
+        showVoteError('Please <a href="login.html">log in</a> as a Public Voter to vote.');
+        return;
+      }
       voteBtn.hidden = true;
       otpPanel.hidden = false;
+      document.getElementById('vote-otp').focus();
     });
 
     document.getElementById('confirm-vote-btn').addEventListener('click', async () => {
       const btn = document.getElementById('confirm-vote-btn');
       showLoading(btn);
-      const otp = document.getElementById('vote-otp').value;
-      try {
-        await api.post(`/innovation/submissions/${innId}/vote`, { otp });
-      } catch {
-        // Backend not connected in this preview — still confirm the interaction visually
+      voteError.hidden = true;
+      const otp = document.getElementById('vote-otp').value.trim();
+      if (!/^\d{6}$/.test(otp)) {
+        hideLoading(btn);
+        showVoteError('Please enter the 6-digit OTP shown on your Public Voter dashboard.');
+        return;
       }
-      const countEl = document.getElementById('vote-count');
-      countEl.textContent = Number(countEl.textContent) + 1;
-      otpPanel.hidden = true;
-      document.getElementById('vote-confirmation').hidden = false;
+      try {
+        const result = await api.post(`/innovation/submissions/${innId}/vote`, { otp });
+        const countEl = document.getElementById('vote-count');
+        if (result && typeof result.voteCount === 'number') {
+          countEl.textContent = result.voteCount;
+        } else {
+          countEl.textContent = Number(countEl.textContent) + 1;
+        }
+        otpPanel.hidden = true;
+        document.getElementById('vote-confirmation').hidden = false;
+      } catch (err) {
+        showVoteError(err.message || 'Voting failed. Please try again.');
+        hideLoading(btn);
+        return;
+      }
       hideLoading(btn);
     });
 

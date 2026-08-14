@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Public Voter Dashboard — MEIH</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/pages/dashboard.css" />
+</head>
+<body>
+  <div id="navbar-root"></div>
+
+  <main class="page dashboard" data-page="dashboard-public-voter">
+    <div class="container">
+
+      <header class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-md);">
+        <div>
+          <h1 id="voter-welcome">Public Voter Dashboard</h1>
+          <p class="text-muted">Vote for your favourite innovations and support local ideas.</p>
+        </div>
+        <a href="innovation.html" class="btn btn-primary" style="padding:12px 28px;font-size:15px;font-weight:700;display:inline-flex;align-items:center;gap:8px;">
+          Browse Innovations
+        </a>
+      </header>
+
+      <section class="card wide" id="otp-card" style="margin-bottom:var(--space-lg);background:linear-gradient(135deg, rgba(108, 92, 231, 0.12), rgba(0, 206, 201, 0.08));border:1px solid rgba(108, 92, 231, 0.25);">
+        <div style="display:flex;align-items:center;gap:var(--space-xl);flex-wrap:wrap;">
+          <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#6c5ce7,#a855f7);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div style="flex:1;min-width:260px;">
+            <h2 style="margin-bottom:4px;">Your Voting OTP</h2>
+            <p class="text-muted" style="margin-bottom:var(--space-sm);font-size:13px;">Use this 6-digit code to confirm your votes. It is unique to your account — keep it private and never share it.</p>
+            <div id="otp-display" class="section-loading"><div class="section-spinner"></div><span>Loading your OTP...</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-sm);">
+            <a href="innovation.html" class="btn btn-primary" style="padding:10px 20px;font-size:14px;">Go Vote</a>
+            <a href="leaderboard.html" class="btn btn-secondary" style="padding:10px 20px;font-size:14px;">View Leaderboard</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-row">
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-approved">&nbsp;</span><span class="stat-label">Innovations To Vote</span></div>
+        <div class="card stat-card"><span class="stat-number skeleton" id="stat-my-votes">&nbsp;</span><span class="stat-label">My Votes Cast</span></div>
+      </section>
+
+      <div class="dashboard-grid">
+        <section class="card wide">
+          <h2>How Voting Works</h2>
+          <ol class="calendar-list">
+            <li><strong>Browse</strong> approved innovations in the Innovation Hub.</li>
+            <li>Open an innovation and click <strong>Vote</strong>.</li>
+            <li>Enter your <strong>6-digit OTP</strong> shown above to confirm your vote.</li>
+            <li>Each Public Voter gets <strong>one vote per innovation</strong>.</li>
+          </ol>
+        </section>
+
+        <section class="card">
+          <h2>Recent Notifications</h2>
+          <ul class="notification-list" id="notification-list">
+            <li class="results-count">No notifications yet.</li>
+          </ul>
+        </section>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="footer-root"></div>
+  <div id="ai-root"></div>
+  <script src="../js/config.js"></script>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module">
+    import { api } from '../js/api.js';
+
+    function setStat(id, value) {
+      const el = document.getElementById(id);
+      el.textContent = value;
+      el.classList.remove('skeleton');
+      el.classList.add('loaded');
+    }
+
+    (async function init() {
+      try {
+        const raw = localStorage.getItem('meih_user');
+        if (raw) {
+          const user = JSON.parse(raw);
+          document.getElementById('voter-welcome').textContent = (user.full_name || user.name || user.email || 'Public Voter') + "'s Dashboard";
+        }
+      } catch {}
+
+      const otpEl = document.getElementById('otp-display');
+      try {
+        const profile = await api.get('/users/profile');
+        const otp = profile.vote_otp || (JSON.parse(localStorage.getItem('meih_user') || '{}').vote_otp) || null;
+        if (otp) {
+          otpEl.className = '';
+          otpEl.innerHTML = '<span style="font-family:var(--font-mono);font-size:42px;font-weight:800;letter-spacing:12px;background:linear-gradient(135deg,#6c5ce7,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">' + otp + '</span>';
+        } else {
+          otpEl.className = '';
+          otpEl.innerHTML = '<p class="form-error">No OTP found. Please contact support to get your voting OTP.</p>';
+        }
+      } catch (err) {
+        const localOtp = (JSON.parse(localStorage.getItem('meih_user') || '{}').vote_otp) || null;
+        if (localOtp) {
+          otpEl.className = '';
+          otpEl.innerHTML = '<span style="font-family:var(--font-mono);font-size:42px;font-weight:800;letter-spacing:12px;background:linear-gradient(135deg,#6c5ce7,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">' + localOtp + '</span>';
+        } else {
+          otpEl.className = '';
+          otpEl.innerHTML = '<p class="form-error">Could not load your OTP: ' + (err.message || 'Unknown error') + '</p>';
+        }
+      }
+
+      api.get('/innovation/submissions').then((subs) => {
+        const list = Array.isArray(subs) ? subs : [];
+        setStat('stat-approved', list.filter(s => s.status === 'approved').length);
+        setStat('stat-my-votes', '0');
+      }).catch(() => {
+        setStat('stat-approved', '—');
+        setStat('stat-my-votes', '—');
+      });
+
+      api.get('/notifications').then((items) => {
+        if (Array.isArray(items) && items.length) {
+          document.getElementById('notification-list').innerHTML = items.map(n => `<li>${n.body ?? n.title}</li>`).join('');
+        }
+      }).catch(() => {});
+    })();
+  </script>
+</body>
+</html>

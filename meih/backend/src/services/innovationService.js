@@ -162,9 +162,24 @@ exports.listCompetitionSubmissions = async (competitionId) => {
   return rows;
 };
 
-exports.vote = async (submissionId, voterFingerprint, voterRole) => {
-  const points = voterRole === 'judge' ? 10 : 5;
-  const role = voterRole || 'public_voter';
+exports.vote = async (submissionId, voterId, otp) => {
+  const { rows: voter } = await db.query(
+    'SELECT id, role, status, vote_otp FROM users WHERE id = $1',
+    [voterId]
+  );
+  if (!voter[0]) throw Object.assign(new Error('Voter account not found'), { status: 401 });
+  if (voter[0].role !== 'public_voter') {
+    throw Object.assign(new Error('Only Public Voters are allowed to vote'), { status: 403 });
+  }
+  if (voter[0].status !== 'active') {
+    throw Object.assign(new Error('Your account is not active'), { status: 403 });
+  }
+  if (!otp || String(otp).trim() !== String(voter[0].vote_otp || '').trim()) {
+    throw Object.assign(new Error('Invalid OTP. Please enter the 6-digit OTP shown on your Public Voter dashboard'), { status: 400 });
+  }
+
+  const points = 5;
+  const role = 'public_voter';
 
   const { rows: sub } = await db.query(
     `SELECT s.competition_id, s.status,
@@ -193,11 +208,18 @@ exports.vote = async (submissionId, voterFingerprint, voterRole) => {
     throw Object.assign(new Error('Competition is not accepting votes'), { status: 400 });
   }
 
+  const { rows: existing } = await db.query(
+    'SELECT id FROM innovation_votes WHERE submission_id = $1 AND voter_id = $2',
+    [submissionId, voterId]
+  );
+  if (existing.length > 0) {
+    throw Object.assign(new Error('You have already voted for this innovation'), { status: 400 });
+  }
+
   await db.query(
-    `INSERT INTO innovation_votes (submission_id, voter_fingerprint, points, voter_role)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (submission_id, voter_fingerprint) DO NOTHING`,
-    [submissionId, voterFingerprint, points, role]
+    `INSERT INTO innovation_votes (submission_id, voter_fingerprint, voter_id, points, voter_role)
+     VALUES ($1, $2, $2, $3, $4)`,
+    [submissionId, voterId, points, role]
   );
   const { rows } = await db.query(
     'SELECT COALESCE(SUM(points), 0)::int AS total_points, COUNT(*)::int AS vote_count FROM innovation_votes WHERE submission_id = $1',

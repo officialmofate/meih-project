@@ -32,7 +32,7 @@ exports.getAnalytics = async () => {
 
 exports.listUsers = async ({ page = 1, limit = 50, role, search, status } = {}) => {
   const offset = (page - 1) * limit;
-  const conditions = [];
+  const conditions = ["status <> 'deleted'"];
   const params = [];
   let idx = 1;
 
@@ -64,9 +64,17 @@ exports.listUsers = async ({ page = 1, limit = 50, role, search, status } = {}) 
 };
 
 exports.updateUserRole = async (id, role) => {
+  let voteOtp = null;
+  if (role === 'public_voter') {
+    const { rows: cur } = await db.query('SELECT vote_otp FROM users WHERE id = $1', [id]);
+    if (!cur[0] || !cur[0].vote_otp) {
+      const userService = require('./userService');
+      voteOtp = await userService.generateUniqueVoteOtp();
+    }
+  }
   const { rows } = await db.query(
-    'UPDATE users SET role = $2, updated_at = now() WHERE id = $1 RETURNING id, email, full_name, role, status',
-    [id, role]
+    `UPDATE users SET role = $2, vote_otp = COALESCE($3, vote_otp), updated_at = now() WHERE id = $1 RETURNING id, email, full_name, role, status, vote_otp`,
+    [id, role, voteOtp]
   );
   return rows[0];
 };
@@ -191,16 +199,21 @@ exports.createUser = async ({ email, password, fullName, phone, role }) => {
     const { rows } = await db.query(
       `UPDATE users SET password_hash = $2, full_name = $3, phone = $4, role = $5, status = 'active', email_verified = true, updated_at = now()
        WHERE id = $1
-       RETURNING id, email, full_name, phone, role, status, created_at`,
+       RETURNING id, email, full_name, phone, role, status, created_at, vote_otp`,
       [existing[0].id, passwordHash, fullName, phone || null, role]
     );
     return rows[0];
   }
+  let voteOtp = null;
+  if (role === 'public_voter') {
+    const userService = require('./userService');
+    voteOtp = await userService.generateUniqueVoteOtp();
+  }
   const { rows } = await db.query(
-    `INSERT INTO users (email, password_hash, full_name, phone, role, status, email_verified)
-     VALUES ($1, $2, $3, $4, $5, 'active', true)
-     RETURNING id, email, full_name, phone, role, status, created_at`,
-    [email, passwordHash, fullName, phone || null, role]
+    `INSERT INTO users (email, password_hash, full_name, phone, role, status, email_verified, vote_otp)
+     VALUES ($1, $2, $3, $4, $5, 'active', true, $6)
+     RETURNING id, email, full_name, phone, role, status, created_at, vote_otp`,
+    [email, passwordHash, fullName, phone || null, role, voteOtp]
   );
   return rows[0];
 };

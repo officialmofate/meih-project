@@ -57,7 +57,7 @@ router.get('/submissions', ctrl.listSubmissions);
 router.get('/submissions/:id', ctrl.getSubmission);
 router.put('/submissions/:id', authenticate, ctrl.updateSubmission);
 router.delete('/submissions/:id', authenticate, ctrl.deleteSubmission);
-router.post('/submissions/:id/vote', ctrl.voteSubmission);
+router.post('/submissions/:id/vote', authenticate, ctrl.voteSubmission);
 router.get('/submissions/:id/votes', ctrl.getVotes);
 router.post('/submissions/:id/comment', authenticate, ctrl.commentSubmission);
 router.get('/submissions/:id/comments', ctrl.getComments);

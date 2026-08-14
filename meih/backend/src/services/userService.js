@@ -1,6 +1,15 @@
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 
+exports.generateUniqueVoteOtp = async () => {
+  for (let i = 0; i < 50; i++) {
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const { rows } = await db.query('SELECT id FROM users WHERE vote_otp = $1 LIMIT 1', [otp]);
+    if (rows.length === 0) return otp;
+  }
+  throw new Error('Could not generate a unique voting OTP');
+};
+
 exports.create = async ({ email, passwordHash, fullName, role = 'client' }) => {
   const { rows } = await db.query(
     `INSERT INTO users (email, password_hash, full_name, role)
@@ -20,9 +29,12 @@ exports.findByEmail = async (email, role) => {
   return rows[0];
 };
 
-exports.findById = async (id) => {
+exports.findById = async (id, includeOtp = false) => {
+  const cols = includeOtp
+    ? 'id, email, full_name, role, status, created_at, updated_at, vote_otp'
+    : 'id, email, full_name, role, status, created_at, updated_at';
   const { rows } = await db.query(
-    'SELECT id, email, full_name, role, status, created_at, updated_at FROM users WHERE id = $1',
+    `SELECT ${cols} FROM users WHERE id = $1`,
     [id]
   );
   return rows[0];
@@ -55,14 +67,45 @@ exports.changePassword = async (id, { oldPassword, newPassword }) => {
 exports.list = async ({ page = 1, limit = 20 } = {}) => {
   const offset = (page - 1) * limit;
   const { rows } = await db.query(
-    'SELECT id, email, full_name, role, status, created_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+    "SELECT id, email, full_name, role, status, created_at FROM users WHERE status <> 'deleted' ORDER BY created_at DESC LIMIT $1 OFFSET $2",
     [limit, offset]
   );
   return rows;
 };
 
 exports.remove = async (id) => {
-  await db.query('DELETE FROM users WHERE id = $1', [id]);
+  try {
+    await db.query('BEGIN');
+    try {
+      await db.query('DELETE FROM notifications WHERE user_id = $1', [id]);
+      await db.query('DELETE FROM reviewer_scores WHERE reviewer_id = $1', [id]);
+      await db.query('DELETE FROM reviewer_assignments WHERE reviewer_id = $1', [id]);
+      await db.query('DELETE FROM judge_scores WHERE judge_id = $1', [id]);
+      await db.query('DELETE FROM judge_assignments WHERE judge_id = $1', [id]);
+      await db.query('DELETE FROM innovation_votes WHERE voter_id = $1', [id]);
+      await db.query('DELETE FROM payments WHERE user_id = $1', [id]);
+      await db.query('DELETE FROM vendors WHERE user_id = $1', [id]);
+      await db.query('DELETE FROM planners WHERE user_id = $1', [id]);
+      await db.query('DELETE FROM events WHERE client_id = $1', [id]);
+      await db.query('DELETE FROM bookings WHERE client_id = $1', [id]);
+      await db.query('DELETE FROM innovation_submissions WHERE user_id = $1', [id]);
+      await db.query('DELETE FROM users WHERE id = $1', [id]);
+      await db.query('COMMIT');
+    } catch (innerErr) {
+      await db.query('ROLLBACK');
+      throw innerErr;
+    }
+  } catch (err) {
+    if (err.code === '23503' || (err.message && err.message.includes('foreign key'))) {
+      // Related data prevents a hard delete — soft-disable the account instead
+      await db.query(
+        "UPDATE users SET status = 'deleted', password_hash = '!disabled', updated_at = now() WHERE id = $1",
+        [id]
+      ).catch(() => {});
+      return;
+    }
+    throw err;
+  }
 };
 
 exports.count = async () => {

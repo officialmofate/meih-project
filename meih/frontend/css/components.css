@@ -214,6 +214,35 @@
   text-align: center;
 }
 
+/* ── Theme Toggle ── */
+.theme-toggle-btn {
+  font-size: 16px !important;
+  line-height: 1 !important;
+  padding: 4px 10px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  min-width: 36px;
+  text-align: center;
+}
+.theme-toggle-btn:hover { color: var(--color-text); background: var(--color-glass); }
+
+/* Smooth theme switching */
+.navbar, .card, .event-card, .innovation-card, .vendor-card,
+input, select, textarea, .ai-chat-panel, .ai-chat-input, .ai-chat-messages,
+.footer, .leaderboard-row {
+  transition: background-color var(--transition-normal), color var(--transition-normal),
+              border-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+[data-theme="light"] .ai-chat-panel { background: #ffffff; border-color: rgba(15,23,42,0.1); }
+[data-theme="light"] .ai-chat-input { background: var(--color-surface); }
+[data-theme="light"] .admin-payment-info .payment-info-item { background: rgba(255,255,255,0.7); }
+[data-theme="light"] .card:hover,
+[data-theme="light"] .event-card:hover,
+[data-theme="light"] .innovation-card:hover,
+[data-theme="light"] .vendor-card:hover { border-color: rgba(15,23,42,0.14); }
+[data-theme="light"] .leaderboard-row:hover { border-color: rgba(15,23,42,0.14); }
+
 /* ── Footer ── */
 .footer {
   text-align: center;

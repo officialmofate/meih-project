@@ -1,4 +1,6 @@
 :root {
+  color-scheme: dark;
+
   /* ── Base palette ── */
   --color-primary: #6c5ce7;
   --color-primary-dark: #5a4bd1;
@@ -92,4 +94,57 @@
   /* ── Z-index layers ── */
   --z-overlay: 1050;
   --z-toast: 1100;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIGHT THEME — applied when <html data-theme="light">
+   ═══════════════════════════════════════════════════════════════ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* ── Surfaces ── */
+  --color-bg: #f4f5f9;
+  --color-bg-alt: #eceef4;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-hover: #eef0f6;
+  --color-glass: rgba(255, 255, 255, 0.72);
+  --color-glass-border: rgba(15, 23, 42, 0.08);
+
+  /* ── Text ── */
+  --color-text: #0f172a;
+  --color-text-secondary: #334155;
+  --color-muted: #64748b;
+  --color-text-inverse: #ffffff;
+
+  /* ── Borders ── */
+  --color-border: rgba(15, 23, 42, 0.12);
+  --color-border-light: rgba(15, 23, 42, 0.06);
+  --color-border-focus: var(--color-primary);
+
+  /* ── Gradients ── */
+  --gradient-hero: linear-gradient(160deg, #f4f5f9 0%, #eceef4 40%, #e6e9f2 100%);
+  --gradient-card: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.62) 100%);
+  --gradient-glow: linear-gradient(135deg, rgba(108, 92, 231, 0.12) 0%, rgba(0, 206, 201, 0.12) 100%);
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 8px 30px rgba(15, 23, 42, 0.14);
+  --shadow-glow-primary: 0 0 20px rgba(108, 92, 231, 0.12);
+  --shadow-glow-secondary: 0 0 20px rgba(0, 206, 201, 0.12);
+  --shadow-glow-primary-strong: 0 0 40px rgba(108, 92, 231, 0.2);
+  --shadow-glow-secondary-strong: 0 0 40px rgba(0, 206, 201, 0.2);
+
+  /* ── Glassmorphism ── */
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-blur: blur(16px);
+  --glass-border: 1px solid rgba(15, 23, 42, 0.08);
+  --color-glass-hover: rgba(15, 23, 42, 0.05);
+
+  /* ── Mesh / Ambient ── */
+  --gradient-mesh: radial-gradient(at 40% 20%, rgba(108, 92, 231, 0.06) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(0, 206, 201, 0.06) 0px, transparent 50%);
+
+  /* ── Depth / Elevation ── */
+  --shadow-depth: 0 20px 60px -15px rgba(15, 23, 42, 0.16);
 }

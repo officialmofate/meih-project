@@ -145,17 +145,21 @@ exports.listCompetitionSubmissions = async (req, res, next) => {
 
 exports.voteSubmission = async (req, res, next) => {
   try {
-    const fingerprint = req.headers['x-voter-fingerprint'] || req.ip;
-    const voterRole = req.user ? req.user.role : 'public_voter';
-    const result = await innovationService.vote(req.params.id, fingerprint, voterRole);
+    if (!req.user) {
+      return res.status(401).json({ message: 'Please log in as a Public Voter to vote' });
+    }
+    if (req.user.role !== 'public_voter') {
+      return res.status(403).json({ message: 'Only Public Voters are allowed to vote' });
+    }
+    const result = await innovationService.vote(req.params.id, req.user.id, req.body.otp);
     res.json(result);
   } catch (err) { next(err); }
 };
 
 exports.getVotes = async (req, res, next) => {
   try {
-    const voteCount = await innovationService.getVotes(req.params.id);
-    res.json({ voteCount });
+    const result = await innovationService.getVotes(req.params.id);
+    res.json(result);
   } catch (err) { next(err); }
 };
 

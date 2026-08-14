@@ -1,9 +1,22 @@
 import { store } from '../state.js';
 
+const THEME_KEY = 'meih_theme';
+
 const HUB_PAGES = {
   event: ['events.html', 'create-event.html', 'event-detail.html', 'dashboard-planner.html', 'dashboard-vendor.html', 'dashboard-client.html', 'planners.html', 'planner-detail.html', 'vendors.html', 'vendor-detail.html'],
-  innovation: ['innovation.html', 'submit-innovation.html', 'innovation-detail.html', 'leaderboard.html', 'dashboard-judge.html', 'dashboard-admin.html', 'dashboard-innovator-manager.html', 'dashboard-innovator.html', 'dashboard-reviewer.html'],
+  innovation: ['innovation.html', 'submit-innovation.html', 'innovation-detail.html', 'leaderboard.html', 'dashboard-judge.html', 'dashboard-admin.html', 'dashboard-innovator-manager.html', 'dashboard-innovator.html', 'dashboard-reviewer.html', 'dashboard-public-voter.html'],
 };
+
+function getStoredTheme() {
+  try { return localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; }
+}
+
+export function applyTheme(theme) {
+  const t = theme || getStoredTheme();
+  document.documentElement.setAttribute('data-theme', t);
+  store.set({ theme: t });
+  try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+}
 
 function detectHub() {
   const path = window.location.pathname.toLowerCase();
@@ -26,6 +39,7 @@ function p(href) {
 export function renderNavbar() {
   const el = document.getElementById('navbar-root');
   if (!el) return;
+  applyTheme();
   const { user } = store.get();
   const hub = detectHub();
 
@@ -50,7 +64,7 @@ export function renderNavbar() {
       reviewer: 'dashboard-reviewer.html',
       admin: 'dashboard-admin.html',
       superadmin: 'dashboard-admin.html',
-      public_voter: 'innovation.html',
+      public_voter: 'dashboard-public-voter.html',
       innovator_manager: 'dashboard-innovator-manager.html',
     };
     dashboardLink = `<a href="${p(dashMap[user.role] || 'dashboard-client.html')}" data-i18n="nav.dashboard">Dashboard</a>`;
@@ -86,6 +100,7 @@ export function renderNavbar() {
       <div class="navbar-links">
         ${hubLinks}
         <button id="lang-toggle" class="btn-ghost lang-toggle-btn" title="${langTitle}">${langLabel}</button>
+        <button id="theme-toggle" class="btn-ghost theme-toggle-btn" title="Switch theme"></button>
         <button id="ai-assistant-toggle" class="btn-ghost" style="font-size:18px;padding:4px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);" title="AI Assistant" data-i18n="nav.ai">AI ✦</button>
         ${user
           ? `<button id="nav-logout" class="btn-nav-logout" data-i18n="nav.logout">Logout</button>`
@@ -113,6 +128,20 @@ export function renderNavbar() {
         i18n.toggleLang();
         renderNavbar();
       } catch (e) { console.error('[MEIH]', e); }
+    });
+  }
+
+  // Theme toggle
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    themeBtn.textContent = current === 'dark' ? '☀' : '☾';
+    themeBtn.title = current === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+    themeBtn.addEventListener('click', () => {
+      const next = (document.documentElement.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
+      applyTheme(next);
+      themeBtn.textContent = next === 'dark' ? '☀' : '☾';
+      themeBtn.title = next === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
     });
   }
 

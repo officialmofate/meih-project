@@ -302,6 +302,8 @@
         const isSuperadmin = currentUser && currentUser.role === 'superadmin';
         const privilegedRoles = ['admin', 'superadmin'];
         const canChangeRole = isSuperadmin || !privilegedRoles.includes(u.role);
+        const isSelf = currentUser && currentUser.id === u.id;
+        const canDelete = !privilegedRoles.includes(u.role) && !isSelf;
         const allRoles = ['client','planner','vendor','innovator','innovator_manager','judge','reviewer','public_voter','admin','superadmin'];
         const roleOptions = allRoles.map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`).join('');
         return `<tr data-user-id="${u.id}">
@@ -309,8 +311,9 @@
           <td>${u.email || '—'}</td>
           <td>${canChangeRole ? `<select class="role-select" data-user-id="${u.id}" style="font-size:12px;padding:2px 4px;">${roleOptions}</select>` : u.role}</td>
           <td><span class="badge ${statusClass}">${u.status || 'active'}</span></td>
-          <td>
+          <td style="white-space:nowrap;">
             <button class="btn-link" data-action="${action}">${actionLabel}</button>
+            ${canDelete ? `&nbsp;<button class="btn btn-sm btn-danger delete-user-btn" data-id="${u.id}" data-name="${(u.full_name || u.name || u.email || '').replace(/"/g, '&quot;')}">Delete</button>` : ''}
           </td>
         </tr>`;
       }).join('');
@@ -343,6 +346,25 @@
           badge.classList.toggle('badge-muted', suspending);
           btn.textContent = suspending ? 'Reinstate' : 'Suspend';
           btn.dataset.action = suspending ? 'reinstate' : 'suspend';
+        });
+      });
+
+      tbody.querySelectorAll('.delete-user-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const name = btn.dataset.name || 'this user';
+          if (!confirm(`Delete ${name}? This permanently removes their account and related data. This cannot be undone.`)) return;
+          const row = btn.closest('tr');
+          try {
+            await api.del(`/users/${btn.dataset.id}`);
+            row.remove();
+            if (tbody.querySelectorAll('tr').length === 0) {
+              document.getElementById('users-table').hidden = true;
+              document.getElementById('no-users').hidden = false;
+            }
+          } catch (err) {
+            alert(err.message || 'Failed to delete user. The account may have been disabled instead.');
+            window.location.reload();
+          }
         });
       });
     }).catch(() => {});

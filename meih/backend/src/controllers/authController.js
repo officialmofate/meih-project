@@ -6,6 +6,7 @@ const db = require('../config/database');
 const { validateEmail } = require('../utils/emailValidator');
 const emailVerification = require('../services/emailVerificationService');
 const emailNotification = require('../services/emailNotificationService');
+const userService = require('../services/userService');
 
 const PUBLIC_ROLES = ['client', 'planner', 'vendor', 'innovator', 'judge', 'reviewer', 'public_voter'];
 
@@ -143,7 +144,14 @@ exports.register = async (req, res, next) => {
       }
       const passwordHash = await bcrypt.hash(password, 12);
       const id = `mem-${memoryIdCounter++}`;
-      const user = { id, email: cleanEmail, full_name: fullName || cleanEmail.split('@')[0], role: userRole, status: 'active', email_verified: false, created_at: new Date().toISOString() };
+      let voteOtp = null;
+      if (userRole === 'public_voter') {
+        voteOtp = String(Math.floor(100000 + Math.random() * 900000));
+        while (Array.from(memoryUsers.values()).some(u => u.vote_otp === voteOtp)) {
+          voteOtp = String(Math.floor(100000 + Math.random() * 900000));
+        }
+      }
+      const user = { id, email: cleanEmail, full_name: fullName || cleanEmail.split('@')[0], role: userRole, status: 'active', email_verified: false, created_at: new Date().toISOString(), vote_otp: voteOtp };
       memoryUsers.set(key, { ...user, password_hash: passwordHash });
       const tokens = signTokens(user);
       return res.status(201).json({ user, ...tokens, emailVerificationRequired: true });
@@ -154,9 +162,13 @@ exports.register = async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+    let voteOtp = null;
+    if (userRole === 'public_voter') {
+      voteOtp = await userService.generateUniqueVoteOtp();
+    }
     const { rows: userRows } = await db.query(
-      'INSERT INTO users (email, password_hash, full_name, role, email_verified) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, role, status, email_verified, created_at',
-      [cleanEmail, passwordHash, fullName || '', userRole, !smtpConfigured]
+      'INSERT INTO users (email, password_hash, full_name, role, email_verified, vote_otp) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, full_name, role, status, email_verified, created_at, vote_otp',
+      [cleanEmail, passwordHash, fullName || '', userRole, !smtpConfigured, voteOtp]
     );
     const user = userRows[0];
 
