@@ -113,7 +113,7 @@ function errorHandler(err, req, res, _next) {
     message: finalStatus === 500
       ? (process.env.NODE_ENV !== 'production' ? err.message || 'Internal server error' : 'Internal server error')
       : (err.message || 'Request failed'),
-    code: err.code || 'INTERNAL_ERROR',
+    code: err.code || (finalStatus >= 500 ? 'INTERNAL_ERROR' : 'BAD_REQUEST'),
     requestId: requestId,
   });
 }

@@ -34,10 +34,6 @@
           <div>
             <h3 style="margin-bottom:4px;">Profile Image</h3>
             <p class="text-muted" style="margin-bottom:var(--space-sm);font-size:13px;">Upload a profile picture for your certificate and innovation submissions.</p>
-            <div id="image-broken-warning" hidden style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 14px;margin-bottom:8px;font-size:13px;color:#856404;display:flex;align-items:center;gap:8px;">
-              <span>&#9888;</span>
-              <span>Your profile image is missing from the server. Please re-upload so it appears on your certificate.</span>
-            </div>
             <label class="btn btn-sm btn-primary" style="cursor:pointer;display:inline-block;">
               Choose Image
               <input type="file" id="profile-image-input" accept="image/*" hidden />
@@ -132,8 +128,6 @@
           }
         } else {
           document.getElementById('avatar-initial').textContent = (user.full_name || 'I').charAt(0).toUpperCase();
-          document.getElementById('image-broken-warning').hidden = false;
-          document.querySelector('#image-broken-warning span:last-child').textContent = 'No profile image uploaded. Upload one so it appears on your certificate.';
         }
       }
     } catch {}
