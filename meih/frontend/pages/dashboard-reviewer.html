@@ -120,7 +120,8 @@
       document.getElementById('reviewer-name').textContent = user.full_name || user.name || user.email || 'Reviewer';
     } catch (e) { window.location.href = 'login.html'; }
 
-    api.get('/innovation/reviewer/assignments').then((assignments) => {
+    function loadAssignments() {
+      return api.get('/innovation/reviewer/assignments').then((assignments) => {
       var loadEl = document.getElementById('reviewer-assign-loading');
       if (loadEl) loadEl.remove();
       if (!Array.isArray(assignments) || !assignments.length) {
@@ -180,6 +181,8 @@
       document.getElementById('reviewer-error').textContent = 'Error loading assignments: ' + (err.message || 'Unknown');
       document.getElementById('reviewer-error').hidden = false;
     });
+    }
+    loadAssignments();
 
     document.getElementById('score-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -188,10 +191,17 @@
       const data = Object.fromEntries(new FormData(e.target));
       try {
         await api.post('/innovation/reviewer/score', data);
-      } catch {}
+      } catch (err) {
+        const errEl = document.getElementById('reviewer-error');
+        errEl.textContent = 'Failed to submit review: ' + (err.message || 'Unknown error');
+        errEl.hidden = false;
+        hideLoading(submitBtn);
+        return;
+      }
       document.getElementById('score-confirmation').hidden = false;
       setTimeout(() => { document.getElementById('score-confirmation').hidden = true; }, 3000);
       hideLoading(submitBtn);
+      loadAssignments();
     });
   </script>
 </body>
