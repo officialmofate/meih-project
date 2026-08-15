@@ -31,11 +31,12 @@
 
         <h1 id="inn-title" data-i18n="loading_innovation">Loading innovation...</h1>
         <div class="flex meta-row">
-          <span class="badge" id="inn-category">—</span>
           <span id="inn-team">—</span>
+          <span id="inn-theme">—</span>
         </div>
 
         <img id="inn-supportive-image" hidden style="max-width:100%;max-height:360px;border-radius:12px;border:1px solid var(--color-border);object-fit:contain;background:var(--color-surface-raised,#fff);margin:var(--space-md) 0;" alt="Innovation supporting material" />
+        <p id="inn-supportive-empty" hidden style="max-width:100%;border:1px dashed var(--color-border);border-radius:12px;padding:16px;color:var(--color-muted,#888);text-align:center;margin:var(--space-md) 0;">No supporting material uploaded.</p>
 
         <section class="card">
           <h2 data-i18n="introduction">Introduction</h2>
@@ -99,7 +100,6 @@
 
     function paint(inn) {
       document.getElementById('inn-title').textContent = inn.title || 'Untitled';
-      document.getElementById('inn-category').textContent = inn.category || '—';
       document.getElementById('inn-team').textContent = inn.team || '—';
       document.getElementById('inn-problem').textContent = inn.problem || '—';
       document.getElementById('inn-description').textContent = inn.description || '—';
@@ -116,16 +116,25 @@
       });
 
       const img = document.getElementById('inn-supportive-image');
-      if (img && (inn.image_url || inn.image_base64)) {
-        if (inn.image_base64) {
-          const ext = (inn.image_url || '.png').split('.').pop().toLowerCase();
-          const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/png';
-          img.src = 'data:' + mime + ';base64,' + inn.image_base64;
-        } else {
-          img.src = window.resolveUrl(inn.image_url);
+      const imgEmpty = document.getElementById('inn-supportive-empty');
+      if (img) {
+        if (inn.image_base64 || inn.image_url) {
+          if (inn.image_base64) {
+            const ext = (inn.image_url || '.png').split('.').pop().toLowerCase();
+            const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/png';
+            img.src = 'data:' + mime + ';base64,' + inn.image_base64;
+          } else {
+            img.src = window.resolveUrl(inn.image_url);
+          }
+          img.hidden = false;
+          if (imgEmpty) imgEmpty.hidden = true;
+        } else if (imgEmpty) {
+          img.hidden = true;
+          imgEmpty.hidden = false;
         }
-        img.hidden = false;
       }
+      const themeEl = document.getElementById('inn-theme');
+      if (themeEl) themeEl.textContent = [inn.main_theme, inn.sub_theme].filter(Boolean).join(' · ') || '—';
     }
 
     api.get(`/innovation/submissions/${innId}`).then(paint).catch(() => {

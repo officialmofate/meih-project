@@ -514,13 +514,14 @@ exports.getTicket = async (req, res, next) => {
     <div class="ticket-grid">
       <div class="ticket-field"><label>Innovator</label><div class="value">${ticket.author_name || 'Guest'}</div></div>
       <div class="ticket-field"><label>Competition</label><div class="value">${ticket.competition_title || '—'}</div></div>
-      <div class="ticket-field"><label>Category</label><div class="value">${ticket.category || '—'}</div></div>
+      <div class="ticket-field"><label>Main Theme</label><div class="value">${ticket.main_theme || '—'}</div></div>
+      <div class="ticket-field"><label>Sub Theme</label><div class="value">${ticket.sub_theme || '—'}</div></div>
       <div class="ticket-field"><label>Competition Dates</label><div class="value">${competitionDates}</div></div>
       <div class="ticket-field"><label>Status</label><div class="value" style="color:#00b894;">APPROVED</div></div>
     </div>
     <hr class="divider"/>
     <div class="qr-section">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(JSON.stringify({ ticketId: ticket.id, innovation: ticket.title, innovator: ticket.author_name, competition: ticket.competition_title, category: ticket.category, status: 'approved', platform: 'MEIH - MOFATE Event & Innovation Hub' }))}" alt="Innovation QR Code" />
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(JSON.stringify({ ticketId: ticket.id, innovation: ticket.title, innovator: ticket.author_name, competition: ticket.competition_title, status: 'approved', platform: 'MEIH - MOFATE Event & Innovation Hub' }))}" alt="Innovation QR Code" />
       <div class="qr-label">Scan to verify innovation</div>
     </div>
   </div>
@@ -577,7 +578,6 @@ exports.getTicketPDF = async (req, res, next) => {
       innovation: ticket.title,
       innovator: ticket.author_name,
       competition: ticket.competition_title,
-      category: ticket.category,
       status: 'approved',
       platform: 'MEIH - MOFATE Event & Innovation Hub'
     });
@@ -655,9 +655,10 @@ exports.getTicketPDF = async (req, res, next) => {
     }
     drawField(70, startY, 'Innovator', ticket.author_name || 'Guest');
     drawField(310, startY, 'Competition', ticket.competition_title || '\u2014');
-    drawField(70, startY + 60, 'Category', ticket.category || '\u2014');
-    drawField(310, startY + 60, 'Dates', competitionDates);
-    drawField(70, startY + 120, 'Status', 'APPROVED');
+    drawField(70, startY + 60, 'Main Theme', ticket.main_theme || '\u2014');
+    drawField(310, startY + 60, 'Sub Theme', ticket.sub_theme || '\u2014');
+    drawField(70, startY + 120, 'Dates', competitionDates);
+    drawField(310, startY + 120, 'Status', 'APPROVED');
 
     doc.moveTo(50, startY + 180).lineTo(doc.page.width - 50, startY + 180).lineWidth(1).dash(5, { space: 5 }).strokeColor(lightGray).stroke();
     doc.fontSize(9).font('Helvetica').fillColor(gray)
@@ -841,7 +842,6 @@ exports.getCertificate = async (req, res, next) => {
         </div>
         <div class="cert-details">
           <div class="cert-field"><label>Innovation Title</label><div class="value">${cert.title || '—'}</div></div>
-          <div class="cert-field"><label>Category</label><div class="value">${cert.category || '—'}</div></div>
           <div class="cert-field"><label>Competition</label><div class="value">${cert.competition_title || '—'}</div></div>
           <div class="cert-field"><label>Date of Issue</label><div class="value">${issueDate}</div></div>
         </div>
@@ -1045,9 +1045,8 @@ exports.getCertificatePDF = async (req, res, next) => {
       doc.fontSize(10).font('Helvetica-Bold').fillColor(navy).text(value || '\u2014', x, y + 11, { width: 160 });
     }
     drawDetail(leftX, detailY, 'Innovation Title', cert.title);
-    drawDetail(rightX, detailY, 'Category', cert.category);
-    drawDetail(leftX, detailY + 32, 'Competition', cert.competition_title);
-    drawDetail(rightX, detailY + 32, 'Date of Issue', issueDate);
+    drawDetail(rightX, detailY, 'Competition', cert.competition_title);
+    drawDetail(leftX, detailY + 32, 'Date of Issue', issueDate);
 
     topY = detailY + 76;
 

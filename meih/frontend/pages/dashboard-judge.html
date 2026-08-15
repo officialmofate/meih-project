@@ -45,7 +45,7 @@
           <div class="section-loading" id="judge-assign-loading"><div class="section-spinner"></div><span>Loading assignments...</span></div>
           <p id="no-assignments" class="empty-state" hidden data-i18n="no_assignments">No innovations assigned yet.</p>
           <table class="data-table" id="assignments-table" hidden>
-            <thead><tr><th data-i18n="title">Title</th><th data-i18n="category">Category</th><th data-i18n="votes">Votes/Points</th><th data-i18n="conflict_of_interest">Conflict of Interest</th><th data-i18n="status">Status</th><th></th></tr></thead>
+            <thead><tr><th data-i18n="title">Title</th><th data-i18n="sub_theme">Sub Theme</th><th data-i18n="votes">Votes/Points</th><th data-i18n="conflict_of_interest">Conflict of Interest</th><th data-i18n="status">Status</th><th></th></tr></thead>
             <tbody id="assignments-body"></tbody>
           </table>
           <p id="judge-view-details" hidden style="margin-top:var(--space-sm);font-size:13px;color:var(--color-text-muted);">Click <strong>View Details</strong> to see the full innovation content (problem, solution, impact, technology).</p>
@@ -190,7 +190,7 @@
         const action = a.innovation_score != null ? 'Edit Score' : 'Score';
         return `<tr>
           <td>${a.title || '—'}</td>
-          <td>${a.category || '—'}</td>
+          <td>${a.sub_theme || '—'}</td>
           <td>${a.total_points || 0} pts (${a.vote_count || 0} votes)</td>
           <td><label class="checkbox-label"><input type="checkbox" data-conflict /> Declare conflict</label></td>
           <td><span class="badge ${statusClass}">${a.innovation_score != null ? 'Scored' : 'Pending'}</span></td>
@@ -272,7 +272,7 @@
               const action = a.innovation_score != null ? 'Edit Score' : 'Score';
               return `<tr>
                 <td>${a.title || '—'}</td>
-                <td>${a.category || '—'}</td>
+                <td>${a.sub_theme || '—'}</td>
                 <td>${a.total_points || 0} pts (${a.vote_count || 0} votes)</td>
                 <td><label class="checkbox-label"><input type="checkbox" data-conflict /> Declare conflict</label></td>
                 <td><span class="badge ${statusClass}">${a.innovation_score != null ? 'Scored' : 'Pending'}</span></td>

@@ -221,8 +221,10 @@
 
       function renderReview() {
         var data = new FormData(form);
+        var compSelect = document.getElementById('inno-competition');
+        var compTitle = compSelect && compSelect.selectedIndex >= 0 ? compSelect.options[compSelect.selectedIndex].textContent : '—';
         document.getElementById('review-summary').innerHTML =
-          '<dt>Competition</dt><dd>' + (data.get('competitionId') || '—') + '</dd>' +
+          '<dt>Competition</dt><dd>' + compTitle + '</dd>' +
           '<dt>Main Theme</dt><dd>' + (data.get('mainTheme') || '—') + '</dd>' +
           '<dt>Sub Theme</dt><dd>' + (data.get('subTheme') || '—') + '</dd>' +
           '<dt>Title</dt><dd>' + (data.get('title') || '—') + '</dd>' +
@@ -299,10 +301,11 @@
     // Load competitions into dropdown
     (async function() {
       try {
-        const comps = await api.get('/innovation/competitions');
+        const raw = await api.get('/innovation/competitions');
+        const comps = (Array.isArray(raw) ? raw : []).filter(c => c.status === 'open');
         const select = document.getElementById('inno-competition');
         const mainThemeSelect = document.getElementById('inno-main-theme');
-        if (Array.isArray(comps) && comps.length) {
+        if (comps.length) {
           select.innerHTML = '<option value="">Select a competition</option>' +
             comps.map(c => '<option value="' + c.id + '">' + c.title + '</option>').join('');
 

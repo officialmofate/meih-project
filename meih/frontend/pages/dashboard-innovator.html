@@ -77,7 +77,7 @@
           <p id="no-submissions" class="empty-state" hidden>You haven't registered any innovations yet. <a href="submit-innovation.html">Register your first</a>.</p>
           <table class="data-table" id="submissions-table" hidden>
             <thead>
-              <tr><th>Title</th><th>Competition</th><th>Category</th><th>Status</th><th>Payment</th><th>Votes</th><th></th></tr>
+              <tr><th>Title</th><th>Competition</th><th>Sub Theme</th><th>Status</th><th>Payment</th><th>Votes</th><th></th></tr>
             </thead>
             <tbody id="submissions-body"></tbody>
           </table>
@@ -221,7 +221,7 @@
           return `<tr>
             <td>${s.title || 'Untitled'}</td>
             <td>${s.competition_title || '—'}</td>
-            <td>${s.category || '—'}</td>
+            <td>${s.sub_theme || '—'}</td>
             <td><span class="badge ${sc}">${s.status.replace('_', ' ')}</span></td>
             <td>${paymentBadge(s.payment_status)}</td>
             <td>${s.vote_count || 0}</td>

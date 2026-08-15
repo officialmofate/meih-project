@@ -28,7 +28,7 @@
           <div class="section-loading" id="reviewer-assign-loading"><div class="section-spinner"></div><span>Loading assignments...</span></div>
           <p id="no-assignments" class="empty-state" hidden>No innovations assigned for review yet.</p>
           <table class="data-table" id="assignments-table" hidden>
-            <thead><tr><th>Title</th><th>Category</th><th>Competition</th><th>Votes</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Title</th><th>Competition</th><th>Sub Theme</th><th>Votes</th><th>Status</th><th></th></tr></thead>
             <tbody id="assignments-body"></tbody>
           </table>
           <p id="reviewer-view-details" hidden style="margin-top:var(--space-sm);font-size:13px;color:var(--color-text-muted);">Click <strong>View Details</strong> to see the full innovation content (problem, solution, impact, technology).</p>
@@ -140,8 +140,8 @@
         const action = a.innovation_score != null ? 'Edit Review' : 'Review';
         return `<tr>
           <td>${a.title || '—'}</td>
-          <td>${a.category || '—'}</td>
           <td>${a.competition_title || '—'}</td>
+          <td>${a.sub_theme || '—'}</td>
           <td>${a.total_points || 0} pts (${a.vote_count || 0} votes)</td>
           <td><span class="badge ${statusClass}">${a.innovation_score != null ? 'Reviewed' : 'Pending'}</span></td>
           <td><a href="innovation-detail.html?id=${a.id}" target="_blank" style="margin-right:8px;">View Details</a> <a href="#score-section" data-open-score="${a.id}">${action}</a></td>

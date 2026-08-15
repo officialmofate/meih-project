@@ -96,7 +96,7 @@
           <div class="section-loading" id="mgr-subs-loading"><div class="section-spinner"></div><span>Loading submissions...</span></div>
           <p id="no-pending-subs" class="empty-state" hidden data-i18n="no_pending_submissions">No submissions awaiting review.</p>
           <table class="data-table" id="pending-subs-table" hidden>
-            <thead><tr><th data-i18n="title">Title</th><th data-i18n="author">Author</th><th data-i18n="competition">Competition</th><th data-i18n="category">Category</th><th data-i18n="submitted">Submitted</th><th data-i18n="actions">Actions</th></tr></thead>
+            <thead><tr><th data-i18n="title">Title</th><th data-i18n="author">Author</th><th data-i18n="competition">Competition</th><th data-i18n="sub_theme">Sub Theme</th><th data-i18n="submitted">Submitted</th><th data-i18n="actions">Actions</th></tr></thead>
             <tbody id="pending-subs-body"></tbody>
           </table>
         </section>
@@ -382,7 +382,7 @@
           <td><a href="innovation-detail.html?id=${s.id}">${s.title || '—'}</a></td>
           <td>${s.author_name || '—'}</td>
           <td>${s.competition_title || '—'}</td>
-          <td>${s.category || '—'}</td>
+          <td>${s.sub_theme || '—'}</td>
           <td>${new Date(s.created_at).toLocaleDateString()}</td>
           <td>
             <button class="btn btn-sm btn-success approve-sub-btn" data-id="${s.id}">Approve</button>

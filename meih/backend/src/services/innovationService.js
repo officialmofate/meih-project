@@ -166,6 +166,22 @@ exports.getSubmission = async (id) => {
 
 exports.submit = async (userId, competitionId, payload) => {
   enforceWordLimits(payload);
+  const { rows: compRows } = await db.query(
+    `SELECT id, title, status, opens_at, closes_at FROM innovation_competitions WHERE id = $1`,
+    [competitionId]
+  );
+  const comp = compRows[0];
+  if (!comp) throw Object.assign(new Error('Competition not found'), { status: 404 });
+  if (comp.status !== 'open') {
+    throw Object.assign(new Error('This competition is not open for registrations'), { status: 400 });
+  }
+  const now = new Date();
+  if (comp.opens_at && new Date(comp.opens_at) > now) {
+    throw Object.assign(new Error('This competition has not opened for registrations yet'), { status: 400 });
+  }
+  if (comp.closes_at && new Date(comp.closes_at) < now) {
+    throw Object.assign(new Error('This competition is closed for registrations'), { status: 400 });
+  }
   const { rows } = await db.query(
     `INSERT INTO innovation_submissions
        (user_id, competition_id, title, category, main_theme, sub_theme, description, problem, solution, impact, technology, status)
