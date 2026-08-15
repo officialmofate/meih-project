@@ -35,6 +35,8 @@
           <span id="inn-team">—</span>
         </div>
 
+        <img id="inn-supportive-image" hidden style="max-width:100%;max-height:360px;border-radius:12px;border:1px solid var(--color-border);object-fit:contain;background:var(--color-surface-raised,#fff);margin:var(--space-md) 0;" alt="Innovation supporting material" />
+
         <section class="card">
           <h2 data-i18n="introduction">Introduction</h2>
           <p id="inn-problem">—</p>
@@ -109,9 +111,21 @@
       if (typeof initPageMeta === 'function') initPageMeta({
         title: (inn.title || 'Innovation') + ' — MEIH',
         description: (inn.problem || inn.solution || '').substring(0, 150),
-        image: inn.image_url || '',
+        image: inn.image_url ? window.resolveUrl(inn.image_url) : '',
         url: window.location.href
       });
+
+      const img = document.getElementById('inn-supportive-image');
+      if (img && (inn.image_url || inn.image_base64)) {
+        if (inn.image_base64) {
+          const ext = (inn.image_url || '.png').split('.').pop().toLowerCase();
+          const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/png';
+          img.src = 'data:' + mime + ';base64,' + inn.image_base64;
+        } else {
+          img.src = window.resolveUrl(inn.image_url);
+        }
+        img.hidden = false;
+      }
     }
 
     api.get(`/innovation/submissions/${innId}`).then(paint).catch(() => {
