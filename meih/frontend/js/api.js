@@ -64,6 +64,8 @@ async function request(path, { method = 'GET', body, headers = {}, isFormData = 
         throw new Error(err.message || 'Request failed');
       }
 
+      if (res.status === 204 || res.status === 205) return null;
+
       const data = await res.json();
 
       if (method === 'GET') {

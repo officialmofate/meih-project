@@ -67,7 +67,7 @@ exports.updateCompetition = async (id, payload) => {
 exports.closeCompetitionVoting = async (competitionId) => {
   const { rows } = await db.query(
     `UPDATE innovation_competitions
-     SET votes_closed_at = now(), updated_at = now()
+     SET votes_closed_at = now()
      WHERE id = $1 RETURNING *`,
     [competitionId]
   );
@@ -843,11 +843,11 @@ exports.getCertificateData = async (id) => {
             (SELECT j.signature_url FROM judge_scores jj
               JOIN users j ON j.id = jj.judge_id
               WHERE jj.submission_id = s.id AND j.signature_url IS NOT NULL
-              ORDER BY jj.updated_at DESC LIMIT 1) AS judge_signature,
+              ORDER BY jj.created_at DESC LIMIT 1) AS judge_signature,
             (SELECT j.signature_base64 FROM judge_scores jj
               JOIN users j ON j.id = jj.judge_id
               WHERE jj.submission_id = s.id AND j.signature_base64 IS NOT NULL
-              ORDER BY jj.updated_at DESC LIMIT 1) AS judge_signature_b64
+              ORDER BY jj.created_at DESC LIMIT 1) AS judge_signature_b64
      FROM innovation_submissions s
      LEFT JOIN users u ON u.id = s.user_id
      LEFT JOIN innovation_competitions c ON c.id = s.competition_id
