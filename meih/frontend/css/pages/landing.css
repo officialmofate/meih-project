@@ -75,6 +75,14 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+.landing-logo {
+  display: block;
+  height: 64px;
+  width: auto;
+  margin: var(--space-md) 0 var(--space-sm);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
 
 /* ── Hero ── */
 .hero {

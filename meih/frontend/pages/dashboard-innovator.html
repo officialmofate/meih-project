@@ -83,6 +83,13 @@
           </table>
         </section>
 
+        <section class="card wide" id="comments-section" hidden>
+          <h2>Comments from Reviewers, Judges & Voters</h2>
+          <div class="section-loading" id="comments-loading"><div class="section-spinner"></div><span>Loading comments...</span></div>
+          <p id="no-comments" class="empty-state" hidden>No comments yet. Comments from reviewers, judges, and voters will appear here.</p>
+          <ul class="comment-list" id="comments-list"></ul>
+        </section>
+
         <section class="card wide" id="requirements-section" hidden>
           <h2>Requirement Tracker — <span id="req-sub-title"></span></h2>
           <p class="text-muted" style="margin-bottom:var(--space-md);">Track your progress from submission to certificate.</p>
@@ -307,6 +314,33 @@
         document.getElementById('notification-list').innerHTML = items.map(n => `<li>${n.body ?? n.title}</li>`).join('');
       }
     }).catch(() => {});
+
+    api.get('/innovation/my/comments').then((comments) => {
+      var cLoad = document.getElementById('comments-loading');
+      if (cLoad) cLoad.remove();
+      document.getElementById('comments-section').hidden = false;
+      if (Array.isArray(comments) && comments.length) {
+        document.getElementById('comments-list').innerHTML = comments.map(c => {
+          var role = c.author_role ? c.author_role.replace(/_/g, ' ') : '';
+          var author = (c.author_name || 'Anonymous');
+          var text = (c.comment || c.text || '').replace(/</g, '&lt;');
+          var sub = c.submission_title ? 'on <strong>' + (c.submission_title.replace(/</g, '&lt;')) + '</strong>' : '';
+          var when = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
+          return '<li class="comment-item">' +
+            '<div class="comment-meta"><strong>' + author + '</strong>' + (role ? ' <span class="badge">' + role + '</span>' : '') + '</div>' +
+            '<div class="comment-text">' + text + '</div>' +
+            '<div class="comment-sub">' + sub + (when ? ' &middot; ' + when : '') + '</div>' +
+            '</li>';
+        }).join('');
+      } else {
+        document.getElementById('no-comments').hidden = false;
+      }
+    }).catch(() => {
+      var cLoad = document.getElementById('comments-loading');
+      if (cLoad) cLoad.remove();
+      document.getElementById('comments-section').hidden = false;
+      document.getElementById('no-comments').hidden = false;
+    });
   </script>
 </body>
 </html>

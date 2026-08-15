@@ -218,8 +218,8 @@ const en = {
   'actions': 'Actions',
 
   // Leaderboard
-  'live_leaderboard': 'Live Leaderboard',
-  'live_leaderboard_desc': 'Rankings update in real time as public votes come in.',
+  'live_leaderboard': 'Leaderboard',
+  'live_leaderboard_desc': 'See how public votes and judge scores rank the top innovations.',
   'all_competitions': 'All Competitions',
 
   // Innovation Detail
@@ -463,8 +463,8 @@ const sw = {
   'actions': 'Hatua',
 
   // Leaderboard
-  'live_leaderboard': 'Jedwali la Nafasi la Moja kwa Moja',
-  'live_leaderboard_desc': 'Nafasi zinasasishwa wakati halisi kama kura za umma zinavyokuja.',
+  'live_leaderboard': 'Jedwali la Nafasi',
+  'live_leaderboard_desc': 'Angalia jinsi kura za umma na alama za waamuzi zinavyoainisha uvumbuzi bora.',
   'all_competitions': 'Mashindano Yote',
 
   // Innovation Detail

@@ -32,9 +32,14 @@ exports.getCompetition = async (id) => {
 
 exports.createCompetition = async (payload) => {
   const { rows } = await db.query(
-    `INSERT INTO innovation_competitions (title, opens_at, closes_at, status)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [payload.title, payload.opensAt, payload.closesAt, payload.status || 'draft']
+    `INSERT INTO innovation_competitions (title, main_theme, sub_themes, opens_at, closes_at, status)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [
+      payload.title,
+      payload.mainTheme || payload.main_theme || null,
+      JSON.stringify(payload.subThemes || payload.sub_themes || []),
+      payload.opensAt, payload.closesAt, payload.status || 'draft'
+    ]
   );
   return rows[0];
 };
@@ -43,13 +48,67 @@ exports.updateCompetition = async (id, payload) => {
   const { rows } = await db.query(
     `UPDATE innovation_competitions SET
        title = COALESCE($2, title),
-       opens_at = COALESCE($3, opens_at),
-       closes_at = COALESCE($4, closes_at),
-       status = COALESCE($5, status)
+       main_theme = COALESCE($3, main_theme),
+       sub_themes = COALESCE($4, sub_themes),
+       opens_at = COALESCE($5, opens_at),
+       closes_at = COALESCE($6, closes_at),
+       status = COALESCE($7, status)
      WHERE id = $1 RETURNING *`,
-    [id, payload.title, payload.opensAt, payload.closesAt, payload.status]
+    [
+      id, payload.title,
+      payload.mainTheme || payload.main_theme || null,
+      JSON.stringify(payload.subThemes || payload.sub_themes || null),
+      payload.opensAt, payload.closesAt, payload.status
+    ]
   );
   return rows[0];
+};
+
+exports.closeCompetitionVoting = async (competitionId) => {
+  const { rows } = await db.query(
+    `UPDATE innovation_competitions
+     SET votes_closed_at = now(), updated_at = now()
+     WHERE id = $1 RETURNING *`,
+    [competitionId]
+  );
+  const comp = rows[0];
+  if (!comp) throw Object.assign(new Error('Competition not found'), { status: 404 });
+
+  const { rows: subs } = await db.query(
+    `SELECT id, user_id, title FROM innovation_submissions
+     WHERE competition_id = $1 AND status = 'approved'`,
+    [competitionId]
+  );
+  const emailNotification = require('./emailNotificationService');
+  for (const s of subs) {
+    emailNotification.onVotingClosed(s.user_id, s.title).catch(() => {});
+  }
+  return comp;
+};
+
+exports.deleteCompetition = async (id) => {
+  const client = await db.getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const subs = await client.query('SELECT id FROM innovation_submissions WHERE competition_id = $1', [id]);
+    for (const s of subs.rows) {
+      await client.query('DELETE FROM innovation_votes WHERE submission_id = $1', [s.id]);
+      await client.query('DELETE FROM innovation_comments WHERE submission_id = $1', [s.id]);
+      await client.query('DELETE FROM judge_scores WHERE submission_id = $1', [s.id]);
+      await client.query('DELETE FROM reviewer_scores WHERE submission_id = $1', [s.id]);
+      await client.query('DELETE FROM judge_assignments WHERE submission_id = $1', [s.id]);
+      await client.query('DELETE FROM reviewer_assignments WHERE submission_id = $1', [s.id]);
+      await client.query('DELETE FROM innovation_submissions WHERE id = $1', [s.id]);
+    }
+    await client.query('DELETE FROM innovation_competitions WHERE id = $1', [id]);
+    await client.query('COMMIT');
+    return true;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 };
 
 exports.listSubmissions = async ({ page = 1, limit = 50, category, status, competitionId } = {}) => {
@@ -109,11 +168,14 @@ exports.submit = async (userId, competitionId, payload) => {
   enforceWordLimits(payload);
   const { rows } = await db.query(
     `INSERT INTO innovation_submissions
-       (user_id, competition_id, title, category, description, problem, solution, impact, technology, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending_review')
+       (user_id, competition_id, title, category, main_theme, sub_theme, description, problem, solution, impact, technology, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending_review')
      RETURNING *`,
     [
-      userId, competitionId, payload.title, payload.category, payload.description,
+      userId, competitionId, payload.title, payload.category,
+      payload.mainTheme || payload.main_theme || null,
+      payload.subTheme || payload.sub_theme || null,
+      payload.description,
       payload.problem, payload.solution, payload.impact, payload.technology,
     ]
   );
@@ -126,21 +188,30 @@ exports.updateSubmission = async (id, userId, payload) => {
     `UPDATE innovation_submissions SET
        title = COALESCE($3, title),
        category = COALESCE($4, category),
-       description = COALESCE($5, description),
-       problem = COALESCE($6, problem),
-       solution = COALESCE($7, solution),
-       impact = COALESCE($8, impact),
-       technology = COALESCE($9, technology),
+       main_theme = COALESCE($5, main_theme),
+       sub_theme = COALESCE($6, sub_theme),
+       description = COALESCE($7, description),
+       problem = COALESCE($8, problem),
+       solution = COALESCE($9, solution),
+       impact = COALESCE($10, impact),
+       technology = COALESCE($11, technology),
        updated_at = now()
      WHERE id = $1 AND user_id = $2
      RETURNING *`,
-    [id, userId, payload.title, payload.category, payload.description,
-     payload.problem, payload.solution, payload.impact, payload.technology]
+    [id, userId, payload.title, payload.category,
+     payload.mainTheme || payload.main_theme || null,
+     payload.subTheme || payload.sub_theme || null,
+     payload.description, payload.problem, payload.solution, payload.impact, payload.technology]
   );
   return rows[0];
 };
 
-exports.deleteSubmission = async (id, userId) => {
+exports.deleteSubmission = async (id, userId, userRole) => {
+  const canDeleteAny = userRole === 'admin' || userRole === 'superadmin' || userRole === 'innovator_manager';
+  if (canDeleteAny) {
+    const { rowCount } = await db.query('DELETE FROM innovation_submissions WHERE id = $1', [id]);
+    return rowCount > 0;
+  }
   const { rowCount } = await db.query(
     'DELETE FROM innovation_submissions WHERE id = $1 AND user_id = $2',
     [id, userId]
@@ -183,7 +254,7 @@ exports.vote = async (submissionId, voterId, otp) => {
 
   const { rows: sub } = await db.query(
     `SELECT s.competition_id, s.status,
-            c.opens_at, c.closes_at, c.status AS comp_status
+            c.opens_at, c.closes_at, c.status AS comp_status, c.votes_closed_at
      FROM innovation_submissions s
      LEFT JOIN innovation_competitions c ON c.id = s.competition_id
      WHERE s.id = $1`,
@@ -203,6 +274,9 @@ exports.vote = async (submissionId, voterId, otp) => {
   }
   if (sub[0].closes_at && now > new Date(sub[0].closes_at)) {
     throw Object.assign(new Error('Voting period has ended'), { status: 400 });
+  }
+  if (sub[0].votes_closed_at) {
+    throw Object.assign(new Error('Voting has been closed by the innovation manager'), { status: 400 });
   }
   if (sub[0].comp_status && !['open', 'voting'].includes(sub[0].comp_status)) {
     throw Object.assign(new Error('Competition is not accepting votes'), { status: 400 });
@@ -278,12 +352,27 @@ exports.commentSubmission = async (submissionId, userId, comment) => {
 
 exports.getComments = async (submissionId) => {
   const { rows } = await db.query(
-    `SELECT c.*, u.full_name AS author_name
+    `SELECT c.*, u.full_name AS author_name, u.role AS author_role
      FROM innovation_comments c
      LEFT JOIN users u ON u.id = c.user_id
      WHERE c.submission_id = $1
      ORDER BY c.created_at DESC`,
     [submissionId]
+  );
+  return rows;
+};
+
+exports.listMyComments = async (userId) => {
+  const { rows } = await db.query(
+    `SELECT c.id, c.submission_id, c.comment, c.created_at,
+            s.title AS submission_title,
+            u.full_name AS author_name, u.role AS author_role
+     FROM innovation_comments c
+     JOIN innovation_submissions s ON s.id = c.submission_id
+     LEFT JOIN users u ON u.id = c.user_id
+     WHERE s.user_id = $1
+     ORDER BY c.created_at DESC`,
+    [userId]
   );
   return rows;
 };
@@ -589,6 +678,7 @@ exports.getSubmissionRequirements = async (id, userId) => {
   const { rows: sub } = await db.query(
     `SELECT s.*, u.full_name AS author_name,
             c.title AS competition_title, c.opens_at AS competition_opens, c.closes_at AS competition_closes,
+            c.votes_closed_at AS competition_votes_closed,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
             js.innovation_score, js.impact_score, js.feasibility_score,
             js.scalability_score, js.sustainability_score, js.technology_score,
@@ -624,7 +714,7 @@ exports.getSubmissionRequirements = async (id, userId) => {
 
   const hasReviewer = await exports.hasReviewerScore(subData.id);
   const hasJudge = await exports.hasJudgeScore(subData.id);
-  const voteOpen = subData.status === 'approved' && hasReviewer && hasJudge;
+  const voteOpen = subData.status === 'approved' && hasReviewer && hasJudge && !subData.competition_votes_closed;
 
   const steps = [
     {
@@ -743,7 +833,21 @@ exports.getCertificateData = async (id) => {
             js.innovation_score, js.impact_score, js.feasibility_score,
             js.scalability_score, js.sustainability_score, js.technology_score,
             js.business_model_score, js.social_impact_score, js.market_readiness_score,
-            js.presentation_score, js.comments AS judge_comments
+            js.presentation_score, js.comments AS judge_comments,
+            (SELECT d.signature_url FROM users d
+              WHERE d.role IN ('innovator_manager','admin','superadmin') AND d.signature_url IS NOT NULL
+              ORDER BY d.updated_at DESC LIMIT 1) AS director_signature,
+            (SELECT d.signature_base64 FROM users d
+              WHERE d.role IN ('innovator_manager','admin','superadmin') AND d.signature_base64 IS NOT NULL
+              ORDER BY d.updated_at DESC LIMIT 1) AS director_signature_b64,
+            (SELECT j.signature_url FROM judge_scores jj
+              JOIN users j ON j.id = jj.judge_id
+              WHERE jj.submission_id = s.id AND j.signature_url IS NOT NULL
+              ORDER BY jj.updated_at DESC LIMIT 1) AS judge_signature,
+            (SELECT j.signature_base64 FROM judge_scores jj
+              JOIN users j ON j.id = jj.judge_id
+              WHERE jj.submission_id = s.id AND j.signature_base64 IS NOT NULL
+              ORDER BY jj.updated_at DESC LIMIT 1) AS judge_signature_b64
      FROM innovation_submissions s
      LEFT JOIN users u ON u.id = s.user_id
      LEFT JOIN innovation_competitions c ON c.id = s.competition_id

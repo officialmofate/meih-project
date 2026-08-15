@@ -113,6 +113,37 @@ async function autoMigrate() {
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS admin_rating INT`);
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_url TEXT`);
     await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_base64 TEXT`);
+    // 019 — competition themes + cleanup of seeded test data
+    await db.query(`ALTER TABLE innovation_competitions ADD COLUMN IF NOT EXISTS main_theme TEXT`);
+    await db.query(`ALTER TABLE innovation_competitions ADD COLUMN IF NOT EXISTS sub_themes JSONB DEFAULT '[]'::jsonb`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS main_theme TEXT`);
+    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS sub_theme TEXT`);
+    // 020 — certificate signatures + manager-closed voting
+    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_url TEXT`);
+    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_base64 TEXT`);
+    await db.query(`ALTER TABLE innovation_competitions ADD COLUMN IF NOT EXISTS votes_closed_at TIMESTAMPTZ`);
+    await db.query(`
+      DO $$
+      DECLARE
+        test_titles TEXT[] := ARRAY['Innovation Summit 2026','TZ Youth Hackathon 2026','Health Innovation Challenge 2026'];
+        v_sub RECORD;
+      BEGIN
+        FOR v_sub IN
+          SELECT s.id
+          FROM innovation_submissions s
+          JOIN innovation_competitions c ON c.id = s.competition_id
+          WHERE c.title = ANY (test_titles)
+        LOOP
+          DELETE FROM innovation_votes WHERE submission_id = v_sub.id;
+          DELETE FROM innovation_comments WHERE submission_id = v_sub.id;
+          DELETE FROM judge_scores WHERE submission_id = v_sub.id;
+          DELETE FROM reviewer_scores WHERE submission_id = v_sub.id;
+          DELETE FROM judge_assignments WHERE submission_id = v_sub.id;
+          DELETE FROM reviewer_assignments WHERE submission_id = v_sub.id;
+          DELETE FROM innovation_submissions WHERE id = v_sub.id;
+        END LOOP;
+        DELETE FROM innovation_competitions WHERE title = ANY (test_titles);
+      END $$`);
     await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_price NUMERIC(12,2)`);
     await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS num_payments INT DEFAULT 1`);
     await db.query(`ALTER TABLE judge_assignments ADD COLUMN IF NOT EXISTS submission_id UUID REFERENCES innovation_submissions(id) ON DELETE CASCADE`);

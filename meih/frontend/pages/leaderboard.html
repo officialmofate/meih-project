@@ -20,8 +20,6 @@
   <link rel="stylesheet" href="../css/pages/innovation.css" />
   <style>
     .leaderboard-status { display:flex; align-items:center; gap:8px; margin-bottom:var(--space-md); font-size:13px; color:var(--color-text-muted); }
-    .leaderboard-status .live-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(0,184,148,0.12); color:#00b894; padding:3px 10px; border-radius:20px; font-weight:600; font-size:12px; }
-    .leaderboard-status .live-badge .live-dot { width:7px; height:7px; }
     .leaderboard-status .last-updated { opacity:0.7; }
     .leaderboard-row { display:flex; align-items:center; gap:12px; padding:var(--space-md); border-left:4px solid transparent; transition:border-color .2s; }
     .leaderboard-row .rank { font-weight:800; font-size:18px; min-width:36px; text-align:center; color:var(--color-text-muted); }
@@ -54,7 +52,6 @@
       </header>
 
       <div class="leaderboard-status">
-        <span class="live-badge"><span class="live-dot" aria-hidden="true"></span> Live</span>
         <select id="competition-select" aria-label="Select competition" style="padding:8px 12px; border:1px solid var(--color-border); border-radius:var(--radius-md); font-size:13px; max-width:300px;">
           <option value="">All Competitions</option>
         </select>
@@ -75,7 +72,6 @@
     const container = document.getElementById('leaderboard-list');
     const select = document.getElementById('competition-select');
     const lastUpdatedEl = document.getElementById('last-updated');
-    let refreshTimer = null;
 
     function paint(rows) {
       if (!rows.length) {
@@ -119,11 +115,6 @@
       }
     }
 
-    function startAutoRefresh() {
-      if (refreshTimer) clearInterval(refreshTimer);
-      refreshTimer = setInterval(load, 15000);
-    }
-
     // Load competitions for dropdown
     api.get('/innovation/competitions')
       .then((comps) => {
@@ -136,10 +127,9 @@
 
     select.addEventListener('change', load);
 
-    // Initial load + auto-refresh
+    // Initial load
     container.innerHTML = '<li class="leaderboard-empty">Loading leaderboard...</li>';
     load();
-    startAutoRefresh();
   </script>
 </body>
 </html>

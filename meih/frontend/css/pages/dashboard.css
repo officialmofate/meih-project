@@ -15,8 +15,7 @@
   top: 0;
 }
 
-/* Dashboard stat cards with gradient */
-.dashboard .stat-card {
+/* Dashboard stat cards with gradient */.dashboard .stat-card {
   background: var(--gradient-card);
   backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-glass-border);
@@ -246,3 +245,101 @@
   object-fit: cover;
 }
 .screenshot-thumb:hover { transform: scale(1.05); }
+
+/* ═══════════════════════════════════════════════════════════════
+   SUB-THEMES EDITOR — dynamic rows with "+ Add"
+   ═══════════════════════════════════════════════════════════════ */
+
+.subthemes-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subtheme-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: subtheme-pop 0.25s ease-out both;
+}
+
+.subtheme-row .subtheme-input {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.subtheme-row .subtheme-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+}
+
+.subtheme-row .subtheme-remove {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.subtheme-row .subtheme-remove:hover {
+  color: #fff;
+  background: rgba(214, 48, 49, 0.85);
+  border-color: rgba(214, 48, 49, 0.85);
+}
+
+.add-subtheme-btn {
+  align-self: flex-start;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: rgba(108, 92, 231, 0.1);
+  border: 1px dashed rgba(108, 92, 231, 0.4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-subtheme-btn:hover {
+  background: rgba(108, 92, 231, 0.2);
+  border-color: var(--color-primary);
+}
+
+@keyframes subtheme-pop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Innovator dashboard — comments list */
+.comment-list { list-style: none; display: flex; flex-direction: column; gap: var(--space-sm); }
+.comment-item {
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.comment-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.comment-meta strong { font-size: 14px; }
+.comment-text { font-size: 14px; line-height: 1.6; color: var(--color-text-secondary); }
+.comment-sub { font-size: 12px; color: var(--color-text-muted); margin-top: 6px; }

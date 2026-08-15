@@ -32,6 +32,16 @@
             <option value="">Select a competition</option>
           </select>
 
+          <label for="inno-main-theme">Main Theme</label>
+          <select id="inno-main-theme" name="mainTheme" required disabled>
+            <option value="">Select a competition first</option>
+          </select>
+
+          <label for="inno-sub-theme">Sub Theme</label>
+          <select id="inno-sub-theme" name="subTheme" required disabled>
+            <option value="">Select a main theme first</option>
+          </select>
+
           <label for="inno-title">Title <span class="text-muted" style="font-weight:400;">(max 20 words)</span></label>
           <input id="inno-title" name="title" type="text" required placeholder="A short, descriptive name" maxlength="200" />
           <p class="word-count-hint" data-for="inno-title" style="font-size:11px;color:var(--color-text-muted,#999);margin:2px 0 0;">0 / 20 words</p>
@@ -179,9 +189,35 @@
       form.querySelectorAll('[data-next]').forEach(function(btn) {
         btn.addEventListener('click', function() {
           var fieldset = btn.closest('.form-step');
-          if (!fieldset.checkValidity()) { fieldset.reportValidity(); return; }
+          var fields = fieldset.querySelectorAll('input, select, textarea');
+          var empty = [];
+          for (var i = 0; i < fields.length; i++) {
+            var f = fields[i];
+            if (f.disabled || f.type === 'file' || f.type === 'hidden' || f.type === 'checkbox' || f.type === 'radio') continue;
+            var val = f.value;
+            if (f.type === 'select-one' || f.type === 'select-multiple') {
+              if (!val) empty.push(f);
+            } else if (typeof val === 'string' && !val.trim()) {
+              empty.push(f);
+            }
+          }
+          if (!fieldset.checkValidity() || empty.length) {
+            fieldset.reportValidity();
+            if (empty.length) {
+              var first = empty[0];
+              first.focus();
+              first.style.borderColor = '#e74c3c';
+            }
+            return;
+          }
           goTo(current + 1);
         });
+      });
+
+      form.addEventListener('input', function(e) {
+        if (e.target.style && e.target.style.borderColor === 'rgb(231, 76, 60)' || (e.target.style && e.target.style.borderColor)) {
+          e.target.style.borderColor = '';
+        }
       });
 
       form.querySelectorAll('[data-back]').forEach(function(btn) {
@@ -191,6 +227,9 @@
       function renderReview() {
         var data = new FormData(form);
         document.getElementById('review-summary').innerHTML =
+          '<dt>Competition</dt><dd>' + (data.get('competitionId') || '—') + '</dd>' +
+          '<dt>Main Theme</dt><dd>' + (data.get('mainTheme') || '—') + '</dd>' +
+          '<dt>Sub Theme</dt><dd>' + (data.get('subTheme') || '—') + '</dd>' +
           '<dt>Title</dt><dd>' + (data.get('title') || '—') + '</dd>' +
           '<dt>Category</dt><dd>' + (data.get('category') || '—') + '</dd>' +
           '<dt>Country</dt><dd>' + (data.get('country') || '—') + '</dd>' +
@@ -268,9 +307,71 @@
       try {
         const comps = await api.get('/innovation/competitions');
         const select = document.getElementById('inno-competition');
+        const mainThemeSelect = document.getElementById('inno-main-theme');
         if (Array.isArray(comps) && comps.length) {
           select.innerHTML = '<option value="">Select a competition</option>' +
             comps.map(c => '<option value="' + c.id + '">' + c.title + '</option>').join('');
+
+          function populateThemes(compId) {
+            const comp = comps.find(c => c.id === compId);
+            const mainSelect = document.getElementById('inno-main-theme');
+            const subSelect = document.getElementById('inno-sub-theme');
+            if (!comp) {
+              mainSelect.innerHTML = '<option value="">Select a competition first</option>';
+              subSelect.innerHTML = '<option value="">Select a main theme first</option>';
+              mainSelect.disabled = true;
+              subSelect.disabled = true;
+              return;
+            }
+            if (comp.main_theme) {
+              mainSelect.innerHTML = '<option value="">Select a main theme</option><option value="' + (comp.main_theme || '').replace(/"/g, '&quot;') + '">' + (comp.main_theme || '') + '</option>';
+            } else {
+              mainSelect.innerHTML = '<option value="">No main theme set</option>';
+            }
+            mainSelect.disabled = false;
+            subSelect.innerHTML = '<option value="">Select a main theme first</option>';
+            subSelect.disabled = true;
+            if (!comp.main_theme) return;
+            const subThemes = Array.isArray(comp.sub_themes) ? comp.sub_themes : [];
+            if (subThemes.length) {
+              subSelect.innerHTML = '<option value="">Select a sub theme</option>' +
+                subThemes.map(s => '<option value="' + String(s).replace(/"/g, '&quot;') + '">' + String(s) + '</option>').join('');
+              subSelect.disabled = false;
+            } else {
+              subSelect.innerHTML = '<option value="">No sub themes set</option>';
+            }
+          }
+
+          mainThemeSelect.addEventListener('change', function() {
+            const comp = comps.find(c => c.id === select.value);
+            const subSelect = document.getElementById('inno-sub-theme');
+            if (!comp || !mainThemeSelect.value) {
+              subSelect.innerHTML = '<option value="">Select a main theme first</option>';
+              subSelect.disabled = true;
+              return;
+            }
+            const subThemes = Array.isArray(comp.sub_themes) ? comp.sub_themes : [];
+            if (subThemes.length) {
+              subSelect.innerHTML = '<option value="">Select a sub theme</option>' +
+                subThemes.map(s => '<option value="' + String(s).replace(/"/g, '&quot;') + '">' + String(s) + '</option>').join('');
+              subSelect.disabled = false;
+            } else {
+              subSelect.innerHTML = '<option value="">No sub themes set</option>';
+              subSelect.disabled = true;
+            }
+          });
+
+          select.addEventListener('change', function() {
+            populateThemes(select.value);
+          });
+
+          // Pre-select competition from URL (?competition=ID) and populate themes
+          var params = new URLSearchParams(window.location.search);
+          var compParam = params.get('competition');
+          if (compParam && comps.some(c => c.id === compParam)) {
+            select.value = compParam;
+            populateThemes(compParam);
+          }
         }
       } catch {}
     })();
@@ -381,6 +482,9 @@
             screenshotUrl: screenshotUrl
           });
           document.getElementById('inno-pay-success').hidden = false;
+          setTimeout(function() {
+            window.location.href = 'dashboard-innovator.html';
+          }, 1200);
         } catch (err) {
           alert(err.message);
         } finally {

@@ -45,9 +45,12 @@ router.get('/competitions', ctrl.listCompetitions);
 router.get('/competitions/:id', ctrl.getCompetition);
 router.post('/competitions', authenticate, authorize('admin', 'innovator_manager'), ctrl.createCompetition);
 router.put('/competitions/:id', authenticate, authorize('admin', 'innovator_manager'), ctrl.updateCompetition);
+router.delete('/competitions/:id', authenticate, authorize('admin', 'innovator_manager'), ctrl.deleteCompetition);
+router.post('/competitions/:id/close-voting', authenticate, authorize('admin', 'innovator_manager'), ctrl.closeCompetitionVoting);
 router.get('/competitions/:id/submissions', ctrl.listCompetitionSubmissions);
 router.post('/upload-screenshot', authenticate, authorize('innovator'), upload.single('screenshot'), ctrl.uploadScreenshot);
 router.post('/upload-profile-image', authenticate, profileUpload.single('image'), ctrl.uploadInnovatorImage);
+router.post('/upload-signature', authenticate, profileUpload.single('signature'), ctrl.uploadSignature);
 router.post('/upload-submission-image', authenticate, authorize('innovator'), profileUpload.single('image'), ctrl.uploadSubmissionImage);
 
 router.post('/competitions/:id/submit', authenticate, authorize('innovator'), ctrl.submitInnovation);
@@ -60,6 +63,7 @@ router.delete('/submissions/:id', authenticate, ctrl.deleteSubmission);
 router.post('/submissions/:id/vote', authenticate, ctrl.voteSubmission);
 router.get('/submissions/:id/votes', ctrl.getVotes);
 router.post('/submissions/:id/comment', authenticate, ctrl.commentSubmission);
+router.get('/my/comments', authenticate, ctrl.listMyComments);
 router.get('/submissions/:id/comments', ctrl.getComments);
 router.put('/submissions/:id/rate', authenticate, authorize('admin', 'innovator_manager', 'judge'), ctrl.rateSubmission);
 

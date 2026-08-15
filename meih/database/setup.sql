@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(50) NOT NULL DEFAULT 'client'
     CHECK (role IN ('client','planner','vendor','innovator','innovator_manager','judge','public_voter','admin','superadmin')),
   status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended')),
+  image_url TEXT,
+  image_base64 TEXT,
+  signature_url TEXT,
+  signature_base64 TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (email, role)
@@ -118,10 +122,13 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE TABLE IF NOT EXISTS innovation_competitions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title VARCHAR(255) NOT NULL,
+  main_theme TEXT,
+  sub_themes JSONB DEFAULT '[]'::jsonb,
   opens_at TIMESTAMPTZ,
   closes_at TIMESTAMPTZ,
   status VARCHAR(20) NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft','open','voting','judging','completed')),
+  votes_closed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -132,6 +139,8 @@ CREATE TABLE IF NOT EXISTS innovation_submissions (
   competition_id UUID NOT NULL REFERENCES innovation_competitions(id),
   title VARCHAR(255) NOT NULL,
   category VARCHAR(100),
+  main_theme TEXT,
+  sub_theme TEXT,
   description TEXT,
   problem TEXT,
   solution TEXT,
@@ -300,12 +309,7 @@ INSERT INTO event_categories (name, suggested_fee_usd) VALUES
   ('Awards Ceremony', 250)
 ON CONFLICT (name) DO NOTHING;
 
--- Seed innovation competitions
-INSERT INTO innovation_competitions (title, opens_at, closes_at, status) VALUES
-  ('Innovation Summit 2026', '2026-01-01T00:00:00Z', '2026-06-30T23:59:59Z', 'voting'),
-  ('TZ Youth Hackathon 2026', '2026-03-01T00:00:00Z', '2026-05-31T23:59:59Z', 'open'),
-  ('Health Innovation Challenge 2026', '2026-02-15T00:00:00Z', '2026-07-15T23:59:59Z', 'open')
-ON CONFLICT DO NOTHING;
+-- Seed innovation competitions (removed — competitions are created by innovation managers at runtime)
 
 -- Seed superadmin — no password required
 INSERT INTO users (email, password_hash, full_name, role, status)

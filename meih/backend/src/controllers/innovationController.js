@@ -67,6 +67,20 @@ function loadImageAsDataUrl(imageUrl) {
   });
 }
 
+const MOFATE_LOGO_PATH = path.join(__dirname, '../../../frontend/assets/logo/MOFATE-LOGO-FULLCOLOR.png');
+
+function loadMofateLogo() {
+  try {
+    if (fs.existsSync(MOFATE_LOGO_PATH)) {
+      const data = fs.readFileSync(MOFATE_LOGO_PATH);
+      if (data.length > 0) {
+        return { buffer: data, dataUrl: 'data:image/png;base64,' + data.toString('base64') };
+      }
+    }
+  } catch (e) { /* fall back to text header */ }
+  return null;
+}
+
 exports.listCompetitions = async (req, res, next) => {
   try {
     const competitions = await innovationService.listCompetitions();
@@ -130,9 +144,24 @@ exports.updateSubmission = async (req, res, next) => {
 
 exports.deleteSubmission = async (req, res, next) => {
   try {
-    const deleted = await innovationService.deleteSubmission(req.params.id, req.user.id);
+    const deleted = await innovationService.deleteSubmission(req.params.id, req.user.id, req.user.role);
     if (!deleted) return res.status(404).json({ message: 'Submission not found or unauthorized' });
     res.status(204).end();
+  } catch (err) { next(err); }
+};
+
+exports.deleteCompetition = async (req, res, next) => {
+  try {
+    const deleted = await innovationService.deleteCompetition(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Competition not found' });
+    res.status(204).end();
+  } catch (err) { next(err); }
+};
+
+exports.closeCompetitionVoting = async (req, res, next) => {
+  try {
+    const comp = await innovationService.closeCompetitionVoting(req.params.id);
+    res.json({ message: 'Voting closed for all submissions in this competition.', competition: comp });
   } catch (err) { next(err); }
 };
 
@@ -173,6 +202,13 @@ exports.commentSubmission = async (req, res, next) => {
 exports.getComments = async (req, res, next) => {
   try {
     const comments = await innovationService.getComments(req.params.id);
+    res.json(comments);
+  } catch (err) { next(err); }
+};
+
+exports.listMyComments = async (req, res, next) => {
+  try {
+    const comments = await innovationService.listMyComments(req.user.id);
     res.json(comments);
   } catch (err) { next(err); }
 };
@@ -329,6 +365,25 @@ exports.uploadInnovatorImage = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.uploadSignature = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No signature image uploaded' });
+    const url = '/uploads/profiles/' + req.file.filename;
+    let b64 = null;
+    try {
+      const fileData = fs.readFileSync(req.file.path);
+      b64 = fileData.toString('base64');
+    } catch (e) { console.log('[UPLOAD] Could not read uploaded file for base64:', e.message); }
+    const db = require('../config/database');
+    const { rowCount } = await db.query(
+      'UPDATE users SET signature_url = $1, signature_base64 = $2 WHERE id = $3',
+      [url, b64, req.user.id]
+    );
+    console.log('[UPLOAD] Saved signature for user', req.user.id, '→', url, 'base64:', b64 ? b64.length + ' chars' : 'none', 'rows updated:', rowCount);
+    res.json({ signature_url: url, url });
+  } catch (err) { next(err); }
+};
+
 exports.uploadSubmissionImage = async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
@@ -411,6 +466,8 @@ exports.getTicket = async (req, res, next) => {
       ? new Date(ticket.competition_opens).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) + ' – ' + new Date(ticket.competition_closes).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : 'TBD';
 
+    const logo = loadMofateLogo();
+
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -423,7 +480,8 @@ exports.getTicket = async (req, res, next) => {
   body { font-family:'Inter',sans-serif; background:#1a1a2e; color:#fff; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
   .ticket { width:100%; max-width:640px; background:linear-gradient(145deg,#16213e,#0f3460); border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.4); }
   .ticket-header { background:linear-gradient(135deg,#6c5ce7,#a855f7); padding:28px 32px; text-align:center; }
-  .ticket-header h1 { font-size:13px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; opacity:0.85; }
+  .ticket-header .ticket-logo { display:inline-block; background:#fff; border-radius:10px; padding:6px 14px; margin-bottom:10px; }
+  .ticket-header .ticket-logo img { height:40px; width:auto; max-width:260px; object-fit:contain; }
   .ticket-header h2 { font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; opacity:0.7; margin-top:4px; }
   .ticket-header .event-name { font-size:24px; font-weight:900; margin-top:6px; line-height:1.2; }
   .ticket-body { padding:28px 32px; }
@@ -446,7 +504,9 @@ exports.getTicket = async (req, res, next) => {
 <body>
 <div class="ticket">
   <div class="ticket-header">
-    <h1>MOFATE</h1>
+    ${logo
+      ? `<div class="ticket-logo"><img src="${logo.dataUrl}" alt="MOFATE" /></div>`
+      : `<h1>MOFATE</h1>`}
     <h2>Innovation Hub Ticket</h2>
     <div class="event-name">${ticket.title || 'Innovation'}</div>
   </div>
@@ -457,7 +517,6 @@ exports.getTicket = async (req, res, next) => {
       <div class="ticket-field"><label>Category</label><div class="value">${ticket.category || '—'}</div></div>
       <div class="ticket-field"><label>Competition Dates</label><div class="value">${competitionDates}</div></div>
       <div class="ticket-field"><label>Status</label><div class="value" style="color:#00b894;">APPROVED</div></div>
-      <div class="ticket-field"><label>Votes</label><div class="value">${ticket.vote_count || 0}</div></div>
     </div>
     <hr class="divider"/>
     <div class="qr-section">
@@ -564,14 +623,29 @@ exports.getTicketPDF = async (req, res, next) => {
     });
 
     doc.rect(0, 0, doc.page.width, 160).fill(purple);
-    doc.fillColor('#ffffff').fontSize(12).font('Helvetica')
-      .text('MOFATE', 50, 30, { align: 'center' });
-    doc.fontSize(10).font('Helvetica')
-      .text('INNOVATION HUB TICKET', 50, 48, { align: 'center', letterSpacing: 3 });
-    doc.fontSize(24).font('Helvetica-Bold')
-      .text(ticket.title || 'Innovation', 50, 70, { align: 'center', width: doc.page.width - 100 });
-    doc.fontSize(11).font('Helvetica')
-      .text('YOUR INNOVATION SHOWCASE TICKET', 50, 120, { align: 'center', letterSpacing: 2 });
+
+    const logo = loadMofateLogo();
+    if (logo) {
+      try {
+        const chipW = 260;
+        const chipH = 44;
+        doc.roundedRect((doc.page.width - chipW) / 2, 24, chipW, chipH, 8).fill('#ffffff');
+        doc.image(logo.buffer, (doc.page.width - chipW) / 2, 24, { fit: [chipW, chipH], align: 'center', valign: 'center' });
+      } catch (e) {
+        console.error('[TICKET-PDF] Failed to render logo, falling back to text:', e.message);
+        doc.fillColor('#ffffff').fontSize(12).font('Helvetica')
+          .text('MOFATE', 50, 30, { align: 'center' });
+      }
+    } else {
+      doc.fillColor('#ffffff').fontSize(12).font('Helvetica')
+        .text('MOFATE', 50, 30, { align: 'center' });
+    }
+    doc.fontSize(10).font('Helvetica').fillColor('#ffffff')
+      .text('INNOVATION HUB TICKET', 50, 78, { align: 'center', letterSpacing: 3 });
+    doc.fontSize(24).font('Helvetica-Bold').fillColor('#ffffff')
+      .text(ticket.title || 'Innovation', 50, 98, { align: 'center', width: doc.page.width - 100 });
+    doc.fontSize(11).font('Helvetica').fillColor('#ffffff')
+      .text('YOUR INNOVATION SHOWCASE TICKET', 50, 146, { align: 'center', letterSpacing: 2 });
 
     doc.fillColor(dark);
     const startY = 190;
@@ -584,7 +658,6 @@ exports.getTicketPDF = async (req, res, next) => {
     drawField(70, startY + 60, 'Category', ticket.category || '\u2014');
     drawField(310, startY + 60, 'Dates', competitionDates);
     drawField(70, startY + 120, 'Status', 'APPROVED');
-    drawField(310, startY + 120, 'Votes', String(ticket.vote_count || 0));
 
     doc.moveTo(50, startY + 180).lineTo(doc.page.width - 50, startY + 180).lineWidth(1).dash(5, { space: 5 }).strokeColor(lightGray).stroke();
     doc.fontSize(9).font('Helvetica').fillColor(gray)
@@ -645,6 +718,24 @@ exports.getCertificate = async (req, res, next) => {
       const dataUrl = await loadImageAsDataUrl(cert.submission_image);
       submissionImg = dataUrl || '';
     }
+    let directorSig = '';
+    if (cert.director_signature_b64) {
+      const ext = path.extname(cert.director_signature || '.png').toLowerCase().replace('.', '');
+      const mime = ext === 'jpg' ? 'jpeg' : ext === 'jpeg' ? 'jpeg' : ext === 'gif' ? 'gif' : ext === 'webp' ? 'webp' : 'png';
+      directorSig = 'data:image/' + mime + ';base64,' + cert.director_signature_b64;
+    } else {
+      const dataUrl = await loadImageAsDataUrl(cert.director_signature);
+      directorSig = dataUrl || '';
+    }
+    let judgeSig = '';
+    if (cert.judge_signature_b64) {
+      const ext = path.extname(cert.judge_signature || '.png').toLowerCase().replace('.', '');
+      const mime = ext === 'jpg' ? 'jpeg' : ext === 'jpeg' ? 'jpeg' : ext === 'gif' ? 'gif' : ext === 'webp' ? 'webp' : 'png';
+      judgeSig = 'data:image/' + mime + ';base64,' + cert.judge_signature_b64;
+    } else {
+      const dataUrl = await loadImageAsDataUrl(cert.judge_signature);
+      judgeSig = dataUrl || '';
+    }
     const initials = (cert.author_name || 'IN').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     const hasRating = cert.admin_rating != null && cert.admin_rating !== '';
     const judgeStars = hasRating ? Math.round(Number(cert.admin_rating)) : 0;
@@ -652,6 +743,8 @@ exports.getCertificate = async (req, res, next) => {
       `<span style="font-size:22px;color:${hasRating ? (i < judgeStars ? '#f59e0b' : '#d1d5db') : '#e2e0dc'};">${hasRating ? (i < judgeStars ? '&#9733;' : '&#9734;') : '&#9734;'}</span>`
     ).join('');
     const judgeText = hasRating ? 'Judge Rating: ' + cert.admin_rating + ' / 5' : 'Pending Evaluation';
+
+    const logo = loadMofateLogo();
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -674,6 +767,8 @@ exports.getCertificate = async (req, res, next) => {
   .cert-corner.br{bottom:-1px;right:-1px;border-bottom:3px solid #c9a84c;border-right:3px solid #c9a84c}
   .cert-header{text-align:center;padding-bottom:24px;border-bottom:1px solid #e2e0dc;position:relative}
   .cert-org{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;color:#1a3a5c;margin-bottom:4px}
+  .cert-logo{margin-bottom:6px}
+  .cert-logo img{height:72px;max-width:320px;object-fit:contain}
   .cert-dept{font-family:'Inter',sans-serif;font-size:9px;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:#8a8580;margin-bottom:20px}
   .cert-title{font-family:'Playfair Display',serif;font-size:34px;font-weight:700;color:#1a3a5c;letter-spacing:0.01em;line-height:1.15;margin-bottom:6px}
   .cert-ornament{display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0}
@@ -706,11 +801,13 @@ exports.getCertificate = async (req, res, next) => {
   .cert-sigs{display:flex;justify-content:space-between;align-items:flex-end;padding:0 20px;margin-bottom:16px}
   .cert-sig{text-align:center;min-width:140px}
   .cert-sig .line{width:140px;height:1px;background:#1a3a5c;margin:0 auto 6px}
+  .cert-sig .cert-sig-img{display:block;height:42px;max-width:150px;object-fit:contain;margin:0 auto 4px}
   .cert-sig .name{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;color:#1a1a2e}
   .cert-sig .role{font-family:'Inter',sans-serif;font-size:9px;color:#8a8580;margin-top:1px}
   .cert-id{font-family:'Inter',sans-serif;font-size:9px;font-weight:500;letter-spacing:0.08em;color:#b0aaa3;text-align:center;margin-top:16px}
   .cert-seal{position:absolute;bottom:40px;right:40px;width:72px;height:72px;border:2px solid #c9a84c;border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0.25}
-  .cert-seal .inner{width:56px;height:56px;border:1px solid #c9a84c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:11px;font-weight:700;color:#c9a84c;text-transform:uppercase;letter-spacing:0.05em;text-align:center;line-height:1.2}
+  .cert-seal .inner{width:56px;height:56px;border:1px solid #c9a84c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:11px;font-weight:700;color:#c9a84c;text-transform:uppercase;letter-spacing:0.05em;text-align:center;line-height:1.2;overflow:hidden}
+  .cert-seal .cert-seal-img{width:40px;height:40px;object-fit:contain;border-radius:50%}
   .print-btn{display:block;margin:20px auto 0;padding:11px 32px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:0.04em;transition:background 0.2s}
   .print-btn:hover{background:#264a6c}
   @media print{body{background:#fff;padding:0;margin:0}.cert-wrapper{max-width:100%}.cert{box-shadow:none}.print-btn{display:none!important}.cert,.cert-border,.cert-border-inner,.cert-header,.cert-body,.cert-footer,.cert-details,.cert-rating-badge,.cert-seal{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}}
@@ -724,7 +821,9 @@ exports.getCertificate = async (req, res, next) => {
       <div class="cert-corner tl"></div><div class="cert-corner tr"></div>
       <div class="cert-corner bl"></div><div class="cert-corner br"></div>
       <div class="cert-header">
-        <div class="cert-org">MOFATE</div>
+        ${logo
+          ? `<div class="cert-logo"><img src="${logo.dataUrl}" alt="MOFATE" /></div>`
+          : `<div class="cert-org">MOFATE</div>`}
         <div class="cert-dept">Mobile Facilitation Team &mdash; Innovation Hub</div>
         <div class="cert-title">Certificate of Achievement</div>
         <div class="cert-ornament"><div class="line"></div><div class="diamond"></div><div class="line"></div></div>
@@ -765,17 +864,17 @@ exports.getCertificate = async (req, res, next) => {
       <div class="cert-footer">
         <div class="cert-sigs">
           <div class="cert-sig">
-            <div class="line"></div>
+            ${directorSig ? `<img src="${directorSig}" alt="Director Signature" class="cert-sig-img" />` : '<div class="line"></div>'}
             <div class="name">Innovation Director</div>
             <div class="role">MOFATE</div>
           </div>
           <div class="cert-sig">
-            <div class="line"></div>
+            ${judgeSig ? `<img src="${judgeSig}" alt="Chief Judge Signature" class="cert-sig-img" />` : '<div class="line"></div>'}
             <div class="name">Chief Judge</div>
             <div class="role">Innovation Hub</div>
           </div>
         </div>
-        <div class="cert-seal"><div class="inner">MOFATE<br/>Seal</div></div>
+        <div class="cert-seal"><div class="inner">${logo ? `<img src="${logo.dataUrl}" alt="MOFATE" class="cert-seal-img" />` : 'MOFATE<br/>Seal'}</div></div>
         <div class="cert-id">Certificate No. MEIH-${cert.id.substring(0, 8).toUpperCase()} &nbsp;&bull;&nbsp; Issued by MOFATE &mdash; Mobile Facilitation Team</div>
       </div>
     </div>
@@ -859,11 +958,27 @@ exports.getCertificatePDF = async (req, res, next) => {
       doc.moveTo(x, y).lineTo(x + dx2, y + dy2).lineWidth(2.5).strokeColor(gold).stroke();
     });
 
-    let topY = 40;
+    let topY = 36;
 
-    doc.fontSize(9).font('Helvetica').fillColor(navy)
-      .text('MOFATE', 0, topY, { align: 'center', width: pageW, letterSpacing: 4 });
-    topY += 14;
+    const logo = loadMofateLogo();
+    if (logo) {
+      try {
+        const logoBoxW = 300;
+        const logoBoxH = 44;
+        doc.image(logo.buffer, (pageW - logoBoxW) / 2, topY, { fit: [logoBoxW, logoBoxH], align: 'center', valign: 'center' });
+        topY += logoBoxH;
+      } catch (e) {
+        console.error('[CERT-PDF] Failed to render logo, falling back to text:', e.message);
+        doc.fontSize(9).font('Helvetica').fillColor(navy)
+          .text('MOFATE', 0, topY, { align: 'center', width: pageW, letterSpacing: 4 });
+        topY += 14;
+      }
+    } else {
+      doc.fontSize(9).font('Helvetica').fillColor(navy)
+        .text('MOFATE', 0, topY, { align: 'center', width: pageW, letterSpacing: 4 });
+      topY += 14;
+    }
+
     doc.fontSize(7).font('Helvetica').fillColor(lightGray)
       .text('MOBILE FACILITATION TEAM  \u2014  INNOVATION HUB', 0, topY, { align: 'center', width: pageW, letterSpacing: 2 });
     topY += 22;
@@ -978,8 +1093,39 @@ exports.getCertificatePDF = async (req, res, next) => {
 
     const sigLeftX = pageW / 2 - 200;
     const sigRightX = pageW / 2 + 80;
-    doc.moveTo(sigLeftX, footerY).lineTo(sigLeftX + 120, footerY).lineWidth(0.5).strokeColor(navy).stroke();
-    doc.moveTo(sigRightX, footerY).lineTo(sigRightX + 120, footerY).lineWidth(0.5).strokeColor(navy).stroke();
+
+    const sigMime = (u) => {
+      const ext = path.extname(u || '.png').toLowerCase().replace('.', '');
+      return ext === 'jpg' ? 'jpeg' : ext === 'jpeg' ? 'jpeg' : ext === 'gif' ? 'gif' : ext === 'webp' ? 'webp' : 'png';
+    };
+    let directorSigUrl = null;
+    let judgeSigUrl = null;
+    if (cert.director_signature_b64) {
+      directorSigUrl = 'data:image/' + sigMime(cert.director_signature) + ';base64,' + cert.director_signature_b64;
+    } else if (cert.director_signature) {
+      directorSigUrl = await loadImageAsDataUrl(cert.director_signature);
+    }
+    if (cert.judge_signature_b64) {
+      judgeSigUrl = 'data:image/' + sigMime(cert.judge_signature) + ';base64,' + cert.judge_signature_b64;
+    } else if (cert.judge_signature) {
+      judgeSigUrl = await loadImageAsDataUrl(cert.judge_signature);
+    }
+
+    function drawSig(x, url) {
+      if (!url) {
+        doc.moveTo(x, footerY).lineTo(x + 120, footerY).lineWidth(0.5).strokeColor(navy).stroke();
+        return;
+      }
+      try {
+        const w = 100, h = 28;
+        doc.image(url, x + (120 - w) / 2, footerY - 32, { fit: [w, h] });
+      } catch (e) {
+        console.error('[CERT-PDF] Failed to render signature:', e.message);
+        doc.moveTo(x, footerY).lineTo(x + 120, footerY).lineWidth(0.5).strokeColor(navy).stroke();
+      }
+    }
+    drawSig(sigLeftX, directorSigUrl);
+    drawSig(sigRightX, judgeSigUrl);
 
     doc.fontSize(7).font('Helvetica-Bold').fillColor(navy)
       .text('Innovation Director', sigLeftX, footerY + 4, { width: 120, align: 'center' });
@@ -993,10 +1139,15 @@ exports.getCertificatePDF = async (req, res, next) => {
 
     doc.circle(pageW - 60, footerY - 12, 26).lineWidth(0.8).strokeColor(gold).stroke();
     doc.circle(pageW - 60, footerY - 12, 20).lineWidth(0.4).strokeColor(gold).stroke();
-    doc.fontSize(5).font('Helvetica-Bold').fillColor(gold)
-      .text('MOFATE', pageW - 60 - 14, footerY - 18, { width: 28, align: 'center' });
-    doc.fontSize(4).font('Helvetica').fillColor(gold)
-      .text('SEAL', pageW - 60 - 14, footerY - 8, { width: 28, align: 'center' });
+    if (logo && logo.buffer) {
+      const sealSize = 30;
+      doc.image(logo.buffer, pageW - 60 - sealSize / 2, footerY - 12 - sealSize / 2, { fit: [sealSize, sealSize] });
+    } else {
+      doc.fontSize(5).font('Helvetica-Bold').fillColor(gold)
+        .text('MOFATE', pageW - 60 - 14, footerY - 18, { width: 28, align: 'center' });
+      doc.fontSize(4).font('Helvetica').fillColor(gold)
+        .text('SEAL', pageW - 60 - 14, footerY - 8, { width: 28, align: 'center' });
+    }
 
     doc.fontSize(6).font('Helvetica').fillColor(lightGray)
       .text('Certificate No. MEIH-' + cert.id.substring(0, 8).toUpperCase() + '  \u2022  Issued by MOFATE \u2014 Mobile Facilitation Team  \u2022  ' + issueDate, 0, pageH - 28, { align: 'center', width: pageW });

@@ -76,12 +76,6 @@
             <button id="confirm-vote-btn" class="btn btn-primary btn-block" data-i18n="confirm_vote">Confirm Vote</button>
           </div>
         </div>
-
-        <div class="card">
-          <h2 data-i18n="share">Share</h2>
-          <p data-i18n="share_desc">Help this innovation climb the leaderboard — share your referral link:</p>
-          <input type="text" readonly id="referral-link" value="https://meih.example/i/loading..." />
-        </div>
       </aside>
 
     </div>
@@ -112,7 +106,6 @@
       document.getElementById('inn-technology').textContent = inn.technology || '—';
       document.getElementById('inn-mode').textContent = inn.presentationMode || inn.presentation_mode || '—';
       document.getElementById('vote-count').textContent = inn.voteCount || inn.vote_count || 0;
-      document.getElementById('referral-link').value = `${window.location.origin}/innovation-detail.html?id=${inn.id}?ref=you`;
       if (typeof initPageMeta === 'function') initPageMeta({
         title: (inn.title || 'Innovation') + ' — MEIH',
         description: (inn.problem || inn.solution || '').substring(0, 150),

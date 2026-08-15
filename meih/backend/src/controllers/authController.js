@@ -270,7 +270,7 @@ exports.login = async (req, res, next) => {
     res.json({
       token: tokens.accessToken,
       ...tokens,
-      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, name: user.full_name, email_verified: user.email_verified, image_url: user.image_url },
+      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, name: user.full_name, email_verified: user.email_verified, image_url: user.image_url, signature_url: user.signature_url },
       profileComplete,
       emailVerified: smtpConfigured ? user.email_verified : true
     });

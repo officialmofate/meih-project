@@ -31,9 +31,4 @@ INSERT INTO event_categories (name, suggested_fee_usd) VALUES
   ('Awards Ceremony', 250)
 ON CONFLICT (name) DO NOTHING;
 
--- Seed innovation competitions
-INSERT INTO innovation_competitions (title, opens_at, closes_at, status) VALUES
-  ('Innovation Summit 2026', '2026-01-01T00:00:00Z', '2026-06-30T23:59:59Z', 'voting'),
-  ('TZ Youth Hackathon 2026', '2026-03-01T00:00:00Z', '2026-05-31T23:59:59Z', 'open'),
-  ('Health Innovation Challenge 2026', '2026-02-15T00:00:00Z', '2026-07-15T23:59:59Z', 'open')
-ON CONFLICT DO NOTHING;
+-- Seed innovation competitions (removed — competitions are created by innovation managers at runtime)

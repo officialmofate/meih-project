@@ -21,6 +21,23 @@
         <p id="judge-error" class="form-error" hidden></p>
       </header>
 
+      <section class="card wide" id="judge-signature-section" style="margin-bottom:var(--space-lg);">
+        <div style="display:flex;align-items:center;gap:var(--space-xl);flex-wrap:wrap;">
+          <div id="judge-signature-preview" style="width:170px;height:64px;border:1px dashed var(--color-border);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--color-surface-raised);flex-shrink:0;">
+            <span style="font-size:12px;color:var(--color-text-muted);">No signature</span>
+          </div>
+          <div>
+            <h3 style="margin-bottom:4px;">Your Signature</h3>
+            <p class="text-muted" style="margin-bottom:var(--space-sm);font-size:13px;">Upload your signature. It will appear on certificates you score as <strong>Chief Judge</strong>.</p>
+            <label class="btn btn-sm btn-primary" style="cursor:pointer;display:inline-block;">
+              Upload Signature
+              <input type="file" id="judge-signature-input" accept="image/*" hidden />
+            </label>
+            <span id="judge-signature-status" style="margin-left:var(--space-sm);font-size:13px;color:var(--color-text-muted);"></span>
+          </div>
+        </div>
+      </section>
+
       <div class="dashboard-grid">
 
         <section class="card wide">
@@ -101,6 +118,50 @@
       const nameEl = document.getElementById('judge-name');
       if (nameEl) nameEl.textContent = user.full_name || user.name || user.email || 'Judge';
     } catch (e) {}
+
+    // Signature upload — appears on certificates as Chief Judge
+    function showJudgeSignature(url) {
+      var preview = document.getElementById('judge-signature-preview');
+      if (!preview) return;
+      if (url) {
+        preview.innerHTML = '<img src="' + url + '" alt="Signature" style="max-width:100%;max-height:100%;object-fit:contain;" />';
+      }
+    }
+    try {
+      var sigUser = JSON.parse(localStorage.getItem('meih_user') || sessionStorage.getItem('meih_user') || '{}');
+      if (sigUser && sigUser.signature_url) showJudgeSignature(window.resolveUrl(sigUser.signature_url));
+    } catch (e) {}
+    (function() {
+      var input = document.getElementById('judge-signature-input');
+      if (!input) return;
+      input.addEventListener('change', async function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var statusEl = document.getElementById('judge-signature-status');
+        statusEl.textContent = 'Uploading...';
+        var fd = new FormData();
+        fd.append('signature', file);
+        try {
+          var BASE_URL = window.MEIH_API_URL || '/api/v1';
+          var token = localStorage.getItem('meih_token');
+          var res = await fetch(BASE_URL + '/innovation/upload-signature', {
+            method: 'POST',
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+            body: fd
+          });
+          if (!res.ok) throw new Error('Upload failed');
+          var data = await res.json();
+          statusEl.textContent = 'Signature uploaded!';
+          showJudgeSignature(window.resolveUrl(data.signature_url || data.url));
+          try {
+            var u = JSON.parse(localStorage.getItem('meih_user'));
+            if (u) { u.signature_url = data.signature_url || data.url; localStorage.setItem('meih_user', JSON.stringify(u)); }
+          } catch (e) {}
+        } catch (err) {
+          statusEl.textContent = 'Failed: ' + (err.message || 'Unknown error');
+        }
+      });
+    })();
 
     function showError(msg) {
       if (judgeError) { judgeError.textContent = msg; judgeError.hidden = false; }

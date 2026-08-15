@@ -26,6 +26,23 @@
         <div class="card stat-card"><span class="stat-number skeleton" id="stat-approved">&nbsp;</span><span class="stat-label" data-i18n="approved_submissions">Approved</span></div>
       </section>
 
+      <section class="card wide" id="signature-section" style="margin-bottom:var(--space-lg);">
+        <div style="display:flex;align-items:center;gap:var(--space-xl);flex-wrap:wrap;">
+          <div id="manager-signature-preview" style="width:170px;height:64px;border:1px dashed var(--color-border);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--color-surface-raised);flex-shrink:0;">
+            <span style="font-size:12px;color:var(--color-text-muted);">No signature</span>
+          </div>
+          <div>
+            <h3 style="margin-bottom:4px;">Your Signature</h3>
+            <p class="text-muted" style="margin-bottom:var(--space-sm);font-size:13px;">Upload your signature. It will appear on certificates as <strong>Innovation Director</strong>.</p>
+            <label class="btn btn-sm btn-primary" style="cursor:pointer;display:inline-block;">
+              Upload Signature
+              <input type="file" id="manager-signature-input" accept="image/*" hidden />
+            </label>
+            <span id="signature-status" style="margin-left:var(--space-sm);font-size:13px;color:var(--color-text-muted);"></span>
+          </div>
+        </div>
+      </section>
+
       <div class="dashboard-grid">
 
         <section class="card wide" id="create-competition-section">
@@ -33,6 +50,18 @@
           <form id="create-competition-form" class="stacked-form">
             <label for="comp-title">Competition Title</label>
             <input id="comp-title" name="title" type="text" required placeholder="e.g. Health Innovation Challenge 2026" />
+
+            <label for="comp-theme">Main Theme</label>
+            <input id="comp-theme" name="mainTheme" type="text" required placeholder="e.g. Health Technology" />
+
+            <label>Sub Themes</label>
+            <div id="subthemes-container" class="subthemes-editor">
+              <div class="subtheme-row">
+                <input type="text" class="subtheme-input" name="subThemes" placeholder="e.g. Telemedicine" />
+                <button type="button" class="btn btn-sm btn-ghost subtheme-remove" title="Remove sub theme">&times;</button>
+              </div>
+            </div>
+            <button type="button" id="add-subtheme-btn" class="btn btn-sm btn-secondary add-subtheme-btn">+ Add Sub Theme</button>
 
             <label for="comp-opens">Opens At</label>
             <input id="comp-opens" name="opensAt" type="datetime-local" required />
@@ -93,7 +122,7 @@
           </div>
           <p id="no-all-subs" class="empty-state" hidden>No submissions found.</p>
           <table class="data-table" id="all-subs-table" hidden>
-            <thead><tr><th data-i18n="title">Title</th><th data-i18n="author">Author</th><th data-i18n="competition">Competition</th><th data-i18n="status">Status</th><th data-i18n="votes">Votes</th></tr></thead>
+            <thead><tr><th data-i18n="title">Title</th><th data-i18n="author">Author</th><th data-i18n="competition">Competition</th><th data-i18n="status">Status</th><th data-i18n="votes">Votes</th><th></th></tr></thead>
             <tbody id="all-subs-body"></tbody>
           </table>
         </section>
@@ -123,6 +152,95 @@
         window.location.href = 'login.html';
       }
     } catch (e) { window.location.href = 'login.html'; }
+
+    // Signature upload — appears on certificates as Innovation Director
+    function showManagerSignature(url) {
+      var preview = document.getElementById('manager-signature-preview');
+      if (!preview) return;
+      if (url) {
+        preview.innerHTML = '<img src="' + url + '" alt="Signature" style="max-width:100%;max-height:100%;object-fit:contain;" />';
+      }
+    }
+    try {
+      var sigUser = currentUser || JSON.parse(localStorage.getItem('meih_user') || 'null');
+      if (sigUser && sigUser.signature_url) showManagerSignature(window.resolveUrl(sigUser.signature_url));
+    } catch (e) {}
+    (function() {
+      var input = document.getElementById('manager-signature-input');
+      if (!input) return;
+      input.addEventListener('change', async function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var statusEl = document.getElementById('signature-status');
+        statusEl.textContent = 'Uploading...';
+        var fd = new FormData();
+        fd.append('signature', file);
+        try {
+          var BASE_URL = window.MEIH_API_URL || '/api/v1';
+          var token = localStorage.getItem('meih_token');
+          var res = await fetch(BASE_URL + '/innovation/upload-signature', {
+            method: 'POST',
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+            body: fd
+          });
+          if (!res.ok) throw new Error('Upload failed');
+          var data = await res.json();
+          statusEl.textContent = 'Signature uploaded!';
+          showManagerSignature(window.resolveUrl(data.signature_url || data.url));
+          try {
+            var u = JSON.parse(localStorage.getItem('meih_user'));
+            if (u) { u.signature_url = data.signature_url || data.url; localStorage.setItem('meih_user', JSON.stringify(u)); }
+          } catch (e) {}
+        } catch (err) {
+          statusEl.textContent = 'Failed: ' + (err.message || 'Unknown error');
+        }
+      });
+    })();
+
+    // Sub-themes editor — dynamic rows with a "+ Add" button
+    function makeSubthemeRow(value) {
+      var row = document.createElement('div');
+      row.className = 'subtheme-row';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'subtheme-input';
+      input.name = 'subThemes';
+      input.placeholder = 'e.g. Telemedicine';
+      input.value = value || '';
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn btn-sm btn-ghost subtheme-remove';
+      removeBtn.title = 'Remove sub theme';
+      removeBtn.textContent = '\u00d7';
+      row.appendChild(input);
+      row.appendChild(removeBtn);
+      return row;
+    }
+
+    (function wireSubthemes() {
+      var container = document.getElementById('subthemes-container');
+      if (!container) return;
+      var addBtn = document.getElementById('add-subtheme-btn');
+      container.addEventListener('click', function(e) {
+        if (e.target.classList.contains('subtheme-remove')) {
+          var rows = container.querySelectorAll('.subtheme-row');
+          if (rows.length > 1) {
+            e.target.closest('.subtheme-row').remove();
+          } else {
+            var input = e.target.closest('.subtheme-row').querySelector('.subtheme-input');
+            input.value = '';
+            input.focus();
+          }
+        }
+      });
+      if (addBtn) {
+        addBtn.addEventListener('click', function() {
+          container.appendChild(makeSubthemeRow(''));
+          var last = container.querySelector('.subtheme-row:last-child .subtheme-input');
+          if (last) last.focus();
+        });
+      }
+    })();
 
     // Load stats
     Promise.all([
@@ -157,27 +275,61 @@
       document.getElementById('competitions-table').classList.add('fade-in');
       document.getElementById('competitions-body').innerHTML = comps.map(c => {
         const statusClass = c.status === 'open' ? 'badge-success' : c.status === 'completed' ? 'badge-muted' : 'badge';
+        const votingClosed = c.votes_closed_at ? '<div class="text-muted" style="font-size:11px;margin-top:2px;">&#128274; Voting closed ' + new Date(c.votes_closed_at).toLocaleDateString() + '</div>' : '';
         return `<tr>
           <td>${c.title || '—'}</td>
           <td>${c.opens_at ? new Date(c.opens_at).toLocaleDateString() : '—'}</td>
           <td>${c.closes_at ? new Date(c.closes_at).toLocaleDateString() : '—'}</td>
-          <td><span class="badge ${statusClass}">${c.status || 'draft'}</span></td>
+          <td><span class="badge ${statusClass}">${c.status || 'draft'}</span>${votingClosed}</td>
           <td>${c.submission_count || 0}</td>
           <td>
-            <button class="btn btn-sm btn-secondary edit-comp-btn" data-id="${c.id}" data-title="${c.title}" data-opens="${c.opens_at || ''}" data-closes="${c.closes_at || ''}" data-status="${c.status}">Edit</button>
+            <button class="btn btn-sm btn-secondary edit-comp-btn" data-id="${c.id}">Edit</button>
+            <button class="btn btn-sm btn-secondary close-voting-btn" data-id="${c.id}" style="border-color:rgba(0,206,201,0.5);color:var(--color-secondary);" ${c.votes_closed_at ? 'disabled' : ''}>Close Voting</button>
             <a href="innovation.html?competition=${c.id}" class="btn btn-sm btn-ghost">View</a>
+            <button class="btn btn-sm btn-danger delete-comp-btn" data-id="${c.id}">Delete</button>
           </td>
         </tr>`;
       }).join('');
 
       document.querySelectorAll('.edit-comp-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          document.getElementById('comp-title').value = btn.dataset.title;
-          if (btn.dataset.opens) document.getElementById('comp-opens').value = btn.dataset.opens.slice(0, 16);
-          if (btn.dataset.closes) document.getElementById('comp-closes').value = btn.dataset.closes.slice(0, 16);
-          document.getElementById('comp-status').value = btn.dataset.status;
+          const comp = (Array.isArray(comps) ? comps : []).find(x => x.id === btn.dataset.id) || {};
+          document.getElementById('comp-title').value = comp.title || '';
+          document.getElementById('comp-theme').value = comp.main_theme || '';
+          const subThemes = Array.isArray(comp.sub_themes) ? comp.sub_themes : [];
+          const container = document.getElementById('subthemes-container');
+          container.innerHTML = '';
+          if (!subThemes.length) subThemes.push('');
+          subThemes.forEach(v => {
+            container.appendChild(makeSubthemeRow(v));
+          });
+          if (comp.opens_at) document.getElementById('comp-opens').value = comp.opens_at.slice(0, 16);
+          if (comp.closes_at) document.getElementById('comp-closes').value = comp.closes_at.slice(0, 16);
+          document.getElementById('comp-status').value = comp.status || 'draft';
           document.getElementById('create-competition-section').scrollIntoView({ behavior: 'smooth' });
-          document.getElementById('create-competition-form').dataset.editId = btn.dataset.id;
+          document.getElementById('create-competition-form').dataset.editId = comp.id;
+        });
+      });
+
+      document.querySelectorAll('.delete-comp-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this competition? This will also permanently delete all its submissions, votes, comments and scores. This cannot be undone.')) return;
+          try {
+            await api.del('/innovation/competitions/' + btn.dataset.id);
+            alert('Competition deleted.');
+            window.location.reload();
+          } catch (err) { alert(err.message || 'Failed to delete competition.'); }
+        });
+      });
+
+      document.querySelectorAll('.close-voting-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Close voting for ALL submissions in this competition? This stops all public voting immediately. This cannot be undone.')) return;
+          try {
+            await api.post('/innovation/competitions/' + btn.dataset.id + '/close-voting', {});
+            alert('Voting closed for all submissions in this competition.');
+            window.location.reload();
+          } catch (err) { alert(err.message || 'Failed to close voting.'); }
         });
       });
     }).catch(() => {
@@ -193,6 +345,7 @@
       errorEl.hidden = true;
       successEl.hidden = true;
       var data = Object.fromEntries(new FormData(e.target));
+      data.subThemes = Array.prototype.map.call(document.querySelectorAll('.subtheme-input'), function(i) { return i.value.trim(); }).filter(Boolean);
       var editId = e.target.dataset.editId;
       try {
         if (editId) {
@@ -234,6 +387,7 @@
           <td>
             <button class="btn btn-sm btn-success approve-sub-btn" data-id="${s.id}">Approve</button>
             <button class="btn btn-sm btn-danger reject-sub-btn" data-id="${s.id}">Reject</button>
+            <button class="btn btn-sm btn-ghost delete-sub-btn" data-id="${s.id}" style="border:1px solid var(--color-border);">Delete</button>
           </td>
         </tr>
       `).join('');
@@ -257,6 +411,17 @@
             alert('Submission rejected.');
             window.location.reload();
           } catch (err) { alert(err.message || 'Failed to reject.'); }
+        });
+      });
+
+      document.querySelectorAll('.delete-sub-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this submission permanently? This cannot be undone.')) return;
+          try {
+            await api.del('/innovation/submissions/' + btn.dataset.id);
+            alert('Submission deleted.');
+            window.location.reload();
+          } catch (err) { alert(err.message || 'Failed to delete submission.'); }
         });
       });
     }).catch(() => {
@@ -336,8 +501,20 @@
             <td>${s.competition_title || '—'}</td>
             <td><span class="badge ${statusClass}">${s.status || '—'}</span></td>
             <td>${s.vote_count || 0}</td>
+            <td><button class="btn btn-sm btn-ghost delete-sub-btn" data-id="${s.id}" style="border:1px solid var(--color-border);">Delete</button></td>
           </tr>`;
         }).join('');
+
+        document.querySelectorAll('.delete-sub-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Delete this submission permanently? This cannot be undone.')) return;
+            try {
+              await api.del('/innovation/submissions/' + btn.dataset.id);
+              alert('Submission deleted.');
+              window.location.reload();
+            } catch (err) { alert(err.message || 'Failed to delete submission.'); }
+          });
+        });
       }).catch(() => {});
     }
     loadAllSubmissions();

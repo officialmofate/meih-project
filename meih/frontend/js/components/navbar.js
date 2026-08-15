@@ -36,6 +36,14 @@ function p(href) {
   return isRootPage() ? 'pages/' + href : href;
 }
 
+function a(href) {
+  return isRootPage() ? 'assets/' + href : '../assets/' + href;
+}
+
+function logoUrl() {
+  return a('logo/MOFATE-LOGO-FULLCOLOR.png');
+}
+
 export function renderNavbar() {
   const el = document.getElementById('navbar-root');
   if (!el) return;
@@ -73,6 +81,7 @@ export function renderNavbar() {
   let hubLinks = '';
   if (hub === 'event') {
     hubLinks = `
+      <a href="/">Home</a>
       <a href="${p('events.html')}" class="active" data-i18n="nav.browse_events">Browse Events</a>
       <a href="${p('planners.html')}">Planners</a>
       <a href="${p('vendors.html')}">Vendors</a>
@@ -80,12 +89,14 @@ export function renderNavbar() {
     `;
   } else if (hub === 'innovation') {
     hubLinks = `
+      <a href="/">Home</a>
       <a href="${p('innovation.html')}" class="active" data-i18n="nav.browse_innovations">Browse Innovations</a>
       <a href="${p('leaderboard.html')}" data-i18n="nav.leaderboard">Leaderboard</a>
       ${dashboardLink}
     `;
   } else {
     hubLinks = `
+      <a href="/" class="active">Home</a>
       <a href="${p('events.html')}" data-i18n="nav.events">Event Hub</a>
       <a href="${p('planners.html')}">Planners</a>
       <a href="${p('vendors.html')}">Vendors</a>
@@ -96,7 +107,10 @@ export function renderNavbar() {
 
   el.innerHTML = `
     <nav class="navbar">
-      <a href="/" class="navbar-logo">MEIH</a>
+      <a href="/" class="navbar-logo">
+        <img src="${logoUrl()}" alt="MOFATE" class="navbar-logo-img" />
+        <span class="navbar-logo-text">MOFATE</span>
+      </a>
       <div class="navbar-links">
         ${hubLinks}
         <button id="lang-toggle" class="btn-ghost lang-toggle-btn" title="${langTitle}">${langLabel}</button>

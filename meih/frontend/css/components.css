@@ -187,6 +187,17 @@
   z-index: 100;
 }
 .navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.navbar-logo-img {
+  height: 32px;
+  width: auto;
+  border-radius: 6px;
+}
+.navbar-logo-text {
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 22px;
