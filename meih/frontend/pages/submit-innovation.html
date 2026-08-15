@@ -46,11 +46,6 @@
           <input id="inno-title" name="title" type="text" required placeholder="A short, descriptive name" maxlength="200" />
           <p class="word-count-hint" data-for="inno-title" style="font-size:11px;color:var(--color-text-muted,#999);margin:2px 0 0;">0 / 20 words</p>
 
-          <label for="inno-category">Category</label>
-          <select id="inno-category" name="category" required>
-            <option value="">Select a category</option>
-          </select>
-
           <label for="inno-country">Country</label>
           <input id="inno-country" name="country" type="text" required />
 
@@ -231,7 +226,6 @@
           '<dt>Main Theme</dt><dd>' + (data.get('mainTheme') || '—') + '</dd>' +
           '<dt>Sub Theme</dt><dd>' + (data.get('subTheme') || '—') + '</dd>' +
           '<dt>Title</dt><dd>' + (data.get('title') || '—') + '</dd>' +
-          '<dt>Category</dt><dd>' + (data.get('category') || '—') + '</dd>' +
           '<dt>Country</dt><dd>' + (data.get('country') || '—') + '</dd>' +
           '<dt>Introduction</dt><dd>' + (data.get('problem') || '—') + '</dd>' +
           '<dt>Methodology</dt><dd>' + (data.get('description') || '—') + '</dd>' +
@@ -376,35 +370,14 @@
       } catch {}
     })();
 
-    // Load categories into dropdown
-    (async function() {
-      try {
-        const cats = await api.get('/innovation/categories');
-        const select = document.getElementById('inno-category');
-        if (Array.isArray(cats) && cats.length) {
-          cats.forEach(c => {
-            const name = c.name || c;
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name;
-            select.appendChild(opt);
-          });
-        }
-      } catch {}
-    })();
-
-    // Show category-based amount when category is selected
-    document.getElementById('inno-category').addEventListener('change', function() {
+    // Default competition fee — shown and pre-filled on the payment step
+    (function() {
       var amtEl = document.getElementById('inno-amount-display');
       var amtInput = document.getElementById('inno-pay-amount');
-      var selected = this.options[this.selectedIndex];
-      if (selected && selected.value) {
-        // Categories use a default of 100000 Tsh (planners/managers set custom amounts)
-        var amount = 100000;
-        amtEl.innerHTML = '<strong>Amount:</strong> Tsh ' + amount.toLocaleString();
-        if (amtInput) amtInput.value = amount;
-      }
-    });
+      var amount = 100000;
+      if (amtEl) amtEl.innerHTML = '<strong>Amount:</strong> Tsh ' + amount.toLocaleString();
+      if (amtInput && !amtInput.value) amtInput.value = amount;
+    })();
 
     // Form submission — isolated from stepper
     try {
