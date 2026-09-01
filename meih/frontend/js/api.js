@@ -1,7 +1,7 @@
 const BASE_URL = window.MEIH_API_URL || '/api/v1';
 const MAX_RETRIES = 2;
 const RETRY_DELAY = 3000;
-const DEFAULT_TIMEOUT = 15000;
+const DEFAULT_TIMEOUT = 65000;
 
 const inflightRequests = new Map();
 const cache = new Map();
