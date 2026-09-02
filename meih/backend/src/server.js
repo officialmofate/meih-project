@@ -252,7 +252,12 @@ function createApp() {
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   }));
 
+  const envOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   const allowedOrigins = [
+    ...envOrigins,
     process.env.FRONTEND_URL,
     'https://meih.onrender.com',
     'https://meih-project1.onrender.com',
