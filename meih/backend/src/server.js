@@ -256,6 +256,7 @@ function createApp() {
     process.env.FRONTEND_URL,
     'https://meih.onrender.com',
     'https://meih-project1.onrender.com',
+    'https://meih-project-1.onrender.com',
     'http://localhost:3000',
     'http://localhost:4000',
   ].filter(Boolean);
