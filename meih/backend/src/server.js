@@ -278,6 +278,8 @@ function createApp() {
   }));
   app.use(compression());
 
+  // Trust Traefik/Dokploy reverse proxy so rate-limit sees real client IPs
+  app.set('trust proxy', 1);
   // ETag support
   app.set('etag', 'weak');
 

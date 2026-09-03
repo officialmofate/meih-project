@@ -164,6 +164,9 @@ export function renderNavbar() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       localStorage.removeItem('meih_token');
+      localStorage.removeItem('meih_user');
+      sessionStorage.removeItem('meih_token');
+      sessionStorage.removeItem('meih_user');
       store.set({ user: null });
       window.location.href = p('login.html');
     });

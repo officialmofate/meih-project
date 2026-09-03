@@ -1,20 +1,20 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: meih-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-meih}
       POSTGRES_USER: ${POSTGRES_USER:-meih_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meih_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - meih_pg_data:/var/lib/postgresql/data
-      - ./meih/database/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-meih_user} -d ${POSTGRES_DB:-meih}']
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 30
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -35,14 +35,14 @@ services:
     environment:
       PORT: 3000
       NODE_ENV: production
-      DATABASE_URL: postgres://${POSTGRES_USER:-meih_user}:${POSTGRES_PASSWORD:-meih_secret}@postgres:5432/${POSTGRES_DB:-meih}
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-${JWT_SECRET}}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      FRONTEND_URL: ${FRONTEND_URL:-https://mofate.online}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://mofate.online,https://www.mofate.online}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -50,11 +50,50 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
       DB_POOL_MAX: ${DB_POOL_MAX:-30}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+    volumes:
+      - meih_uploads:/app/meih/backend/uploads
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
+  db-backup:
+    image: postgres:17-alpine
+    container_name: meih-db-backup
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-meih_user}
+      POSTGRES_DB: ${POSTGRES_DB:-meih}
+    volumes:
+      - meih_db_backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        mkdir -p /backups
+        echo "[db-backup] Service started. Running first backup now, then every 24 hours."
+        while true; do
+          STAMP=$$(date +%Y%m%d_%H%M%S)
+          FILE="/backups/meih_$${STAMP}.dump"
+          echo "[db-backup] Backing up at $${STAMP} ..."
+          if pg_dump -h postgres -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}" -Fc -f "$${FILE}"; then
+            echo "[db-backup] OK: $${FILE}"
+            ls -t /backups/*.dump 2>/dev/null | tail -n +8 | xargs -r rm -f
+            echo "[db-backup] Keeping last 7 backups. Next backup in 24h."
+          else
+            echo "[db-backup] FAILED. Will retry in 24h."
+            rm -f "$${FILE}"
+          fi
+          sleep 86400
+        done
+
 volumes:
   meih_pg_data:
+  meih_uploads:
+  meih_db_backups:
