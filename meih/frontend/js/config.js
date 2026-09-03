@@ -1,7 +1,9 @@
 // MEIH Frontend Config
-// Set your backend API URL here before deploying
-window.MEIH_API_URL = 'https://meih.onrender.com/api/v1';
-window.MEIH_BACKEND_URL = 'https://meih.onrender.com';
+// The frontend is served by the same backend container, so we use RELATIVE URLs.
+// This makes the app work on any domain (localhost, Render, Dokploy, your domain)
+// without re-editing this file.
+window.MEIH_API_URL = '/api/v1';
+window.MEIH_BACKEND_URL = '';
 
 window.resolveUrl = function (path) {
   if (!path) return '';
