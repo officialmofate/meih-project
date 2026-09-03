@@ -135,14 +135,19 @@ exports.listSubmissions = async ({ page = 1, limit = 50, category, status, compe
 
   const { rows } = await db.query(
     `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
-            COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
-            (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
+            COALESCE(v.total_points, 0)::int AS total_points,
+            COALESCE(v.vote_count, 0)::int AS vote_count,
             c.title AS competition_title
      FROM innovation_submissions s
+     LEFT JOIN (
+       SELECT submission_id, SUM(points)::int AS total_points, COUNT(*)::int AS vote_count
+       FROM innovation_votes
+       GROUP BY submission_id
+     ) v ON v.submission_id = s.id
      LEFT JOIN users u ON u.id = s.user_id
      LEFT JOIN innovation_competitions c ON c.id = s.competition_id
      ${where}
-     ORDER BY total_points DESC, s.created_at DESC
+     ORDER BY COALESCE(v.total_points, 0) DESC, s.created_at DESC
      LIMIT $${idx++} OFFSET $${idx}`,
     params
   );
