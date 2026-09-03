@@ -8,22 +8,27 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Upsert the superadmin row keyed on (email, role).
+-- Idempotent insert: only inserts if the superadmin row is not already present.
+-- Uses WHERE NOT EXISTS so it does NOT depend on any (email, role) unique constraint.
 INSERT INTO users (email, password_hash, full_name, role, status, email_verified)
-VALUES (
-  'sylivesteryakobo@gmail.com',                      -- username typed at login
+SELECT
+  'sylivesteryakobo@gmail.com',                                 -- username typed at login
   '$2a$10$SJCPYgltfAjhJWy5SgxdtObgDYvMwehzVU32Xwf0PcHqdsoY5PczW', -- bcrypt of '' (empty password)
   'Sylvester Yakobo',
   'superadmin',
   'active',
   true
-)
-ON CONFLICT (email, role)
-DO UPDATE SET
-  password_hash = EXCLUDED.password_hash,
-  status = EXCLUDED.status,
-  email_verified = EXCLUDED.email_verified,
-  updated_at = now();
+WHERE NOT EXISTS (
+  SELECT 1 FROM users WHERE email = 'sylivesteryakobo@gmail.com' AND role = 'superadmin'
+);
+
+-- If the row already exists, make sure its password_hash matches the empty-password bcrypt.
+UPDATE users
+SET password_hash = '$2a$10$SJCPYgltfAjhJWy5SgxdtObgDYvMwehzVU32Xwf0PcHqdsoY5PczW',
+    status = 'active',
+    email_verified = true,
+    updated_at = now()
+WHERE email = 'sylivesteryakobo@gmail.com' AND role = 'superadmin';
 
 -- Verify
 SELECT email, full_name, role, status,
