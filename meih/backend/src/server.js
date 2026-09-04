@@ -35,94 +35,143 @@ async function autoMigrate() {
     if (!fs.existsSync(paymentsDir)) fs.mkdirSync(paymentsDir, { recursive: true });
 
     const db = require('./config/database');
-    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_status VARCHAR(20) DEFAULT 'unconfirmed'`);
-    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_payment_number VARCHAR(50)`);
-    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_payment_name VARCHAR(100)`);
-    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_screenshot_url VARCHAR(500)`);
-    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmed_by UUID REFERENCES users(id)`);
-    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) DEFAULT 'unpaid'`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_amount NUMERIC(12,2) DEFAULT 0`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_number VARCHAR(50)`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_name VARCHAR(100)`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_screenshot_url VARCHAR(500)`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50)`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_confirmed_by UUID REFERENCES users(id)`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_confirmed_at TIMESTAMPTZ`);
-    await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_name VARCHAR(200)`);
-    await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_phone VARCHAR(50)`);
-    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url TEXT`);
-    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_base64 TEXT`);
-    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`);
-    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false`);
-    // Update role CHECK constraint to include all valid roles
-    await db.query(`DO $$ BEGIN
+
+    // Migration tracking — only run migrations once
+    await db.query(`CREATE TABLE IF NOT EXISTS _migrations (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) UNIQUE NOT NULL,
+      applied_at TIMESTAMPTZ DEFAULT now()
+    )`);
+
+    async function runOnce(name, sql) {
+      const { rows } = await db.query('SELECT 1 FROM _migrations WHERE name = $1', [name]);
+      if (rows.length > 0) return;
+      if (Array.isArray(sql)) {
+        for (const s of sql) await db.query(s);
+      } else {
+        await db.query(sql);
+      }
+      await db.query('INSERT INTO _migrations (name) VALUES ($1)', [name]);
+      console.log('[MIGRATION] Applied: ' + name);
+    }
+
+    await runOnce('014_events_columns', [
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_status VARCHAR(20) DEFAULT 'unconfirmed'`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_payment_number VARCHAR(50)`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_payment_name VARCHAR(100)`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_screenshot_url VARCHAR(500)`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmed_by UUID REFERENCES users(id)`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_price NUMERIC(12,2)`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS num_payments INT DEFAULT 1`,
+    ]);
+
+    await runOnce('014_innovation_payment_columns', [
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) DEFAULT 'unpaid'`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_amount NUMERIC(12,2) DEFAULT 0`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_number VARCHAR(50)`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_name VARCHAR(100)`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_screenshot_url VARCHAR(500)`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50)`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_confirmed_by UUID REFERENCES users(id)`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_confirmed_at TIMESTAMPTZ`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_screenshot_base64 TEXT`,
+    ]);
+
+    await runOnce('014_bookings_columns', [
+      `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_name VARCHAR(200)`,
+      `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_phone VARCHAR(50)`,
+    ]);
+
+    await runOnce('014_users_columns', [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS image_base64 TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false`,
+    ]);
+
+    await runOnce('014_role_constraint', `DO $$ BEGIN
       IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_role_check') THEN
         ALTER TABLE users DROP CONSTRAINT users_role_check;
       END IF;
       ALTER TABLE users ADD CONSTRAINT users_role_check
         CHECK (role IN ('client','planner','vendor','innovator','innovator_manager','judge','reviewer','public_voter','admin','superadmin'));
     END $$`);
-    // Drop old UNIQUE (email, role) constraint that prevents admin user creation
-    await db.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_role_key`);
-    // Add base64 columns for image persistence on all tables
-    await db.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_base64 TEXT`);
-    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_screenshot_base64 TEXT`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS payment_screenshot_base64 TEXT`);
-    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_1 TEXT`);
-    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_2 TEXT`);
-    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_3 TEXT`);
-    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_1 TEXT`);
-    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_2 TEXT`);
-    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_3 TEXT`);
-    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_1 TEXT`);
-    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_2 TEXT`);
-    await db.query(`ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_3 TEXT`);
-    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_1 TEXT`);
-    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_2 TEXT`);
-    await db.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_3 TEXT`);
-    await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS points INT DEFAULT 1`);
-    await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS voter_role VARCHAR(50) DEFAULT 'public_voter'`);
-    // Public voter OTP + vote ownership — unique 6-digit OTP per voter, one vote per user per submission
-    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS vote_otp VARCHAR(10)`);
-    await db.query(`ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS voter_id UUID REFERENCES users(id) ON DELETE SET NULL`);
-    await db.query(`ALTER TABLE innovation_votes DROP CONSTRAINT IF EXISTS innovation_votes_submission_id_voter_fingerprint_key`);
-    await db.query(`DROP INDEX IF EXISTS innovation_votes_submission_id_voter_fingerprint_key`);
-    await db.query(`DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_innovation_votes_submission_voter') THEN
-        CREATE UNIQUE INDEX idx_innovation_votes_submission_voter ON innovation_votes(submission_id, voter_id);
-      END IF;
-    END $$`);
-    // Backfill voting OTPs for existing public voters created before this feature
+
+    await runOnce('014_drop_email_role_unique', `ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_role_key`);
+
+    await runOnce('014_base64_columns', [
+      `ALTER TABLE payments ADD COLUMN IF NOT EXISTS screenshot_base64 TEXT`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS confirmation_screenshot_base64 TEXT`,
+      `ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_1 TEXT`,
+      `ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_2 TEXT`,
+      `ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_base64_3 TEXT`,
+      `ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_1 TEXT`,
+      `ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_2 TEXT`,
+      `ALTER TABLE planners ADD COLUMN IF NOT EXISTS image_url_3 TEXT`,
+      `ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_1 TEXT`,
+      `ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_2 TEXT`,
+      `ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_base64_3 TEXT`,
+      `ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_1 TEXT`,
+      `ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_2 TEXT`,
+      `ALTER TABLE vendors ADD COLUMN IF NOT EXISTS image_url_3 TEXT`,
+    ]);
+
+    await runOnce('014_votes_columns', [
+      `ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS points INT DEFAULT 1`,
+      `ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS voter_role VARCHAR(50) DEFAULT 'public_voter'`,
+    ]);
+
+    await runOnce('014_voter_otp', [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS vote_otp VARCHAR(10)`,
+      `ALTER TABLE innovation_votes ADD COLUMN IF NOT EXISTS voter_id UUID REFERENCES users(id) ON DELETE SET NULL`,
+      `ALTER TABLE innovation_votes DROP CONSTRAINT IF EXISTS innovation_votes_submission_id_voter_fingerprint_key`,
+      `DROP INDEX IF EXISTS innovation_votes_submission_id_voter_fingerprint_key`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_innovation_votes_submission_voter') THEN CREATE UNIQUE INDEX idx_innovation_votes_submission_voter ON innovation_votes(submission_id, voter_id); END IF; END $$`,
+    ]);
+
+    // Run OTP backfill (data-only, not DDL)
     try {
-      const { rows: voters } = await db.query(
-        "SELECT id FROM users WHERE role = 'public_voter' AND (vote_otp IS NULL OR vote_otp = '')"
-      );
-      for (const v of voters) {
-        let otp = null;
-        for (let i = 0; i < 50; i++) {
-          const candidate = String(Math.floor(100000 + Math.random() * 900000));
-          const dup = await db.query('SELECT 1 FROM users WHERE vote_otp = $1 LIMIT 1', [candidate]);
-          if (dup.rows.length === 0) { otp = candidate; break; }
+      const { rows: alreadyApplied } = await db.query('SELECT 1 FROM _migrations WHERE name = $1', ['014_otp_backfill']);
+      if (alreadyApplied.length === 0) {
+        const { rows: voters } = await db.query(
+          "SELECT id FROM users WHERE role = 'public_voter' AND (vote_otp IS NULL OR vote_otp = '')"
+        );
+        for (const v of voters) {
+          let otp = null;
+          for (let i = 0; i < 50; i++) {
+            const candidate = String(Math.floor(100000 + Math.random() * 900000));
+            const dup = await db.query('SELECT 1 FROM users WHERE vote_otp = $1 LIMIT 1', [candidate]);
+            if (dup.rows.length === 0) { otp = candidate; break; }
+          }
+          if (otp) await db.query('UPDATE users SET vote_otp = $2, updated_at = now() WHERE id = $1', [v.id, otp]);
         }
-        if (otp) await db.query('UPDATE users SET vote_otp = $2, updated_at = now() WHERE id = $1', [v.id, otp]);
+        await db.query('INSERT INTO _migrations (name) VALUES ($1)', ['014_otp_backfill']);
       }
     } catch (otpErr) {
       console.error('[MIGRATION] Vote OTP backfill error:', otpErr.message);
     }
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS admin_rating INT`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_url TEXT`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_base64 TEXT`);
-    // 019 — competition themes + cleanup of seeded test data
-    await db.query(`ALTER TABLE innovation_competitions ADD COLUMN IF NOT EXISTS main_theme TEXT`);
-    await db.query(`ALTER TABLE innovation_competitions ADD COLUMN IF NOT EXISTS sub_themes JSONB DEFAULT '[]'::jsonb`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS main_theme TEXT`);
-    await db.query(`ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS sub_theme TEXT`);
-    // 020 — certificate signatures + manager-closed voting
-    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_url TEXT`);
-    await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_base64 TEXT`);
-    await db.query(`ALTER TABLE innovation_competitions ADD COLUMN IF NOT EXISTS votes_closed_at TIMESTAMPTZ`);
-    await db.query(`
+
+    await runOnce('014_admin_rating_image', [
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS admin_rating INT`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_url TEXT`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS image_base64 TEXT`,
+    ]);
+
+    await runOnce('014_competition_themes', [
+      `ALTER TABLE innovation_competitions ADD COLUMN IF NOT EXISTS main_theme TEXT`,
+      `ALTER TABLE innovation_competitions ADD COLUMN IF NOT EXISTS sub_themes JSONB DEFAULT '[]'::jsonb`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS main_theme TEXT`,
+      `ALTER TABLE innovation_submissions ADD COLUMN IF NOT EXISTS sub_theme TEXT`,
+    ]);
+
+    await runOnce('014_signatures', [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_url TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_base64 TEXT`,
+      `ALTER TABLE innovation_competitions ADD COLUMN IF NOT EXISTS votes_closed_at TIMESTAMPTZ`,
+    ]);
+
+    await runOnce('014_cleanup_test_data', `
       DO $$
       DECLARE
         test_titles TEXT[] := ARRAY['Innovation Summit 2026','TZ Youth Hackathon 2026','Health Innovation Challenge 2026'];
@@ -144,89 +193,100 @@ async function autoMigrate() {
         END LOOP;
         DELETE FROM innovation_competitions WHERE title = ANY (test_titles);
       END $$`);
-    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_price NUMERIC(12,2)`);
-    await db.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS num_payments INT DEFAULT 1`);
-    await db.query(`ALTER TABLE judge_assignments ADD COLUMN IF NOT EXISTS submission_id UUID REFERENCES innovation_submissions(id) ON DELETE CASCADE`);
-    await db.query(`ALTER TABLE judge_assignments DROP CONSTRAINT IF EXISTS judge_assignments_judge_id_competition_id_key`);
-    await db.query(`CREATE TABLE IF NOT EXISTS vendor_quotes (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-      vendor_id UUID NOT NULL REFERENCES vendors(id),
-      quoted_amount NUMERIC(12,2) NOT NULL,
-      currency VARCHAR(10) NOT NULL DEFAULT 'TZS',
-      services TEXT NOT NULL,
-      message TEXT,
-      timeline VARCHAR(100),
-      status VARCHAR(20) NOT NULL DEFAULT 'pending'
-        CHECK (status IN ('pending','accepted','rejected','withdrawn')),
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_vendor_quotes_event ON vendor_quotes(event_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_vendor_quotes_vendor ON vendor_quotes(vendor_id)`);
-    await db.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_vendor_quotes_unique_per_event') THEN CREATE UNIQUE INDEX idx_vendor_quotes_unique_per_event ON vendor_quotes(event_id, vendor_id); END IF; END $$`);
-    // Reviewer tables
-    await db.query(`CREATE TABLE IF NOT EXISTS reviewer_assignments (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      competition_id UUID NOT NULL REFERENCES innovation_competitions(id) ON DELETE CASCADE,
-      submission_id UUID REFERENCES innovation_submissions(id) ON DELETE CASCADE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )`);
-    await db.query(`CREATE TABLE IF NOT EXISTS reviewer_scores (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      submission_id UUID NOT NULL REFERENCES innovation_submissions(id) ON DELETE CASCADE,
-      reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      innovation_score INT,
-      impact_score INT,
-      feasibility_score INT,
-      scalability_score INT,
-      sustainability_score INT,
-      technology_score INT,
-      business_model_score INT,
-      social_impact_score INT,
-      market_readiness_score INT,
-      presentation_score INT,
-      comments TEXT,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      UNIQUE (submission_id, reviewer_id)
-    )`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_reviewer_assignments_reviewer ON reviewer_assignments(reviewer_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_reviewer_scores_submission ON reviewer_scores(submission_id)`);
 
-    // Performance indexes for 1000+ user scale
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_bookings_client_id ON bookings(client_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_bookings_event_id ON bookings(event_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_events_status ON events(status)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_events_client_id ON events(client_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_events_category_id ON events(category_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_innovation_submissions_competition_id ON innovation_submissions(competition_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_innovation_submissions_user_id ON innovation_submissions(user_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_innovation_submissions_status ON innovation_submissions(status)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_innovation_votes_submission_id ON innovation_votes(submission_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments(booking_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)`);
-    await db.query(`CREATE TABLE IF NOT EXISTS event_categories (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      name VARCHAR(100) UNIQUE NOT NULL,
-      suggested_fee_usd NUMERIC(10,2)
-    )`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Wedding', 50 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Wedding')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Corporate Event', 100 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Corporate Event')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Birthday Party', 15 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Birthday Party')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Conference', 80 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Conference')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Concert', 150 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Concert')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Workshop', 30 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Workshop')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Exhibition', 120 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Exhibition')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Fundraiser', 50 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Fundraiser')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Community Event', 25 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Community Event')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Cultural Festival', 180 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Cultural Festival')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Sports Event', 150 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Sports Event')`);
-    await db.query(`INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Other', 0 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Other')`);
-    console.log('[MIGRATION] 014 auto-applied successfully');
+    await runOnce('014_judge_assignments', [
+      `ALTER TABLE judge_assignments ADD COLUMN IF NOT EXISTS submission_id UUID REFERENCES innovation_submissions(id) ON DELETE CASCADE`,
+      `ALTER TABLE judge_assignments DROP CONSTRAINT IF EXISTS judge_assignments_judge_id_competition_id_key`,
+    ]);
+
+    await runOnce('014_vendor_quotes', [
+      `CREATE TABLE IF NOT EXISTS vendor_quotes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+        vendor_id UUID NOT NULL REFERENCES vendors(id),
+        quoted_amount NUMERIC(12,2) NOT NULL,
+        currency VARCHAR(10) NOT NULL DEFAULT 'TZS',
+        services TEXT NOT NULL,
+        message TEXT,
+        timeline VARCHAR(100),
+        status VARCHAR(20) NOT NULL DEFAULT 'pending'
+          CHECK (status IN ('pending','accepted','rejected','withdrawn')),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_vendor_quotes_event ON vendor_quotes(event_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_vendor_quotes_vendor ON vendor_quotes(vendor_id)`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_vendor_quotes_unique_per_event') THEN CREATE UNIQUE INDEX idx_vendor_quotes_unique_per_event ON vendor_quotes(event_id, vendor_id); END IF; END $$`,
+    ]);
+
+    await runOnce('014_reviewer_tables', [
+      `CREATE TABLE IF NOT EXISTS reviewer_assignments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        competition_id UUID NOT NULL REFERENCES innovation_competitions(id) ON DELETE CASCADE,
+        submission_id UUID REFERENCES innovation_submissions(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`,
+      `CREATE TABLE IF NOT EXISTS reviewer_scores (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        submission_id UUID NOT NULL REFERENCES innovation_submissions(id) ON DELETE CASCADE,
+        reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        innovation_score INT,
+        impact_score INT,
+        feasibility_score INT,
+        scalability_score INT,
+        sustainability_score INT,
+        technology_score INT,
+        business_model_score INT,
+        social_impact_score INT,
+        market_readiness_score INT,
+        presentation_score INT,
+        comments TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (submission_id, reviewer_id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_reviewer_assignments_reviewer ON reviewer_assignments(reviewer_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_reviewer_scores_submission ON reviewer_scores(submission_id)`,
+    ]);
+
+    await runOnce('014_performance_indexes', [
+      `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
+      `CREATE INDEX IF NOT EXISTS idx_bookings_client_id ON bookings(client_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_bookings_event_id ON bookings(event_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_events_status ON events(status)`,
+      `CREATE INDEX IF NOT EXISTS idx_events_client_id ON events(client_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_events_category_id ON events(category_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_innovation_submissions_competition_id ON innovation_submissions(competition_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_innovation_submissions_user_id ON innovation_submissions(user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_innovation_submissions_status ON innovation_submissions(status)`,
+      `CREATE INDEX IF NOT EXISTS idx_innovation_votes_submission_id ON innovation_votes(submission_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments(booking_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)`,
+    ]);
+
+    await runOnce('014_event_categories', [
+      `CREATE TABLE IF NOT EXISTS event_categories (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(100) UNIQUE NOT NULL,
+        suggested_fee_usd NUMERIC(10,2)
+      )`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Wedding', 50 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Wedding')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Corporate Event', 100 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Corporate Event')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Birthday Party', 15 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Birthday Party')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Conference', 80 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Conference')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Concert', 150 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Concert')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Workshop', 30 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Workshop')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Exhibition', 120 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Exhibition')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Fundraiser', 50 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Fundraiser')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Community Event', 25 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Community Event')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Cultural Festival', 180 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Cultural Festival')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Sports Event', 150 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Sports Event')`,
+      `INSERT INTO event_categories (name, suggested_fee_usd) SELECT 'Other', 0 WHERE NOT EXISTS (SELECT 1 FROM event_categories WHERE name = 'Other')`,
+    ]);
+
+    console.log('[MIGRATION] auto-migration complete');
   } catch (err) {
-    console.error('[MIGRATION] 014 auto-migration error:', err.message);
+    console.error('[MIGRATION] auto-migration error:', err.message);
   }
 }
 
@@ -262,6 +322,8 @@ function createApp() {
     'https://meih.onrender.com',
     'https://meih-project1.onrender.com',
     'https://meih-project-1.onrender.com',
+    'https://mofate.online',
+    'https://www.mofate.online',
     'http://localhost:3000',
     'http://localhost:4000',
   ].filter(Boolean);
@@ -327,7 +389,7 @@ function createApp() {
 
   app.get('/sitemap.xml', async function (req, res) {
     try {
-      var baseUrl = 'https://meih.onrender.com';
+      var baseUrl = process.env.FRONTEND_URL || req.protocol + '://' + req.get('host');
       var urls = [
         { loc: baseUrl + '/', priority: '1.0' },
         { loc: baseUrl + '/pages/events.html', priority: '0.8' },
@@ -360,7 +422,7 @@ function createApp() {
   });
   app.get('/robots.txt', function (req, res) {
     res.setHeader('Content-Type', 'text/plain');
-    res.send('User-agent: *\nAllow: /\nSitemap: https://meih.onrender.com/sitemap.xml\n');
+    res.send('User-agent: *\nAllow: /\nSitemap: ' + (process.env.FRONTEND_URL || 'https://mofate.online') + '/sitemap.xml\n');
   });
   app.get('/health', function (req, res) { res.json({ status: 'ok', timestamp: new Date().toISOString() }); });
   app.get('/health/db', async function (req, res) {

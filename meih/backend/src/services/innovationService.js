@@ -134,7 +134,13 @@ exports.listSubmissions = async ({ page = 1, limit = 50, category, status, compe
   params.push(limit, offset);
 
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
+    `SELECT s.id, s.user_id, s.competition_id, s.title, s.category, s.main_theme, s.sub_theme,
+            s.description, s.problem, s.solution, s.impact, s.technology,
+            s.status, s.admin_rating, s.image_url,
+            s.payment_status, s.payment_amount, s.payment_number, s.payment_name,
+            s.payment_screenshot_url, s.payment_method, s.payment_confirmed_by, s.payment_confirmed_at,
+            s.created_at, s.updated_at,
+            u.full_name AS author_name, u.image_url AS author_image,
             COALESCE(v.total_points, 0)::int AS total_points,
             COALESCE(v.vote_count, 0)::int AS vote_count,
             c.title AS competition_title
@@ -242,7 +248,13 @@ exports.deleteSubmission = async (id, userId, userRole) => {
 
 exports.listCompetitionSubmissions = async (competitionId) => {
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
+    `SELECT s.id, s.user_id, s.competition_id, s.title, s.category, s.main_theme, s.sub_theme,
+            s.description, s.problem, s.solution, s.impact, s.technology,
+            s.status, s.admin_rating, s.image_url,
+            s.payment_status, s.payment_amount, s.payment_number, s.payment_name,
+            s.payment_screenshot_url, s.payment_method, s.payment_confirmed_by, s.payment_confirmed_at,
+            s.created_at, s.updated_at,
+            u.full_name AS author_name, u.image_url AS author_image,
             COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count
      FROM innovation_submissions s
@@ -459,7 +471,13 @@ exports.getJudgeAssignments = async (judgeId) => {
   console.log('[JUDGE-SRV] Fetching assignments for judge:', judgeId);
   try {
     const { rows } = await db.query(
-      `SELECT DISTINCT s.*, u.full_name AS author_name, u.image_url AS author_image,
+      `SELECT DISTINCT s.id, s.user_id, s.competition_id, s.title, s.category, s.main_theme, s.sub_theme,
+              s.description, s.problem, s.solution, s.impact, s.technology,
+              s.status, s.admin_rating, s.image_url,
+              s.payment_status, s.payment_amount, s.payment_number, s.payment_name,
+              s.payment_screenshot_url, s.payment_method, s.payment_confirmed_by, s.payment_confirmed_at,
+              s.created_at, s.updated_at,
+              u.full_name AS author_name, u.image_url AS author_image,
               COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
               (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
               js.innovation_score, js.impact_score, js.feasibility_score,
@@ -586,7 +604,13 @@ exports.rejectSubmission = async (id, managerId) => {
 
 exports.listManagerSubmissions = async (managerId) => {
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name, u.image_url AS author_image,
+    `SELECT s.id, s.user_id, s.competition_id, s.title, s.category, s.main_theme, s.sub_theme,
+            s.description, s.problem, s.solution, s.impact, s.technology,
+            s.status, s.admin_rating, s.image_url,
+            s.payment_status, s.payment_amount, s.payment_number, s.payment_name,
+            s.payment_screenshot_url, s.payment_method, s.payment_confirmed_by, s.payment_confirmed_at,
+            s.created_at, s.updated_at,
+            u.full_name AS author_name, u.image_url AS author_image,
             COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
             c.title AS competition_title
@@ -602,7 +626,14 @@ exports.listManagerSubmissions = async (managerId) => {
 exports.listPendingPayment = async ({ page = 1, limit = 50 } = {}) => {
   const offset = (page - 1) * limit;
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name, c.title AS competition_title
+    `SELECT s.id, s.user_id, s.competition_id, s.title, s.category, s.main_theme, s.sub_theme,
+            s.description, s.problem, s.solution, s.impact, s.technology,
+            s.status, s.admin_rating, s.image_url,
+            s.payment_status, s.payment_amount, s.payment_number, s.payment_name,
+            s.payment_screenshot_url, s.payment_method, s.payment_confirmed_by, s.payment_confirmed_at,
+            s.created_at, s.updated_at,
+            u.full_name AS author_name,
+            c.title AS competition_title
      FROM innovation_submissions s
      LEFT JOIN users u ON u.id = s.user_id
      LEFT JOIN innovation_competitions c ON c.id = s.competition_id
@@ -820,7 +851,13 @@ exports.getSubmissionRequirements = async (id, userId) => {
 exports.listManagerPendingPayments = async (managerId, { page = 1, limit = 50 } = {}) => {
   const offset = (page - 1) * limit;
   const { rows } = await db.query(
-    `SELECT s.*, u.full_name AS author_name, u.email AS author_email,
+    `SELECT s.id, s.user_id, s.competition_id, s.title, s.category, s.main_theme, s.sub_theme,
+            s.description, s.problem, s.solution, s.impact, s.technology,
+            s.status, s.admin_rating, s.image_url,
+            s.payment_status, s.payment_amount, s.payment_number, s.payment_name,
+            s.payment_screenshot_url, s.payment_method, s.payment_confirmed_by, s.payment_confirmed_at,
+            s.created_at, s.updated_at,
+            u.full_name AS author_name, u.email AS author_email,
             c.title AS competition_title
      FROM innovation_submissions s
      LEFT JOIN users u ON u.id = s.user_id
@@ -940,7 +977,13 @@ exports.listAllReviewerAssignments = async () => {
 
 exports.getReviewerAssignments = async (reviewerId) => {
   const { rows } = await db.query(
-    `SELECT DISTINCT s.*, u.full_name AS author_name, u.image_url AS author_image,
+    `SELECT DISTINCT s.id, s.user_id, s.competition_id, s.title, s.category, s.main_theme, s.sub_theme,
+            s.description, s.problem, s.solution, s.impact, s.technology,
+            s.status, s.admin_rating, s.image_url,
+            s.payment_status, s.payment_amount, s.payment_number, s.payment_name,
+            s.payment_screenshot_url, s.payment_method, s.payment_confirmed_by, s.payment_confirmed_at,
+            s.created_at, s.updated_at,
+            u.full_name AS author_name, u.image_url AS author_image,
             COALESCE((SELECT SUM(v.points) FROM innovation_votes v WHERE v.submission_id = s.id), 0)::int AS total_points,
             (SELECT COUNT(*)::int FROM innovation_votes v WHERE v.submission_id = s.id) AS vote_count,
             rs.innovation_score, rs.impact_score, rs.feasibility_score,

@@ -24,7 +24,7 @@ function isConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
-const BASE_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'https://meih.onrender.com';
+const BASE_URL = process.env.APP_URL || process.env.FRONTEND_URL || 'https://mofate.online';
 
 function emailWrapper(title, bodyHtml) {
   return `

@@ -18,4 +18,4 @@ Disallow: /pages/submit-innovation.html
 Disallow: /pages/create-event.html
 Disallow: /api/
 
-Sitemap: https://meih.onrender.com/sitemap.xml
+Sitemap: https://mofate.online/sitemap.xml
